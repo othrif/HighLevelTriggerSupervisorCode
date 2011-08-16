@@ -1,0 +1,7 @@
+
+package hltsv
+
+manager Reiner.Hauser@cern.ch Denis.Fellmann@cern.ch
+
+use TDAQPolicy
+
