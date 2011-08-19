@@ -3,5 +3,77 @@ package hltsv
 
 manager Reiner.Hauser@cern.ch Denis.Fellmann@cern.ch Per.Werner@cern.ch
 
+public
+
 use TDAQPolicy
+
+use ers
+use queues
+use eformat
+use dcmessages
+use dynlibs
+use sysmon
+use sysmonapps
+use histmon
+use EventStorage
+use dal
+use DFConfiguration
+use ttcpr
+use ac
+use hltinterface
+
+use Boost * TDAQCExternal
+
+private
+
+library hltsv          L1Source.cxx Activity.cxx Node.cxx Scheduler.cxx Event.cxx
+macro hltsv_shlibflags "-lers -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon"
+
+application hltsv_main  hltsv_main.cxx
+macro hltsv_mainlinkopts "-lers -lhltsv -lhistmon -lsysmonapps -lsysmon -lhltinterface"
+macro hltsv_main_dependencies hltsv
+
+macro sw.repository.binary.hltsv_main:name         "HLT Supervisor"
+macro sw.repository.binary.hltsv_main:description  "HLT Supervisor Application"
+
+library svl1internal  L1InternalSource.cxx
+macro svl1internal_shlibflags "-lers"
+macro svl1internal_dependencies hltsv
+
+library svl1preloaded L1PreloadedSource.cxx
+macro svl1preloaded_shlibflags "-lers -leformat_write -leformat -lDataReader"
+macro svl1preloaded_dependencies hltsv
+
+library svl1ttc L1TTCSource.cxx
+macro svl1ttc_shlibflags "-leformat_write -leformat -lttcpr"
+macro svl1ttc_dependencies hltsv
+
+library svl1slink L1SLinkSource.cxx
+macro svl1slink_shlibflags "-leformat_write -leformat -lslink"
+macro svl1slink_dependencies hltsv
+
+library svl1filar L1FilarSource.cxx
+macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lttcpr"
+macro svl1filar_dependencies hltsv
+
+library svl1ltp L1LTPSource.cxx
+macro svl1sltp_shlibflags "-leformat_write -leformat"
+macro svl1ltp_dependencies hltsv
+
+
+# tests
+
+application test_l1source ../test/test_l1source.cxx
+macro test_l1sourcelinkopts "-lers -lhltsv -lconfig -ldynlibs -ldaq-df-dal"
+macro test_l1source_dependencies hltsv
+
+application testDCM ../test/testDCM.cxx
+macro testDCMlinkopts "-lers -leformat -lac -ldcmessages -lmsginput -lmsgconf -lmsg -ldaq-df-dal"
+
+macro sw.repository.binary.testDC:name         "Tester for hltsv"
+macro sw.repository.binary.testDC:description  "Tester for hltsv"
+
+
+apply_pattern install_libs files="libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc.so libsvl1filar.so libsvl1ltp.so"
+apply_pattern install_apps files="hltsv_main test_l1source testDCM"
 
