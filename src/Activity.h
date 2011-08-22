@@ -10,7 +10,7 @@
 #include "RunController/CommandedTrigger.h"
 #include "RunController/MasterTrigger.h"
 
-#include "Scheduler.h"
+#include "NodeSet.h"
 
 #include "boost/thread/mutex.hpp"
 #include "boost/thread/thread.hpp"
@@ -81,7 +81,7 @@ namespace hltsv {
 
         // these run as separate threads
         void handle_lvl1_input();
-        void assign_event();
+        void assign_event(unsigned int offset);
         void handle_decision();
         void handle_timeouts();
         void handle_clears();
@@ -95,7 +95,7 @@ namespace hltsv {
         ProtectedQueue<Event*>          m_incoming_events;
         ProtectedQueue<MessagePassing::Buffer*> m_decision_queue;
         ProtectedQueue<Event*>          m_clear_queue;
-        Scheduler                       m_scheduler;
+        NodeSet                         m_nodes;
         EventMap                        m_events;
 
         daq::dynlibs::DynamicLibrary    *m_l1source_lib;

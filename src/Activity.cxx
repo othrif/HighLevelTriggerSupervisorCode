@@ -20,6 +20,7 @@
 #include "Event.h"
 #include "Node.h"
 #include "L1Source.h"
+#include "Scheduler.h"
 
 #include "boost/function.hpp"
 
@@ -86,7 +87,7 @@ namespace hltsv {
         }
 
         for(PortList::iterator it = efds.begin(); it != efds.end(); ++it) {
-            m_scheduler.add_node(new Node(*it, 8));
+            m_nodes.add_node(new Node(*it, 8));
         }
 
 
@@ -123,18 +124,19 @@ namespace hltsv {
         m_running = true;
         m_triggering = true;
 
-        m_thread_input    = new boost::thread(boost::bind(&Activity::handle_lvl1_input, this));
+        m_thread_input    = new boost::thread(&Activity::handle_lvl1_input, this);
 
+        size_t nodeCount = m_nodes.size()/8;
         for(size_t i = 0; i < 8; i++) {
-            m_thread_assign.push_back(new boost::thread(boost::bind(&Activity::assign_event, this)));
+            m_thread_assign.push_back(new boost::thread(&Activity::assign_event, this, nodeCount * i));
         }
 
         for(size_t i = 0; i < 8; i++) {
-            m_thread_decision.push_back(new boost::thread(boost::bind(&Activity::handle_decision, this)));
+            m_thread_decision.push_back(new boost::thread(&Activity::handle_decision, this));
         }
 
-        m_thread_timeout  = new boost::thread(boost::bind(&Activity::handle_timeouts, this));
-        m_thread_clears   = new boost::thread(boost::bind(&Activity::handle_clears, this));
+        m_thread_timeout  = new boost::thread(&Activity::handle_timeouts, this);
+        m_thread_clears   = new boost::thread(&Activity::handle_clears, this);
 
         return DC::OK;
     }
@@ -240,7 +242,7 @@ namespace hltsv {
             unsigned int  slots = 8;
             it >> slots;
 
-            if(Node *node = m_scheduler.find_node(id)) {
+            if(Node *node = m_nodes.find_node(id)) {
                 // existing node, assume reboot
                 node->reset(slots);
 
@@ -249,7 +251,7 @@ namespace hltsv {
                 // assume new node
                 if(Port *port = Port::find(id)) {
                     Node *node = new Node(port, slots);
-                    m_scheduler.add_node(node);
+                    m_nodes.add_node(node);
                     ERS_DEBUG(,1"Adding new node: " << id << " with " << slots << " slots");
                     m_stats.ProcessingNodesAdded++;
 
@@ -275,12 +277,14 @@ namespace hltsv {
         }
     }
 
-    void Activity::assign_event()
+    void Activity::assign_event(unsigned int offset)
     {
+        Scheduler scheduler(m_nodes, offset);
+
         while(m_running) {
             Event *event = 0;
             if(m_incoming_events.get(event)) {
-                if(Node *node = m_scheduler.select_node(event)) {
+                if(Node *node = scheduler.select_node(event)) {
 
                     add_event(event);
 

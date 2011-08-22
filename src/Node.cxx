@@ -10,11 +10,11 @@
 namespace hltsv {
 
     Node::Node(MessagePassing::Port *port, unsigned int slots)
-        : m_enabled(true),
-          m_slots(slots),
-          m_max_slots(slots),
+        : m_max_slots(slots),
           m_port(port)
     {
+        m_enabled = true;
+        m_slots = slots;
         ERS_PRECONDITION(port != 0);
         ERS_PRECONDITION(slots > 0);
     }
@@ -25,12 +25,18 @@ namespace hltsv {
 
     bool Node::allocate(Event *event)
     {
-        boost::mutex::scoped_lock lock(m_mutex);
+        // fast check
         if(m_enabled && m_slots > 0) {
-            m_slots--;
-            event->handled_by(this);
-            m_events.push_back(event);
-            return true;
+
+            boost::mutex::scoped_lock lock(m_mutex);
+
+            // have to check again !
+            if(m_enabled && m_slots > 0) {
+                m_slots--;
+                event->handled_by(this);
+                m_events.push_back(event);
+                return true;
+            }
         }
         return false;
     }
@@ -78,12 +84,12 @@ namespace hltsv {
     void Node::reset(unsigned int slots)
     {
         m_events.clear();
-        m_enabled = true;
         if(slots == 0) {
             m_slots   = m_max_slots;
         } else {
             m_slots = slots;
         }
+        m_enabled = true;
     }
 
     const Node::EventList& Node::events() const
