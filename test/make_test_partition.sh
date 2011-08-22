@@ -1,5 +1,5 @@
 #!/bin/bash
-REPOSITORY=/work/msu-pc7/rhauser/tdaq-nightly/installed
+REPOSITORY=$(dirname $(dirname $(pwd)))/installed
 pm_part_l2.py -p test_hltsv
 pm_set.py test_hltsv.data.xml <<EOF
 
