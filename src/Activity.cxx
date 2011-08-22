@@ -246,13 +246,13 @@ namespace hltsv {
                 // existing node, assume reboot
                 node->reset(slots);
 
-                ERS_DEBUG(1,"Resetting slots for existing node: " << id << " to " << slots);
+                ERS_LOG("Resetting slots for existing node: " << id << " to " << slots);
             } else {
                 // assume new node
                 if(Port *port = Port::find(id)) {
                     Node *node = new Node(port, slots);
                     m_nodes.add_node(node);
-                    ERS_DEBUG(,1"Adding new node: " << id << " with " << slots << " slots");
+                    ERS_LOG("Adding new node: " << id << " with " << slots << " slots");
                     m_stats.ProcessingNodesAdded++;
 
                 } else {
