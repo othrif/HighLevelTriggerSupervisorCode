@@ -2,38 +2,69 @@
 #include "Scheduler.h"
 #include "Node.h"
 
-#include <iterator>
-
 namespace hltsv {
 
-    Scheduler::Scheduler(NodeSet& m_nodes, unsigned int offset)
-        : m_nodes(m_nodes),
-          m_next(m_nodes.begin())
-    {
-        std::advance(m_next, offset);
-    }
+    Scheduler::~Scheduler()
+    {}
 
+    
     Node *Scheduler::select_node(Event *event)
     {
-        NodeSet::iterator it = m_next;
-
-        // this assumes that no nodes are added the
-        // NodeSet while we are scheduling, only
-        // disabled or enabled.
+        boost::mutex::scoped_lock lock(m_mutex);
+        Map::iterator it = m_next;
 
         while(true) {
             if(it == m_nodes.end()) {
                 it = m_nodes.begin();
             }
-
-            if((*it)->allocate(event)) {
-                Node *result = *it;
+            if(it->second->allocate(event)) {
+                Node *result = it->second;
                 ++it;
                 m_next = it;
                 return result;
             }
             ++it;
         }
+    }
+
+    void Scheduler::reset()
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        for(Map::iterator it = m_nodes.begin();
+            it != m_nodes.end();
+            ++it) {
+            it->second->reset();
+        }
+    }
+
+    void Scheduler::add_node(Node *node)
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        m_nodes[node->id()] = node;
+        m_next = m_nodes.begin();
+    }
+
+    void Scheduler::disable_node(MessagePassing::NodeID id)
+    {
+        if(Node *node = find_node(id)) {
+            node->disable();
+        }
+    }
+
+    void Scheduler::enable_node(MessagePassing::NodeID id)
+    {
+        if(Node *node = find_node(id)) {
+            node->enable();
+        }
+    }
+
+    Node *Scheduler::find_node(MessagePassing::NodeID id) const
+    {
+        Map::const_iterator it = m_nodes.find(id);
+        if(it != m_nodes.end()) {
+            return it->second;
+        }
+        return 0;
     }
 
 }

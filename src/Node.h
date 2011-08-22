@@ -3,7 +3,6 @@
 #define HLTSV_NODE_H_
 
 #include "msg/Types.h"
-#include "tbb/atomic.h"
 #include "boost/thread/mutex.hpp"
 
 #include <list>
@@ -39,12 +38,12 @@ namespace hltsv {
         const EventList& events() const;
 
     private:
-        tbb::atomic<bool>         m_enabled;
-        tbb::atomic<unsigned int> m_slots;
-        unsigned int              m_max_slots;
-        MessagePassing::Port      *m_port;
-        EventList                 m_events;
-        boost::mutex              m_mutex;
+        bool                 m_enabled;
+        unsigned int         m_slots;
+        unsigned int         m_max_slots;
+        MessagePassing::Port *m_port;
+        EventList            m_events;
+        boost::mutex         m_mutex;
     };
 }
 

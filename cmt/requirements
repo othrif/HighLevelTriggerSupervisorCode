@@ -21,13 +21,12 @@ use DFConfiguration
 use ttcpr
 use ac
 use hltinterface
-use tbb
 
 use Boost * TDAQCExternal
 
 private
 
-library hltsv          L1Source.cxx Activity.cxx Node.cxx Scheduler.cxx Event.cxx NodeSet.cxx
+library hltsv          L1Source.cxx Activity.cxx Node.cxx Scheduler.cxx Event.cxx
 macro hltsv_shlibflags "-lers -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon"
 
 application hltsv_main  hltsv_main.cxx
