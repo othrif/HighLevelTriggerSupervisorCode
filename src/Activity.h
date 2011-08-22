@@ -15,6 +15,8 @@
 #include "boost/thread/mutex.hpp"
 #include "boost/thread/thread.hpp"
 
+#include "TH1F.h"
+
 #include "HLTSV.h"
 
 namespace dcmessages {
@@ -86,6 +88,8 @@ namespace hltsv {
         void handle_timeouts();
         void handle_clears();
 
+        void update_rates();
+
     private:
 
         typedef std::map<uint32_t,Event*> EventMap;
@@ -103,6 +107,7 @@ namespace hltsv {
 
         hltsv::HLTSV                    m_stats;
         tdaq::sysmon::ISResource        *m_resource;
+        TH1F                            *m_rate;
 
         MessageConfiguration            m_msgconf;
         MessagePassing::Port            *m_ros_group;
@@ -116,6 +121,7 @@ namespace hltsv {
         std::vector<boost::thread*>     m_thread_decision;
         boost::thread                   *m_thread_timeout;
         boost::thread                   *m_thread_clears;
+        boost::thread                   *m_thread_update_rates;
 
         // master triger
         int                             m_triggerHoldCounter;

@@ -21,16 +21,18 @@ use DFConfiguration
 use ttcpr
 use ac
 use hltinterface
+use tbb
 
 use Boost * TDAQCExternal
+use ROOT  * DQMCExternal
 
 private
 
 library hltsv          L1Source.cxx Activity.cxx Node.cxx Scheduler.cxx Event.cxx
-macro hltsv_shlibflags "-lers -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon"
+macro hltsv_shlibflags "-lers -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon -lhltinterface -lhistmon"
 
 application hltsv_main  hltsv_main.cxx
-macro hltsv_mainlinkopts "-lers -lhltsv -lhistmon -lsysmonapps -lsysmon -lhltinterface"
+macro hltsv_mainlinkopts "-lers -lhltsv"
 macro hltsv_main_dependencies hltsv
 
 macro sw.repository.binary.hltsv_main:name         "HLT Supervisor"

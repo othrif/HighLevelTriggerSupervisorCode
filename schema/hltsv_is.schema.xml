@@ -79,7 +79,7 @@
 
 <oks-schema>
 
-<info name="" type="" num-of-includes="0" num-of-items="1" oks-format="schema" oks-version="oks-06-03-04 built &quot;Aug 18 2011&quot;" created-by="rhauser" created-on="msu-pc7.cern.ch" creation-time="20110818T115012" last-modified-by="rhauser" last-modified-on="msu-pc7.cern.ch" last-modification-time="20110818T115558"/>
+<info name="" type="" num-of-includes="0" num-of-items="1" oks-format="schema" oks-version="oks-06-03-04 built &quot;Aug 22 2011&quot;" created-by="rhauser" created-on="msu-pc7.cern.ch" creation-time="20110818T115012" last-modified-by="rhauser" last-modified-on="msu-pc7.cern.ch" last-modification-time="20110822T154544"/>
 
  <class name="HLTSV">
   <superclass name="Info"/>
@@ -91,6 +91,7 @@
   <attribute name="ProcessingNodesDisabled" type="u32" is-not-null="yes"/>
   <attribute name="ProcessingNodesEnabled" type="u32" is-not-null="yes"/>
   <attribute name="ProcessingNodesAdded" type="u32" is-not-null="yes"/>
+  <attribute name="Rate" type="float" is-not-null="yes"/>
  </class>
 
 </oks-schema>

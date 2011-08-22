@@ -16,6 +16,7 @@
 #include "dal/Partition.h"
 
 #include "sysmonapps/ISResource.h"
+#include "hltinterface/ITHistRegister.h"
 
 #include "Event.h"
 #include "Node.h"
@@ -24,6 +25,9 @@
 #include "boost/function.hpp"
 
 namespace hltsv {
+
+    const size_t Num_Assign = 4;
+    const size_t Num_Decision = 4;
 
     Activity::Activity()
         : m_input_thread(0),
@@ -103,6 +107,12 @@ namespace hltsv {
                                                           ac->get_instance()->getAppName(), this);
         }
 
+#if 0        
+        m_rate = new TH1F("ProcessedEventsRate","ProcessedEventsRate", 1000, 0., 200000.);
+
+        hltinterface::ITHistRegister::instance()->registerTObject("", "/DEBUG/HLTSV/ProcssedEventsRate", m_rate);
+#endif
+
         return DC::OK;
     }
 
@@ -125,16 +135,18 @@ namespace hltsv {
 
         m_thread_input    = new boost::thread(boost::bind(&Activity::handle_lvl1_input, this));
 
-        for(size_t i = 0; i < 8; i++) {
+        for(size_t i = 0; i < Num_Assign; i++) {
             m_thread_assign.push_back(new boost::thread(boost::bind(&Activity::assign_event, this)));
         }
 
-        for(size_t i = 0; i < 8; i++) {
+        for(size_t i = 0; i < Num_Decision; i++) {
             m_thread_decision.push_back(new boost::thread(boost::bind(&Activity::handle_decision, this)));
         }
 
         m_thread_timeout  = new boost::thread(boost::bind(&Activity::handle_timeouts, this));
         m_thread_clears   = new boost::thread(boost::bind(&Activity::handle_clears, this));
+
+        m_thread_update_rates = new boost::thread(boost::bind(&Activity::update_rates, this));
 
         return DC::OK;
     }
@@ -163,13 +175,13 @@ namespace hltsv {
         m_thread_input->join();
         delete m_thread_input;
 
-        for(size_t i = 0; i < 8; i++) {
+        for(size_t i = 0; i < Num_Assign; i++) {
             m_thread_assign[i]->join();
             delete m_thread_assign[i];
         }
         m_thread_assign.clear();
 
-        for(size_t i = 0; i < 8; i++) {
+        for(size_t i = 0; i < Num_Decision; i++) {
             m_thread_decision[i]->join();
             delete m_thread_decision[i];
         }
@@ -180,6 +192,9 @@ namespace hltsv {
 
         m_thread_clears->join();
         delete m_thread_clears;
+
+        m_thread_update_rates->join();
+        delete m_thread_update_rates;
 
         return DC::OK;
     }
@@ -332,9 +347,14 @@ namespace hltsv {
                 // ERS_LOG("Got decision for event " << lvl1_id);
 
                 if(Event *event = find_event(lvl1_id)) {
-                    m_stats.ProcessedEvents++;
-                    event->done();
-                    m_clear_queue.put(event);
+                    boost::mutex::scoped_lock lock(m_mutex);
+                    if(event->active()) {
+                        event->done();
+                        m_stats.ProcessedEvents++;
+                        m_clear_queue.put(event);
+                    } else {
+                        ERS_LOG("Late reply for event" << lvl1_id);
+                    }
                 } else {
                     // oops, unknown lvl1 id ???
                     ERS_LOG("Unknown level 1 ID: " << lvl1_id);
@@ -353,6 +373,8 @@ namespace hltsv {
         RealTimeClock clock;
 
         while(m_running) {
+            sleep(1);
+
             daq::clocks::Time now = clock.time();
 
             {
@@ -382,7 +404,6 @@ namespace hltsv {
                 }
             }
 
-            usleep(10000);
         }
     }
 
@@ -416,6 +437,16 @@ namespace hltsv {
         if(to_clear.size() > 0) {
             dcmessages::DFM_Clear_Msg msg(to_clear, 0, 0);
             msg.send(m_ros_group);
+        }
+    }
+
+    void Activity::update_rates()
+    {
+        
+        while(m_running) {
+            uint64_t oldProcessedEvents = m_stats.ProcessedEvents;
+            sleep(5);
+            m_stats.Rate = (m_stats.ProcessedEvents - oldProcessedEvents)/5.0;
         }
     }
 
