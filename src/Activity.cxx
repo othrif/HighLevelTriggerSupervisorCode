@@ -31,7 +31,7 @@ namespace hltsv {
 
     Activity::Activity()
         : m_input_thread(0),
-          m_incoming_events(4096),
+          m_incoming_events(64000),
           m_l1source_lib(0),
           m_l1source(0),
           m_resource(0),
@@ -121,6 +121,7 @@ namespace hltsv {
 
     DC::StatusWord Activity::act_connect()
     {
+        MessagePassing::Port::connect(m_msgconf.create_by_group("L2PU"));
         m_input_thread->start();
         return DC::OK;
     }
