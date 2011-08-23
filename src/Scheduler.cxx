@@ -5,7 +5,12 @@
 namespace hltsv {
 
     Scheduler::~Scheduler()
-    {}
+    {
+        for(Map::iterator it = m_nodes.begin(); it != m_nodes.end(); ++it) {
+            delete it->second;
+        }
+        // clear is done on destruction anyway
+    }
 
     
     Node *Scheduler::select_node(Event *event)

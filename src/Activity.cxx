@@ -26,17 +26,22 @@
 
 namespace hltsv {
 
-    const size_t Num_Assign = 4;
-    const size_t Num_Decision = 4;
+    const size_t Num_Assign = 8;
+    const size_t Num_Decision = 8;
 
     Activity::Activity()
         : m_input_thread(0),
-          m_incoming_events(1024),
+          m_incoming_events(4096),
           m_l1source_lib(0),
           m_l1source(0),
+          m_resource(0),
+          m_time(0),
           m_ros_group(0),
           m_running(false),
           m_triggering(false),
+          m_thread_input(0),
+          m_thread_timeout(0),
+          m_thread_clears(0),
           m_triggerHoldCounter(0)
     {
     }
@@ -107,11 +112,9 @@ namespace hltsv {
                                                           ac->get_instance()->getAppName(), this);
         }
 
-#if 0        
-        m_rate = new TH1F("ProcessedEventsRate","ProcessedEventsRate", 1000, 0., 200000.);
+        m_time = new TH1F("Time","Time", 2000, 0., 20000.);
 
-        hltinterface::ITHistRegister::instance()->registerTObject("", "/DEBUG/HLTSV/ProcssedEventsRate", m_rate);
-#endif
+        hltinterface::ITHistRegister::instance()->registerTObject("", "/DEBUG/HLTSV/Time", m_time);
 
         return DC::OK;
     }
@@ -133,20 +136,21 @@ namespace hltsv {
         m_running = true;
         m_triggering = true;
 
-        m_thread_input    = new boost::thread(boost::bind(&Activity::handle_lvl1_input, this));
+        m_thread_input    = new boost::thread(&Activity::handle_lvl1_input, this);
 
         for(size_t i = 0; i < Num_Assign; i++) {
-            m_thread_assign.push_back(new boost::thread(boost::bind(&Activity::assign_event, this)));
+            m_thread_assign.push_back(new boost::thread(&Activity::assign_event, this));
         }
 
         for(size_t i = 0; i < Num_Decision; i++) {
-            m_thread_decision.push_back(new boost::thread(boost::bind(&Activity::handle_decision, this)));
+            m_thread_decision.push_back(new boost::thread(&Activity::handle_decision, this));
         }
 
-        m_thread_timeout  = new boost::thread(boost::bind(&Activity::handle_timeouts, this));
-        m_thread_clears   = new boost::thread(boost::bind(&Activity::handle_clears, this));
+        m_thread_timeout  = new boost::thread(&Activity::handle_timeouts, this);
+        m_thread_clears   = new boost::thread(&Activity::handle_clears, this);
 
-        m_thread_update_rates = new boost::thread(boost::bind(&Activity::update_rates, this));
+        m_thread_update_rates = new boost::thread(&Activity::update_rates, this);
+
 
         return DC::OK;
     }
@@ -223,6 +227,10 @@ namespace hltsv {
         delete m_resource;
         m_resource = 0;
 
+        hltinterface::ITHistRegister::instance()->releaseTObject("", "/DEBUG/HLTSV/Time");
+        delete m_time;
+        m_time = 0;
+
         return DC::OK;
     }
 
@@ -297,7 +305,11 @@ namespace hltsv {
             if(m_incoming_events.get(event)) {
                 if(Node *node = m_scheduler.select_node(event)) {
 
-                    add_event(event);
+                    {
+                        EventMap::accessor access;
+                        m_events.insert(access, event->lvl1_id());
+                        access->second = event;
+                    }
 
                     ERS_DEBUG(3,"Assigned event " << event->lvl1_id() << " to node " << node->id());
 
@@ -312,7 +324,9 @@ namespace hltsv {
 
                         // re-allocate to other node...
                         ERS_LOG("Sending event " << event->lvl1_id() << " failed");
-                    } 
+                    } else {
+                        m_timeout_queue.put(event->lvl1_id());
+                    }
                     
                 } else {
                     // pretty bad...
@@ -332,6 +346,8 @@ namespace hltsv {
 
     void Activity::handle_decision()
     {
+        RealTimeClock clock;
+
         while(m_running) {
             MessagePassing::Buffer *buffer;
             if(m_decision_queue.get(buffer)) {
@@ -346,8 +362,10 @@ namespace hltsv {
 
                 // ERS_LOG("Got decision for event " << lvl1_id);
 
-                if(Event *event = find_event(lvl1_id)) {
-                    boost::mutex::scoped_lock lock(m_mutex);
+                EventMap::accessor access;
+                if(m_events.find(access, lvl1_id)) {
+                    ERS_ASSERT_MSG(access->second != 0, "Invalid event pointer");
+                    Event *event = access->second;
                     if(event->active()) {
                         event->done();
                         m_stats.ProcessedEvents++;
@@ -355,6 +373,8 @@ namespace hltsv {
                     } else {
                         ERS_LOG("Late reply for event" << lvl1_id);
                     }
+                    Time diff = clock.time() - event->assigned();
+                    m_time->Fill(diff.as_milliseconds());
                 } else {
                     // oops, unknown lvl1 id ???
                     ERS_LOG("Unknown level 1 ID: " << lvl1_id);
@@ -372,38 +392,54 @@ namespace hltsv {
     {
         RealTimeClock clock;
 
+        std::list<uint32_t> events;
+
         while(m_running) {
-            sleep(1);
+
+            usleep(10000);
+
+            // get more events to check
+            uint32_t event_id;
+            while(m_timeout_queue.try_get(event_id)) {
+                events.push_back(event_id);
+            }
 
             daq::clocks::Time now = clock.time();
 
-            {
-                boost::mutex::scoped_lock lock(m_mutex);
-                for(EventMap::iterator it = m_events.begin(); it != m_events.end(); ++it) {
-                    Event *event = it->second;
-
+            for(std::list<uint32_t>::iterator it = events.begin(); it != events.end(); ) {
+                
+                EventMap::const_accessor access;
+                if(m_events.find(access, (*it))) {
+                    Event *event = access->second;
+                
                     ERS_ASSERT_MSG(event != 0, "Invalid Event pointer");
-
+                
+                    // already been handled
                     if(!event->active()) {
+                        it = events.erase(it);
                         continue;
                     }
-
-                    if((now - event->assigned()).as_milliseconds() > 10000) {
+                
+                    if((now - event->assigned()).as_milliseconds() > 100000) {
                         // do something.
                         // but what ? There is no SFI to ask to build the event.
                         // If we re-assign there must be a way to tell the node that
                         // it should simply build the event, not process it.
                         ERS_LOG("Timeout for event " << event->lvl1_id());
-
+                        
                         m_stats.Timeouts++;
-
                         event->done();
                         m_clear_queue.put(event);
+                        it = events.erase(it);
 
+                    } else {
+                        ++it;
                     }
+                } else {
+                    // no longer in global map
+                    it = events.erase(it);
                 }
             }
-
         }
     }
 
@@ -418,7 +454,8 @@ namespace hltsv {
 
                 to_clear.push_back(event->lvl1_id());
 
-                delete_event(event->lvl1_id());
+                m_events.erase(event->lvl1_id());
+                delete event;
 
                 if(to_clear.size() >= 100) {  // or timeout...
                     ERS_DEBUG(3,"Sending clear with " << to_clear.size() << " events");
@@ -442,43 +479,11 @@ namespace hltsv {
 
     void Activity::update_rates()
     {
-        
         while(m_running) {
             uint64_t oldProcessedEvents = m_stats.ProcessedEvents;
             sleep(5);
             m_stats.Rate = (m_stats.ProcessedEvents - oldProcessedEvents)/5.0;
         }
-    }
-
-    Event *Activity::find_event(uint32_t lvl1_id) const
-    {
-        boost::mutex::scoped_lock lock(m_mutex);
-        EventMap::const_iterator it = m_events.find(lvl1_id);
-        if(it != m_events.end()) {
-            ERS_ASSERT_MSG(it->second != 0, "Invalid event pointer");
-            return it->second;
-        } else {
-            return 0;
-        }
-    }
-
-    void  Activity::delete_event(uint32_t lvl1_id)
-    {
-        boost::mutex::scoped_lock lock(m_mutex);
-        EventMap::iterator it = m_events.find(lvl1_id);
-        if(it != m_events.end()) {
-            ERS_ASSERT_MSG(it->second != 0, "Invalid event pointer");
-            delete it->second;
-            m_events.erase(it);
-        } else {
-            ERS_LOG("Invalid l1 id in delete = " << lvl1_id);
-        }
-    }
-     
-    void  Activity::add_event(Event *event)
-    {
-        boost::mutex::scoped_lock lock(m_mutex);
-        m_events[event->lvl1_id()] = event;
     }
 
     /**

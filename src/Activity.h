@@ -15,6 +15,8 @@
 #include "boost/thread/mutex.hpp"
 #include "boost/thread/thread.hpp"
 
+#include "tbb/concurrent_hash_map.h"
+
 #include "TH1F.h"
 
 #include "HLTSV.h"
@@ -64,7 +66,6 @@ namespace hltsv {
         DC::StatusWord act_disconnect();
         DC::StatusWord act_exit();
 
-
         uint32_t hold();
         void resume();
         void setL1Prescales(uint32_t l1p);
@@ -77,26 +78,23 @@ namespace hltsv {
     private:
         void handle_announce(MessagePassing::Buffer *buffer);
 
-        Event *find_event(uint32_t lvl1_id) const;
-        void  delete_event(uint32_t lvl1_id);
-        void  add_event(Event *event);
-
         // these run as separate threads
         void handle_lvl1_input();
         void assign_event();
         void handle_decision();
         void handle_timeouts();
         void handle_clears();
-
         void update_rates();
 
     private:
 
-        typedef std::map<uint32_t,Event*> EventMap;
+        // typedef std::map<uint32_t,Event*> EventMap;
+        typedef tbb::concurrent_hash_map<uint32_t,Event*> EventMap;
 
         MessageInput::MessageDispatcher m_dispatcher;
         MessageInput::InputThread       *m_input_thread;
         ProtectedQueue<Event*>          m_incoming_events;
+        ProtectedQueue<uint32_t>        m_timeout_queue;
         ProtectedQueue<MessagePassing::Buffer*> m_decision_queue;
         ProtectedQueue<Event*>          m_clear_queue;
         Scheduler                       m_scheduler;
@@ -107,7 +105,7 @@ namespace hltsv {
 
         hltsv::HLTSV                    m_stats;
         tdaq::sysmon::ISResource        *m_resource;
-        TH1F                            *m_rate;
+        TH1F                            *m_time;
 
         MessageConfiguration            m_msgconf;
         MessagePassing::Port            *m_ros_group;
