@@ -12,7 +12,6 @@
 
 #include "Scheduler.h"
 
-#include "boost/thread/mutex.hpp"
 #include "boost/thread/thread.hpp"
 
 #include "tbb/concurrent_hash_map.h"
@@ -109,7 +108,6 @@ namespace hltsv {
 
         MessageConfiguration            m_msgconf;
         MessagePassing::Port            *m_ros_group;
-        mutable boost::mutex            m_mutex;
 
         bool                            m_running;
         bool                            m_triggering;

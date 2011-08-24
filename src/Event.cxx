@@ -15,8 +15,6 @@ namespace hltsv {
           m_node(0)
     {
         ERS_ASSERT_MSG(l1 != 0, "No LVL1Result");
-        RealTimeClock clock;
-        m_assigned = clock.time();
     }
 
     Event::~Event()
@@ -32,6 +30,9 @@ namespace hltsv {
     void Event::handled_by(Node *node)
     {
         m_node = node;
+
+        static RealTimeClock clock;
+        m_assigned = clock.time();
     }
     
     Node* Event::handled_by() const

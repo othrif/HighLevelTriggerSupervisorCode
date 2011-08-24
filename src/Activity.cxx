@@ -370,12 +370,12 @@ namespace hltsv {
                     if(event->active()) {
                         event->done();
                         m_stats.ProcessedEvents++;
+                        Time diff = clock.time() - event->assigned();
+                        m_time->Fill(diff.as_milliseconds());
                         m_clear_queue.put(event);
                     } else {
                         ERS_LOG("Late reply for event" << lvl1_id);
                     }
-                    Time diff = clock.time() - event->assigned();
-                    m_time->Fill(diff.as_milliseconds());
                 } else {
                     // oops, unknown lvl1 id ???
                     ERS_LOG("Unknown level 1 ID: " << lvl1_id);
