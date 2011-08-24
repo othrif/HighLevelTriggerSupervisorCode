@@ -26,8 +26,7 @@
 
 namespace hltsv {
 
-    const size_t Num_Assign = 8;
-    const size_t Num_Decision = 8;
+    const size_t Num_Assign = 12;
 
     Activity::Activity()
         : m_input_thread(0),
@@ -40,8 +39,8 @@ namespace hltsv {
           m_running(false),
           m_triggering(false),
           m_thread_input(0),
-          m_thread_timeout(0),
-          m_thread_clears(0),
+          m_thread_decision(0),
+          m_thread_update_rates(0),
           m_triggerHoldCounter(0)
     {
     }
@@ -143,12 +142,7 @@ namespace hltsv {
             m_thread_assign.push_back(new boost::thread(&Activity::assign_event, this));
         }
 
-        for(size_t i = 0; i < Num_Decision; i++) {
-            m_thread_decision.push_back(new boost::thread(&Activity::handle_decision, this));
-        }
-
-        m_thread_timeout  = new boost::thread(&Activity::handle_timeouts, this);
-        m_thread_clears   = new boost::thread(&Activity::handle_clears, this);
+        m_thread_decision = new boost::thread(&Activity::handle_decision, this);
 
         m_thread_update_rates = new boost::thread(&Activity::update_rates, this);
 
@@ -175,7 +169,6 @@ namespace hltsv {
 
         m_incoming_events.wakeup();
         m_decision_queue.wakeup();
-        m_clear_queue.wakeup();
 
         m_thread_input->join();
         delete m_thread_input;
@@ -186,17 +179,8 @@ namespace hltsv {
         }
         m_thread_assign.clear();
 
-        for(size_t i = 0; i < Num_Decision; i++) {
-            m_thread_decision[i]->join();
-            delete m_thread_decision[i];
-        }
-        m_thread_decision.clear();
-
-        m_thread_timeout->join();
-        delete m_thread_timeout;
-
-        m_thread_clears->join();
-        delete m_thread_clears;
+        m_thread_decision->join();
+        delete m_thread_decision;
 
         m_thread_update_rates->join();
         delete m_thread_update_rates;
@@ -272,11 +256,14 @@ namespace hltsv {
             } else {
                 // assume new node
                 if(Port *port = Port::find(id)) {
-                    Node *node = new Node(port, slots);
-                    m_scheduler.add_node(node);
-                    ERS_DEBUG(,1"Adding new node: " << id << " with " << slots << " slots");
-                    m_stats.ProcessingNodesAdded++;
-
+                    if(!m_running) {
+                        Node *node = new Node(port, slots);
+                        m_scheduler.add_node(node);
+                        ERS_DEBUG(,1"Adding new node: " << id << " with " << slots << " slots");
+                        m_stats.ProcessingNodesAdded++;
+                    } else {
+                        ERS_LOG("Ignoring new node while running: " << id);
+                    }
                 } else {
                     // error: no such Port
                     ERS_LOG("Unknown message passing ID: " << id);
@@ -301,22 +288,35 @@ namespace hltsv {
 
     void Activity::assign_event()
     {
+        RealTimeClock clock;
+        std::list<uint32_t> events;
+        Time last_check = clock.time();
+
         while(m_running) {
             Event *event = 0;
             if(m_incoming_events.get(event)) {
-                if(Node *node = m_scheduler.select_node(event)) {
 
-                    {
-                        EventMap::accessor access;
-                        m_events.insert(access, event->lvl1_id());
-                        access->second = event;
-                    }
+                while(Node *node = m_scheduler.select_node(event)) {
 
                     ERS_DEBUG(3,"Assigned event " << event->lvl1_id() << " to node " << node->id());
 
                     m_stats.AssignedEvents++;
 
-                    if(!event->l1result()->send(node->port(), 0)) {
+                    if(event->l1result()->send(node->port(), 0)) {
+
+                        // success
+
+                        // enter in global table
+                        EventMap::accessor access;
+                        m_events.insert(access, event->lvl1_id());
+                        access->second = event;
+
+                        // and in local list
+                        events.push_back(event->lvl1_id());
+
+                        break;
+                    } else {
+
                         // handle failed sending
                         node->disable();
                         node->free(event);
@@ -324,25 +324,60 @@ namespace hltsv {
                         m_stats.ProcessingNodesDisabled++;
 
                         // re-allocate to other node...
-                        ERS_LOG("Sending event " << event->lvl1_id() << " failed");
-                    } else {
-                        m_timeout_queue.put(event->lvl1_id());
+                        ERS_LOG("Sending event " << event->lvl1_id() << "to node" << node->id() << " failed, re-allocating");
                     }
-                    
-                } else {
-                    // pretty bad...
-                    // fatal()
-                    ERS_LOG("No node available ! ");
-                    delete event;
-                    break;
-                }
-            } else {
-                break;
+                        
+                } // scheduler never return NULL
             }
+
+            // timeout checking
+            daq::clocks::Time now = clock.time();
+
+            if((now - last_check).as_seconds() > 1.0) {
+
+                for(std::list<uint32_t>::iterator it = events.begin(); it != events.end(); ) {
+                    
+                    EventMap::const_accessor access;
+                    if(m_events.find(access, (*it))) {
+                        Event *event = access->second;
+                        
+                        ERS_ASSERT_MSG(event != 0, "Invalid Event pointer");
+                        
+                        // already been handled
+                        if(!event->active()) {
+                            it = events.erase(it);
+                            continue;
+                        }
+                        
+                        if((now - event->assigned()).as_milliseconds() > 100000) {
+                            // do something.
+                            // but what ? There is no SFI to ask to build the event.
+                            // If we re-assign there must be a way to tell the node that
+                            // it should simply build the event, not process it.
+                            ERS_LOG("Timeout for event " << event->lvl1_id());
+                            
+                            m_stats.Timeouts++;
+                            event->done();
+                            access.release();
+                            add_event_to_clear(event);
+                            it = events.erase(it);
+                            
+                        } else {
+                            ++it;
+                        }
+                    } else {
+                        // no longer in global map, delete in our list
+                        it = events.erase(it);
+                    }
+                }
+                last_check = clock.time();
+            }
+
         }
 
         ERS_LOG("Events in input queue: " << m_incoming_events.size());
         m_incoming_events.clear(ProtectedQueue<Event*>::deleter());
+
     }
 
     void Activity::handle_decision()
@@ -350,6 +385,7 @@ namespace hltsv {
         RealTimeClock clock;
 
         while(m_running) {
+
             MessagePassing::Buffer *buffer;
             if(m_decision_queue.get(buffer)) {
                 MessagePassing::Buffer::iterator it = buffer->begin();
@@ -372,7 +408,8 @@ namespace hltsv {
                         m_stats.ProcessedEvents++;
                         Time diff = clock.time() - event->assigned();
                         m_time->Fill(diff.as_milliseconds());
-                        m_clear_queue.put(event);
+                        access.release();
+                        add_event_to_clear(event);
                     } else {
                         ERS_LOG("Late reply for event" << lvl1_id);
                     }
@@ -380,102 +417,38 @@ namespace hltsv {
                     // oops, unknown lvl1 id ???
                     ERS_LOG("Unknown level 1 ID: " << lvl1_id);
                 }
-            } else {
-                // wakeup
-                break;
             }
         }
 
         m_decision_queue.clear(ProtectedQueue<MessagePassing::Buffer*>::deleter());
+
     }
 
-    void Activity::handle_timeouts()
+    void Activity::add_event_to_clear(Event *event)
     {
-        RealTimeClock clock;
+        boost::mutex::scoped_lock lock(m_clear_mutex);
+        m_to_clear.push_back(event->lvl1_id());
 
-        std::list<uint32_t> events;
+        m_events.erase(event->lvl1_id());
+        delete event;
 
-        while(m_running) {
+        if(m_to_clear.size() >= 100) {  // or timeout...
+            ERS_DEBUG(3,"Sending clear with " << m_to_clear.size() << " events");
+            dcmessages::DFM_Clear_Msg msg(m_to_clear, 0, 0);
+            m_to_clear.clear();
+            lock.unlock();
 
-            usleep(10000);
-
-            // get more events to check
-            uint32_t event_id;
-            while(m_timeout_queue.try_get(event_id)) {
-                events.push_back(event_id);
-            }
-
-            daq::clocks::Time now = clock.time();
-
-            for(std::list<uint32_t>::iterator it = events.begin(); it != events.end(); ) {
-                
-                EventMap::const_accessor access;
-                if(m_events.find(access, (*it))) {
-                    Event *event = access->second;
-                
-                    ERS_ASSERT_MSG(event != 0, "Invalid Event pointer");
-                
-                    // already been handled
-                    if(!event->active()) {
-                        it = events.erase(it);
-                        continue;
-                    }
-                
-                    if((now - event->assigned()).as_milliseconds() > 100000) {
-                        // do something.
-                        // but what ? There is no SFI to ask to build the event.
-                        // If we re-assign there must be a way to tell the node that
-                        // it should simply build the event, not process it.
-                        ERS_LOG("Timeout for event " << event->lvl1_id());
-                        
-                        m_stats.Timeouts++;
-                        event->done();
-                        m_clear_queue.put(event);
-                        it = events.erase(it);
-
-                    } else {
-                        ++it;
-                    }
-                } else {
-                    // no longer in global map
-                    it = events.erase(it);
-                }
-            }
-        }
-    }
-
-    void Activity::handle_clears()
-    {
-        std::vector<LVL1ID> to_clear;
-
-        while(m_running) {
-
-            Event *event = 0;
-            if(m_clear_queue.get(event)) {
-
-                to_clear.push_back(event->lvl1_id());
-
-                m_events.erase(event->lvl1_id());
-                delete event;
-
-                if(to_clear.size() >= 100) {  // or timeout...
-                    ERS_DEBUG(3,"Sending clear with " << to_clear.size() << " events");
-                    dcmessages::DFM_Clear_Msg msg(to_clear, 0, 0);
-                    if(!msg.send(m_ros_group)) {
-                        ERS_LOG("Problem sending clears");
-                    }
-                    to_clear.clear();
-                }
-            } else {
-                // wakeup
-                break;
+            if(!msg.send(m_ros_group)) {
+                ERS_LOG("Problem sending clears");
             }
         }
 
+#if 0
         if(to_clear.size() > 0) {
             dcmessages::DFM_Clear_Msg msg(to_clear, 0, 0);
             msg.send(m_ros_group);
         }
+#endif
     }
 
     void Activity::update_rates()

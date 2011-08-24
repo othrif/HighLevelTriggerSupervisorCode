@@ -5,7 +5,7 @@
 #include "msg/Types.h"
 #include "boost/thread/mutex.hpp"
 
-#include <list>
+#include <vector>
 
 namespace MessagePassing {
     class Port;
@@ -33,7 +33,7 @@ namespace hltsv {
 
         void reset(unsigned int slots = 0);
 
-        typedef std::list<Event*> EventList;
+        typedef std::vector<Event*> EventList;
 
         const EventList& events() const;
 

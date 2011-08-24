@@ -13,6 +13,7 @@
 #include "Scheduler.h"
 
 #include "boost/thread/thread.hpp"
+#include "boost/thread/mutex.hpp"
 
 #include "tbb/concurrent_hash_map.h"
 
@@ -81,9 +82,11 @@ namespace hltsv {
         void handle_lvl1_input();
         void assign_event();
         void handle_decision();
-        void handle_timeouts();
-        void handle_clears();
         void update_rates();
+
+        // helper functions
+        void handle_timeouts(std::list<Event*>& events);
+        void add_event_to_clear(Event *event);
 
     private:
 
@@ -93,9 +96,7 @@ namespace hltsv {
         MessageInput::MessageDispatcher m_dispatcher;
         MessageInput::InputThread       *m_input_thread;
         ProtectedQueue<Event*>          m_incoming_events;
-        ProtectedQueue<uint32_t>        m_timeout_queue;
         ProtectedQueue<MessagePassing::Buffer*> m_decision_queue;
-        ProtectedQueue<Event*>          m_clear_queue;
         Scheduler                       m_scheduler;
         EventMap                        m_events;
 
@@ -114,10 +115,11 @@ namespace hltsv {
 
         boost::thread                   *m_thread_input;
         std::vector<boost::thread*>     m_thread_assign;
-        std::vector<boost::thread*>     m_thread_decision;
-        boost::thread                   *m_thread_timeout;
-        boost::thread                   *m_thread_clears;
+        boost::thread                   *m_thread_decision;
         boost::thread                   *m_thread_update_rates;
+
+        boost::mutex                    m_clear_mutex;
+        std::vector<uint32_t>           m_to_clear;
 
         // master triger
         int                             m_triggerHoldCounter;

@@ -13,7 +13,8 @@ namespace hltsv {
         : m_enabled(true),
           m_slots(slots),
           m_max_slots(slots),
-          m_port(port)
+          m_port(port),
+          m_events(slots,0)
     {
         ERS_PRECONDITION(port != 0);
         ERS_PRECONDITION(slots > 0);
@@ -29,7 +30,9 @@ namespace hltsv {
         if(m_enabled && m_slots > 0) {
             m_slots--;
             event->handled_by(this);
-            m_events.push_back(event);
+            EventList::iterator it = std::find(m_events.begin(), m_events.end(), (Event *)0);
+            ERS_ASSERT_MSG(it != m_events.end(), "No free slot in event list");
+            *it = event;
             return true;
         }
         return false;
@@ -39,12 +42,8 @@ namespace hltsv {
     {
         boost::mutex::scoped_lock lock(m_mutex);
         EventList::iterator it = std::find(m_events.begin(), m_events.end(), event);
-        if(it != m_events.end()) {
-            m_events.erase(it);
-        } else {
-            // fatal
-            ERS_LOG("Event not in Node's list" );
-        }
+        ERS_ASSERT_MSG(it != m_events.end(), "Event not in Node's list");
+        *it = 0;
         m_slots++;
         ERS_ASSERT_MSG(m_slots <= m_max_slots, "More calls to free() than allocate()")
     }
@@ -77,13 +76,15 @@ namespace hltsv {
 
     void Node::reset(unsigned int slots)
     {
-        m_events.clear();
-        m_enabled = true;
+        boost::mutex::scoped_lock lock(m_mutex);
         if(slots == 0) {
             m_slots   = m_max_slots;
         } else {
             m_slots = slots;
         }
+        m_events.clear();
+        m_events.resize(m_slots, 0);
+        m_enabled = true;
     }
 
     const Node::EventList& Node::events() const
