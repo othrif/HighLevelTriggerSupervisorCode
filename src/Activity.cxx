@@ -1,6 +1,8 @@
 
 #include "Activity.h"
 
+#include <stdlib.h>
+
 #include "dynlibs/DynamicLibrary.h"
 #include "dcmessages/Messages.h"
 #include "dcmessages/LVL1Result.h"
@@ -38,6 +40,7 @@ namespace hltsv {
           m_ros_group(0),
           m_running(false),
           m_triggering(false),
+          m_num_assign_threads(Num_Assign),
           m_thread_input(0),
           m_thread_decision(0),
           m_thread_update_rates(0),
@@ -65,7 +68,7 @@ namespace hltsv {
 
         try {
             m_l1source_lib = new DynamicLibrary(lib_name);
-            if(L1Source::creator_t make = m_l1source_lib->function<L1Source::creator_t>("create_source")) {
+            if(L1Source::creator_t make = (L1Source::creator_t)m_l1source_lib->symbol("create_source")) {
                 m_l1source = make(source_type, *conf);
                 m_l1source->preset();
             } else {
@@ -97,7 +100,6 @@ namespace hltsv {
             m_scheduler.add_node(new Node(*it, 8));
         }
 
-
         m_stats.LVL1Events = m_stats.AssignedEvents = m_stats.ProcessedEvents = m_stats.Timeouts = 
             m_stats.ProcessingNodesInitial = m_stats.ProcessingNodesDisabled = m_stats.ProcessingNodesEnabled =
             m_stats.ProcessingNodesAdded = 0;
@@ -114,6 +116,10 @@ namespace hltsv {
         m_time = new TH1F("Time","Time", 2000, 0., 20000.);
 
         hltinterface::ITHistRegister::instance()->registerTObject("", "/DEBUG/HLTSV/Time", m_time);
+
+        if(getenv("NUM_ASSIGN_THREADS")) {
+            m_num_assign_threads = strtol(getenv("NUM_ASSIGN_THREADS"),0,0);
+        }
 
         return DC::OK;
     }
@@ -138,7 +144,7 @@ namespace hltsv {
 
         m_thread_input    = new boost::thread(&Activity::handle_lvl1_input, this);
 
-        for(size_t i = 0; i < Num_Assign; i++) {
+        for(size_t i = 0; i < m_num_assign_threads; i++) {
             m_thread_assign.push_back(new boost::thread(&Activity::assign_event, this));
         }
 
@@ -173,7 +179,7 @@ namespace hltsv {
         m_thread_input->join();
         delete m_thread_input;
 
-        for(size_t i = 0; i < Num_Assign; i++) {
+        for(size_t i = 0; i < m_num_assign_threads; i++) {
             m_thread_assign[i]->join();
             delete m_thread_assign[i];
         }

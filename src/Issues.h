@@ -4,6 +4,10 @@
 
 #include "ers/Issue.h"
 
+#ifndef ERS_EMPTY
+#define ERS_EMPTY /* */
+#endif
+
 ERS_DECLARE_ISSUE( 	hltsv, // namespace
 			Issue, // issue class name
 			" HLT Supervisor Issue "

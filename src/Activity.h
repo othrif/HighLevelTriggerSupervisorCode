@@ -113,6 +113,7 @@ namespace hltsv {
         bool                            m_running;
         bool                            m_triggering;
 
+        unsigned int                    m_num_assign_threads;
         boost::thread                   *m_thread_input;
         std::vector<boost::thread*>     m_thread_assign;
         boost::thread                   *m_thread_decision;

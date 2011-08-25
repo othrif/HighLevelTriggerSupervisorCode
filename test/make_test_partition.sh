@@ -16,7 +16,7 @@ pm_set.py test_hltsv.data.xml <<EOF
   HLTSVConf@DC_ISResourceUpdate.delay = 10
   HLTSVConf@DC_ISResourceUpdate.activeOnNodes = [ "L2SV" ]
 
-  DCAppConf-1@DCApplicationConfig.refDC_ISResourceUpdate += [ HLTSVConf@DC_ISResourceUpdate ]
+  DCApplicationConfig-1@DCApplicationConfig.refDC_ISResourceUpdate += [ HLTSVConf@DC_ISResourceUpdate ]
 
   L2SV-1@L2SVApplication.Program = hltsv_main@Binary
   L2SV-1@L2SVApplication.ReceiveMulticast = True

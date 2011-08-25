@@ -32,7 +32,7 @@ library hltsv          L1Source.cxx Activity.cxx Node.cxx Scheduler.cxx Event.cx
 macro hltsv_shlibflags "-lers -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon -lhltinterface -lhistmon"
 
 application hltsv_main  hltsv_main.cxx
-macro hltsv_mainlinkopts "-lers -lhltsv"
+macro hltsv_mainlinkopts "-lers -lhltsv -ltbb"
 macro hltsv_main_dependencies hltsv
 
 macro sw.repository.binary.hltsv_main:name         "HLT Supervisor"
@@ -66,7 +66,7 @@ macro svl1ltp_dependencies hltsv
 # tests
 
 application test_l1source ../test/test_l1source.cxx
-macro test_l1sourcelinkopts "-lers -lhltsv -lconfig -ldynlibs -ldaq-df-dal"
+macro test_l1sourcelinkopts "-lers -lhltsv -lconfig -ldynlibs -ldaq-df-dal -ltbb"
 macro test_l1source_dependencies hltsv
 
 application testDCM ../test/testDCM.cxx
