@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "dynlibs/DynamicLibrary.h"
+#include "clocks/Clock.h"
 #include "dcmessages/Messages.h"
 #include "dcmessages/LVL1Result.h"
 #include "dcmessages/DFM_Clear_Msg.h"
@@ -31,13 +32,13 @@ namespace hltsv {
     const size_t Num_Assign = 12;
 
     Activity::Activity()
-        : m_input_thread(0),
-          m_incoming_events(64000),
+        : m_incoming_events(64000),
           m_l1source_lib(0),
           m_l1source(0),
           m_resource(0),
           m_time(0),
           m_ros_group(0),
+          m_network(false),
           m_running(false),
           m_triggering(false),
           m_num_assign_threads(Num_Assign),
@@ -54,11 +55,6 @@ namespace hltsv {
         
     DC::StatusWord Activity::act_config()
     {
-        m_dispatcher.register_handler(0x12345678, boost::bind(&Activity::handle_announce, this, _1));
-        m_dispatcher.register_queue(0x87654321, &m_decision_queue);
-
-        m_input_thread = new MessageInput::InputThread(&m_dispatcher);
-
         Configuration* conf;
         AppControl::get_instance()->getConfiguration(&conf);
 
@@ -83,6 +79,8 @@ namespace hltsv {
 
         if(!m_msgconf.configure(ac->getNodeID(), *conf)) {
             // fatal
+            ERS_LOG("Cannot configure message passing");
+            return DC::FATAL;
         }
 
         m_ros_group = m_msgconf.create_group("ROS");
@@ -121,13 +119,14 @@ namespace hltsv {
             m_num_assign_threads = strtol(getenv("NUM_ASSIGN_THREADS"),0,0);
         }
 
+        m_network = true;
+        m_thread_decision = new boost::thread(&Activity::handle_network, this);
+
         return DC::OK;
     }
 
     DC::StatusWord Activity::act_connect()
     {
-        MessagePassing::Port::connect(m_msgconf.create_by_group("L2PU"));
-        m_input_thread->start();
         return DC::OK;
     }
 
@@ -142,16 +141,13 @@ namespace hltsv {
         m_running = true;
         m_triggering = true;
 
-        m_thread_input    = new boost::thread(&Activity::handle_lvl1_input, this);
-
         for(size_t i = 0; i < m_num_assign_threads; i++) {
             m_thread_assign.push_back(new boost::thread(&Activity::assign_event, this));
         }
 
-        m_thread_decision = new boost::thread(&Activity::handle_decision, this);
-
         m_thread_update_rates = new boost::thread(&Activity::update_rates, this);
 
+        m_thread_input = new boost::thread(&Activity::handle_lvl1_input, this);
 
         return DC::OK;
     }
@@ -171,13 +167,9 @@ namespace hltsv {
         m_triggering = false;
         m_running = false;
 
-        usleep(1000);
-
         m_incoming_events.wakeup();
-        m_decision_queue.wakeup();
 
-        m_thread_input->join();
-        delete m_thread_input;
+        usleep(100000);
 
         for(size_t i = 0; i < m_num_assign_threads; i++) {
             m_thread_assign[i]->join();
@@ -185,11 +177,23 @@ namespace hltsv {
         }
         m_thread_assign.clear();
 
-        m_thread_decision->join();
-        delete m_thread_decision;
-
         m_thread_update_rates->join();
         delete m_thread_update_rates;
+
+        m_thread_input->join();
+        delete m_thread_input;
+
+        ERS_LOG("Events in input queue: " << m_incoming_events.size());
+        m_incoming_events.clear(ProtectedQueue<Event*>::deleter());
+
+        sleep(3);
+
+        for(EventMap::iterator it = m_events.begin(); it != m_events.end(); ++it) {
+            if(it->second->active()) { it->second->done(); }
+            delete it->second;
+        }
+
+        m_events.clear();
 
         return DC::OK;
     }
@@ -201,26 +205,23 @@ namespace hltsv {
             m_cmdReceiver = 0;
         }
 
+        m_network = false;
+        m_thread_decision->join();
+        delete m_thread_decision;
+
         delete m_l1source;
         m_l1source = 0;
         m_l1source_lib->release();
         delete m_l1source_lib;
 
-        m_dispatcher.unregister_type_handler(0x87654321);
-        m_dispatcher.unregister_type_handler(0x12345678);
-
-        m_input_thread->stop();
-        m_input_thread->wait();
-        delete m_input_thread;
-        
         m_msgconf.unconfigure();
 
         delete m_resource;
         m_resource = 0;
 
-        hltinterface::ITHistRegister::instance()->releaseTObject("", "/DEBUG/HLTSV/Time");
-        delete m_time;
-        m_time = 0;
+        // hltinterface::ITHistRegister::instance()->releaseTObject("", "/DEBUG/HLTSV/Time");
+        // delete m_time;
+        // m_time = 0;
 
         return DC::OK;
     }
@@ -243,8 +244,8 @@ namespace hltsv {
     void Activity::handle_announce(MessagePassing::Buffer *buffer)
     {
         using namespace MessagePassing;
-        using namespace MessageInput
-;
+        using namespace MessageInput;
+
         MessageHeader header(buffer);
         if(header.valid()) {
             // should contain: NodeID, number of processing slots
@@ -281,20 +282,30 @@ namespace hltsv {
 
     void Activity::handle_lvl1_input()
     {
+        ERS_LOG("Entering handle_lvl1_input");
         while(m_running) {
             if(m_triggering) {
                 if(dcmessages::LVL1Result * l1result = m_l1source->getResult()) {
-                    m_incoming_events.put(new Event(l1result));
-                    m_stats.LVL1Events++;
-                    ERS_DEBUG(3,"Got new event: " << l1result->l1ID());
+                    if(m_incoming_events.put(new Event(l1result))) {
+                        m_stats.LVL1Events++;
+                        ERS_DEBUG(3,"Got new event: " << l1result->l1ID());
+                    } else {
+                        ERS_LOG("handle_lvl1_input: wakeup");
+                        delete l1result;
+                        break;
+                    }
                 }
+            } else {
+                usleep(1000);
             }
         }
+        ERS_LOG("Exiting handle_lvl1_input");
     }
 
     void Activity::assign_event()
     {
         RealTimeClock clock;
+
         std::list<uint32_t> events;
         Time last_check = clock.time();
 
@@ -381,53 +392,78 @@ namespace hltsv {
 
         }
 
-        ERS_LOG("Events in input queue: " << m_incoming_events.size());
-        m_incoming_events.clear(ProtectedQueue<Event*>::deleter());
-
     }
 
-    void Activity::handle_decision()
+    void Activity::handle_network()
     {
-        RealTimeClock clock;
+        static RealTimeClock clock;
 
-        while(m_running) {
+        ERS_LOG("Entering network handler");
+        
+        while(m_network) {
 
-            MessagePassing::Buffer *buffer;
-            if(m_decision_queue.get(buffer)) {
-                MessagePassing::Buffer::iterator it = buffer->begin();
-                it += MessageInput::MessageHeader::SIZE;
+            if(MessagePassing::Buffer *buffer = MessagePassing::Port::receive(100000)) {
 
-                uint32_t lvl1_id;
+                MessageInput::MessageHeader header(buffer);
 
-                it >> lvl1_id;
+                if(!header.valid()) {
+                    // log this
+                    ERS_LOG("Invalid message header");
+                    delete buffer;
+                    continue;
+                }
 
-                delete buffer;
-
-                // ERS_LOG("Got decision for event " << lvl1_id);
-
-                EventMap::accessor access;
-                if(m_events.find(access, lvl1_id)) {
-                    ERS_ASSERT_MSG(access->second != 0, "Invalid event pointer");
-                    Event *event = access->second;
-                    if(event->active()) {
-                        event->done();
-                        m_stats.ProcessedEvents++;
-                        Time diff = clock.time() - event->assigned();
-                        m_time->Fill(diff.as_milliseconds());
-                        access.release();
-                        add_event_to_clear(event);
-                    } else {
-                        ERS_LOG("Late reply for event" << lvl1_id);
-                    }
-                } else {
-                    // oops, unknown lvl1 id ???
-                    ERS_LOG("Unknown level 1 ID: " << lvl1_id);
+                switch(header.type()) {
+                case 0x1234U:
+                    handle_announce(buffer);
+                    break;
+                case 0x8765U:
+                    handle_decision(buffer);
+                    break;
+                default:
+                    ERS_LOG("Invalid message type: " << header.type());
+                    delete buffer;
+                    break;
                 }
             }
         }
 
-        m_decision_queue.clear(ProtectedQueue<MessagePassing::Buffer*>::deleter());
+        ERS_LOG("Exiting network handler");
+    }
+                
+    void Activity::handle_decision(MessagePassing::Buffer *buffer) 
+    {
+        static RealTimeClock clock;
 
+        MessagePassing::Buffer::iterator it = buffer->begin();
+        it += MessageInput::MessageHeader::SIZE;
+        
+        uint32_t lvl1_id;
+        
+        it >> lvl1_id;
+        
+        delete buffer;
+        
+        // ERS_LOG("Got decision for event " << lvl1_id);
+        
+        EventMap::accessor access;
+        if(m_events.find(access, lvl1_id)) {
+            ERS_ASSERT_MSG(access->second != 0, "Invalid event pointer");
+            Event *event = access->second;
+            if(event->active()) {
+                event->done();
+                m_stats.ProcessedEvents++;
+                Time diff = clock.time() - event->assigned();
+                m_time->Fill(diff.as_milliseconds());
+                access.release();
+                add_event_to_clear(event);
+            } else {
+                        ERS_LOG("Late reply for event" << lvl1_id);
+            }
+                } else {
+            // oops, unknown lvl1 id ???
+            ERS_LOG("Unknown level 1 ID: " << lvl1_id);
+        }
     }
 
     void Activity::add_event_to_clear(Event *event)
@@ -448,13 +484,6 @@ namespace hltsv {
                 ERS_LOG("Problem sending clears");
             }
         }
-
-#if 0
-        if(to_clear.size() > 0) {
-            dcmessages::DFM_Clear_Msg msg(to_clear, 0, 0);
-            msg.send(m_ros_group);
-        }
-#endif
     }
 
     void Activity::update_rates()

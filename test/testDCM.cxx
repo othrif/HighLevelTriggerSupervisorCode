@@ -27,7 +27,11 @@ public:
     {
         Configuration *config = 0;
         AppControl::get_instance()->getConfiguration(&config);
-        m_msgconf.configure(AppControl::get_instance()->getNodeID(), *config);
+
+        if(!m_msgconf.configure(AppControl::get_instance()->getNodeID(), *config)) {
+            ERS_LOG("Cannot configure message passing");
+            return DC::FATAL;
+        }
 
         m_port = m_msgconf.create_by_group("L2SV").front();
 
@@ -38,7 +42,7 @@ public:
     {
         MessagePassing::Buffer announce(128);
 
-        MessageInput::MessageHeader header(0x12345678, 0, MessagePassing::Port::self(),
+        MessageInput::MessageHeader header(0x1234, 0, MessagePassing::Port::self(),
                                            MessageInput::MessageHeader::SIZE + sizeof(uint32_t));
                         
         MessagePassing::Buffer::iterator it = announce.begin();
@@ -85,7 +89,7 @@ public:
 
                 // ERS_LOG("Got event " << l1result.l1ID());
 
-                MessageInput::MessageHeader header(0x87654321,
+                MessageInput::MessageHeader header(0x8765U,
                                                    0, 
                                                    MessagePassing::Port::self(), 
                                                    MessageInput::MessageHeader::SIZE + sizeof(uint32_t));

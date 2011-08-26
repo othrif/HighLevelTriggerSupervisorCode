@@ -3,7 +3,6 @@
 #define HLTSV_ACTIVITY_H_
 
 #include "ac/UserActivity.h"
-#include "msginput/MessageDispatcher.h"
 #include "msgconf/MessageConfiguration.h"
 #include "queues/ProtectedQueue.h"
 
@@ -76,16 +75,16 @@ namespace hltsv {
         void setConditionsUpdate(uint32_t folderIndex, uint32_t lb);
 
     private:
-        void handle_announce(MessagePassing::Buffer *buffer);
-
         // these run as separate threads
         void handle_lvl1_input();
         void assign_event();
-        void handle_decision();
+        void handle_network();
         void update_rates();
 
         // helper functions
-        void handle_timeouts(std::list<Event*>& events);
+        void handle_announce(MessagePassing::Buffer *buffer);
+        void handle_decision(MessagePassing::Buffer *buffer);
+        void handle_timeouts();
         void add_event_to_clear(Event *event);
 
     private:
@@ -93,10 +92,8 @@ namespace hltsv {
         // typedef std::map<uint32_t,Event*> EventMap;
         typedef tbb::concurrent_hash_map<uint32_t,Event*> EventMap;
 
-        MessageInput::MessageDispatcher m_dispatcher;
-        MessageInput::InputThread       *m_input_thread;
         ProtectedQueue<Event*>          m_incoming_events;
-        ProtectedQueue<MessagePassing::Buffer*> m_decision_queue;
+
         Scheduler                       m_scheduler;
         EventMap                        m_events;
 
@@ -110,6 +107,7 @@ namespace hltsv {
         MessageConfiguration            m_msgconf;
         MessagePassing::Port            *m_ros_group;
 
+        bool                            m_network;
         bool                            m_running;
         bool                            m_triggering;
 
