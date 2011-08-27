@@ -47,7 +47,7 @@ pm_set.py test_hltsv.data.xml <<EOF
   L2SV-1@L2SVApplication.RunsOn = msu-pc6.cern.ch@Computer
 
   L2PU-1@L2PUTemplateApplication.Program = testDCM@Binary
-  L2PU-1@L2PUTemplateApplication.Instances = 128
+  L2PU-1@L2PUTemplateApplication.Instances = 16
 
   NUM_ASSIGN_THREADS@Variable
   NUM_ASSIGN_THREADS@Variable.Name = 'NUM_ASSIGN_THREADS'

@@ -460,7 +460,7 @@ namespace hltsv {
             } else {
                         ERS_LOG("Late reply for event" << lvl1_id);
             }
-                } else {
+        } else {
             // oops, unknown lvl1 id ???
             ERS_LOG("Unknown level 1 ID: " << lvl1_id);
         }
