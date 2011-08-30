@@ -37,7 +37,7 @@ library svl1source L1Source.cxx
 macro svl1source_shlibflags "-ldcmessages"
 
 application hltsv_main  hltsv_main.cxx Activity.cxx Node.cxx Scheduler.cxx Event.cxx
-macro hltsv_mainlinkopts "-lers -lhltsv -ltbb -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon -lhltinterface -lhistmon -lsvl1source"
+macro hltsv_mainlinkopts "-lers -ltbb -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon -lhltinterface -lhistmon -lsvl1source"
 
 macro sw.repository.binary.hltsv_main:name         "HLT Supervisor"
 macro sw.repository.binary.hltsv_main:description  "HLT Supervisor Application"
