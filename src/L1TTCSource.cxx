@@ -55,7 +55,7 @@ namespace hltsv {
                                         eformat::STATUS_FRONT);
 
         eformat::write::ROBFragment* robs[1];
-        robs[1] = &rob;
+        robs[0] = &rob;
         dcmessages::LVL1Result* l1Result =
             new dcmessages::LVL1Result( robs, 1 );
 
