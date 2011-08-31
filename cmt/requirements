@@ -54,9 +54,9 @@ library svl1ttc L1TTCSource.cxx
 macro svl1ttc_shlibflags "-leformat_write -leformat -lttcpr"
 macro svl1ttc_dependencies svl1source
 
-library svl1slink L1SLinkSource.cxx
-macro svl1slink_shlibflags "-leformat_write -leformat -lslink"
-macro svl1slink_dependencies svl1source
+#library svl1slink L1SLinkSource.cxx
+#macro svl1slink_shlibflags "-leformat_write -leformat -lslink"
+#macro svl1slink_dependencies svl1source
 
 library svl1filar L1FilarSource.cxx
 macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lttcpr"
@@ -65,6 +65,12 @@ macro svl1filar_dependencies svl1source
 library svl1ltp L1LTPSource.cxx
 macro svl1sltp_shlibflags "-leformat_write -leformat"
 macro svl1ltp_dependencies svl1source
+
+macro constituents "svl1source hltsv_main svl1internal svl1preloaded svl1filar svl1ttc svl1ltp test_l1source testDCM" \
+       x86_64-slc5"svl1source hltsv_main svl1internal svl1preloaded svl1ttc svl1ltp test_l1source testDCM"
+
+macro to_install "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc.so libsvl1filar.so libsvl1ltp.so" \
+      x86_64-slc5 "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc.so libsvl1ltp.so"
 
 # tests
 
@@ -78,6 +84,6 @@ macro testDCMlinkopts "-lers -leformat -lac -ldcmessages -lmsginput -lmsgconf -l
 macro sw.repository.binary.testDC:name         "Tester for hltsv"
 macro sw.repository.binary.testDC:description  "Tester for hltsv"
 
-apply_pattern install_libs files="libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc.so libsvl1filar.so libsvl1ltp.so"
+apply_pattern install_libs files="${to_install}"
 apply_pattern install_apps files="hltsv_main test_l1source testDCM"
 

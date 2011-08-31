@@ -266,7 +266,7 @@ namespace hltsv {
                     if(!m_running) {
                         Node *node = new Node(port, slots);
                         m_scheduler.add_node(node);
-                        ERS_DEBUG(,1"Adding new node: " << id << " with " << slots << " slots");
+                        ERS_DEBUG(1,"Adding new node: " << id << " with " << slots << " slots");
                         m_stats.ProcessingNodesAdded++;
                     } else {
                         ERS_LOG("Ignoring new node while running: " << id);
