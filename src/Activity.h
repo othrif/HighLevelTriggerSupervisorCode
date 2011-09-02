@@ -85,7 +85,7 @@ namespace hltsv {
         void handle_announce(MessagePassing::Buffer *buffer);
         void handle_decision(MessagePassing::Buffer *buffer);
         void handle_timeouts();
-        void add_event_to_clear(Event *event);
+        void add_event_to_clear(uint32_t lvl1_id);
 
     private:
 
@@ -117,7 +117,6 @@ namespace hltsv {
         boost::thread                   *m_thread_decision;
         boost::thread                   *m_thread_update_rates;
 
-        boost::mutex                    m_clear_mutex;
         std::vector<uint32_t>           m_to_clear;
 
         // master triger

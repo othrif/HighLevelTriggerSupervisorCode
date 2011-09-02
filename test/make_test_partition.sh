@@ -25,9 +25,9 @@ pm_set.py test_hltsv.data.xml <<EOF
   ProtoRepo@SW_Repository.Uses = [ Online@SW_Repository ]
   ProtoRepo@SW_Repository.ISInfoDescriptionFiles = [ 'share/data/hltsv_is.schema.xml' ] 
 
-  hltsv_main@Binary
-  hltsv_main@Binary.BinaryName = 'hltsv_main'
-  hltsv_main@Binary.BelongsTo =  ProtoRepo@SW_Repository
+  #hltsv_main@Binary
+  #hltsv_main@Binary.BinaryName = 'hltsv_main'
+  #hltsv_main@Binary.BelongsTo =  ProtoRepo@SW_Repository
 
   testDCM@Binary
   testDCM@Binary.BinaryName = 'testDCM'
@@ -47,7 +47,7 @@ pm_set.py test_hltsv.data.xml <<EOF
   L2SV-1@L2SVApplication.RunsOn = msu-pc6.cern.ch@Computer
 
   L2PU-1@L2PUTemplateApplication.Program = testDCM@Binary
-  L2PU-1@L2PUTemplateApplication.Instances = 16
+  L2PU-1@L2PUTemplateApplication.Instances = 64
 
   NUM_ASSIGN_THREADS@Variable
   NUM_ASSIGN_THREADS@Variable.Name = 'NUM_ASSIGN_THREADS'
