@@ -67,7 +67,7 @@ macro svl1sltp_shlibflags "-leformat_write -leformat"
 macro svl1ltp_dependencies svl1source
 
 macro constituents "svl1source hltsv_main svl1internal svl1preloaded svl1filar svl1ttc svl1ltp test_l1source testDCM" \
-       x86_64-slc5"svl1source hltsv_main svl1internal svl1preloaded svl1ttc svl1ltp test_l1source testDCM"
+       x86_64-slc5 "svl1source hltsv_main svl1internal svl1preloaded svl1ttc svl1ltp test_l1source testDCM"
 
 macro to_install "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc.so libsvl1filar.so libsvl1ltp.so" \
       x86_64-slc5 "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc.so libsvl1ltp.so"
