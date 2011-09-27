@@ -25,6 +25,9 @@
 #include "Node.h"
 #include "L1Source.h"
 
+#include "hltsvdal/HLTSVApplication.h"
+#include "hltsvdal/HLTSVConfiguration.h"
+
 #include "boost/function.hpp"
 
 namespace hltsv {
@@ -67,7 +70,7 @@ namespace hltsv {
 
         try {
             m_l1source_lib = new DynamicLibrary(lib_name);
-            if(L1Source::creator_t make = (L1Source::creator_t)m_l1source_lib->symbol("create_source")) {
+            if(L1Source::creator_t make = m_l1source_lib->function<L1Source::creator_t>("create_source")) {
                 m_l1source = make(source_type, *conf);
                 m_l1source->preset();
             } else {

@@ -28,16 +28,34 @@ use ROOT  * DQMCExternal
 
 private
 
+use genconfig
+
 ignore_pattern inst_headers_
 ignore_pattern inst_headers_auto
 ignore_pattern inst_headers_bin_auto
 ignore_pattern inst_idl_auto
 
+macro           generate-config-include-dirs            "${TDAQ_INST_PATH}/share/data/dal ${TDAQ_INST_PATH}/share/data/DFConfiguration"
+document        generate-config DFdal                   -s=../schema/                     \
+                                                        namespace="daq::df"               \
+                                                        include="hltsvdal"                \
+                                                        hltsv.schema.xml                     
+
+macro           gdir                                    "$(bin)DFdal.tmp"
+
+library         daq-hltsv-dal                              "$(gdir)/*.cpp"
+
+macro pudummy_dependencies "daq-hltsv-dal"
+macro daq-hltsv-dal_dependencies "DFdal"
+
+macro_append daq-hltsv-dal_shlibflags "-ldaq-core-dal -ldaq-df-dal"
+
 library svl1source L1Source.cxx
 macro svl1source_shlibflags "-ldcmessages"
 
 application hltsv_main  hltsv_main.cxx Activity.cxx Node.cxx Scheduler.cxx Event.cxx
-macro hltsv_mainlinkopts "-lers -ltbb -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon -lhltinterface -lhistmon -lsvl1source"
+macro hltsv_mainlinkopts "-lers -ltbb -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon -lhltinterface -lhistmon -lsvl1source -ldaq-hltsv-dal"
+macro hltsv_main_dependencies "daq-hltsv-dal"
 
 macro sw.repository.binary.hltsv_main:name         "HLT Supervisor"
 macro sw.repository.binary.hltsv_main:description  "HLT Supervisor Application"
@@ -69,8 +87,8 @@ macro svl1ltp_dependencies svl1source
 macro constituents "svl1source hltsv_main svl1internal svl1preloaded svl1filar svl1ttc svl1ltp test_l1source testDCM" \
        x86_64-slc5 "svl1source hltsv_main svl1internal svl1preloaded svl1ttc svl1ltp test_l1source testDCM"
 
-macro to_install "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc.so libsvl1filar.so libsvl1ltp.so" \
-      x86_64-slc5 "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc.so libsvl1ltp.so"
+macro to_install "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc.so libsvl1filar.so libsvl1ltp.so libdaq-hltsv-dal.so" \
+      x86_64-slc5 "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc.so libsvl1ltp.so libdaq-hltsv-dal.so"
 
 # tests
 

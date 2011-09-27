@@ -33,6 +33,8 @@ pm_set.py test_hltsv.data.xml <<EOF
   testDCM@Binary.BinaryName = 'testDCM'
   testDCM@Binary.BelongsTo =  ProtoRepo@SW_Repository
 
+  ProtoRepo@SW_Repository.SW_Objects = [ testDCM@Binary ]
+
   HLTSVConf@DC_ISResourceUpdate
   HLTSVConf@DC_ISResourceUpdate.name = 'HLTSV'
   HLTSVConf@DC_ISResourceUpdate.delay = 10

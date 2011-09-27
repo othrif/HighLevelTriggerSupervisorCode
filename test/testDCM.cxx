@@ -14,8 +14,7 @@
 class DCMActivity : public ThreadedUserActivity {
 public:
     DCMActivity()
-        : m_port(0),
-          m_running(false)
+        : m_running(false)
     {
     }
 
@@ -33,8 +32,8 @@ public:
             return DC::FATAL;
         }
 
-        m_port = m_msgconf.create_by_group("L2SV").front();
-
+        m_ports = m_msgconf.create_by_group("L2SV");
+        
         return DC::OK;
     }
 
@@ -50,7 +49,8 @@ public:
 
         announce.size(it);
 
-        m_port->send(&announce, true);
+        m_ports.front()->send(&announce, true);
+
         return DC::OK;
     }
 
@@ -72,16 +72,27 @@ public:
     DC::StatusWord act_unconfig()
     {
         m_msgconf.unconfigure();
+        m_ports.clear();
         return DC::OK;
     }
 
     void execute()
     {
-        MessagePassing::Buffer reply(128);
+
+        using namespace MessagePassing;
+        using namespace MessageInput;
+
+        Buffer reply(128);
 
         while(m_running) {
 
-            if(MessagePassing::Buffer *buf = MessagePassing::Port::receive(100000)) {
+            if(Buffer *buf = Port::receive(100000)) {
+
+                MessageHeader input(buf);
+                if(!input.valid()) {
+                    delete buf;
+                    continue;
+                }
 
                 dcmessages::LVL1Result l1result(buf);
                 
@@ -89,16 +100,21 @@ public:
 
                 // ERS_LOG("Got event " << l1result.l1ID());
 
-                MessageInput::MessageHeader header(0x8765U,
-                                                   0, 
-                                                   MessagePassing::Port::self(), 
-                                                   MessageInput::MessageHeader::SIZE + sizeof(uint32_t));
+                MessageHeader header(0x8765U,
+                                     0, 
+                                     Port::self(), 
+                                     MessageHeader::SIZE + sizeof(uint32_t));
                 
-                MessagePassing::Buffer::iterator it = reply.begin();
+                Buffer::iterator it = reply.begin();
                 it << header << l1result.l1ID();
 
                 reply.size(it);
-                m_port->send(&reply, true);
+
+                if(Port *port = Port::find(input.source())) {
+                    port->send(&reply, true);
+                } else {
+                    ERS_LOG("Invalid source node ID: " << input.source());
+                }
 
                 // ERS_LOG("Sent reply " << l1result.l1ID());
                 
@@ -107,9 +123,9 @@ public:
     }
 
 private:
-    MessageConfiguration m_msgconf;
-    MessagePassing::Port *m_port;
-    bool                 m_running;
+    MessageConfiguration             m_msgconf;
+    std::list<MessagePassing::Port*> m_ports;
+    bool                             m_running;
 };
 
 int main(int argc, char *argv[])
