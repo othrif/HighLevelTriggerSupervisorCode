@@ -105,3 +105,9 @@ macro sw.repository.binary.testDC:description  "Tester for hltsv"
 apply_pattern install_libs files="${to_install}"
 apply_pattern install_apps files="hltsv_main test_l1source testDCM"
 
+apply_pattern   install_db_files name=schema            files="../schema/hltsv.schema.xml" \
+                                                        target_dir="schema"
+
+apply_pattern   install_data name=isschema              files="../schema/hltsv_is.schema.xml"\
+							target_dir="schema"
+
