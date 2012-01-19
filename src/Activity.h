@@ -100,6 +100,8 @@ namespace hltsv {
         daq::dynlibs::DynamicLibrary    *m_l1source_lib;
         hltsv::L1Source                 *m_l1source;
 
+        uint32_t                        m_timeout;
+
         hltsv::HLTSV                    m_stats;
         tdaq::sysmon::ISResource        *m_resource;
         TH1F                            *m_time;

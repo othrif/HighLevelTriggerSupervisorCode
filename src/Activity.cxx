@@ -64,7 +64,10 @@ namespace hltsv {
         Configuration* conf;
         ac->getConfiguration(&conf);
 
-        std::string source_type = "internal";
+        const daq::df::HLTSVApplication *self = conf->cast<daq::df::HLTSVApplication>(ac->getDFApplication());
+        const daq::df::HLTSVConfiguration *my_conf = self->get_Configuration();
+
+        std::string source_type = my_conf->get_L1Source();
         std::string lib_name("libsvl1");
         lib_name += source_type;
 
@@ -80,7 +83,6 @@ namespace hltsv {
             ers::fatal(ex);
             return DC::FATAL;
         }
-
 
 
         if(!m_msgconf.configure(ac->getNodeID(), *conf)) {
@@ -121,9 +123,9 @@ namespace hltsv {
 
         hltinterface::ITHistRegister::instance()->registerTObject("", "/DEBUG/HLTSV/Time", m_time);
 
-        if(getenv("NUM_ASSIGN_THREADS")) {
-            m_num_assign_threads = strtol(getenv("NUM_ASSIGN_THREADS"),0,0);
-        }
+        
+        m_num_assign_threads = my_conf->get_NumberOfAssignThreads();
+        m_timeout = my_conf->get_Timeout();
 
         m_network = true;
         m_thread_decision = new boost::thread(&Activity::handle_network, this);
@@ -411,7 +413,7 @@ namespace hltsv {
                         
                         Time diff = clock.time() - event->assigned();
 
-                        if(diff.as_milliseconds() > 100000) {
+                        if(diff.as_milliseconds() > m_timeout) {
 
                             // do something.
                             // but what ? There is no SFI to ask to build the event.
