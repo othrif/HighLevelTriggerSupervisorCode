@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
             putenv("TDAQ_PARTITION=test_source");
         }
 
-        if(hltsv::L1Source::creator_t maker = (hltsv::L1Source::creator_t )lib.symbol("create_source")) {
+        if(hltsv::L1Source::creator_t maker = lib.function<hltsv::L1Source::creator_t>("create_source")) {
             hltsv::L1Source *source = maker(source_type, config);
 
             std::cout << "Created new L1Source" << std::endl;
