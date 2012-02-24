@@ -5,7 +5,6 @@
 #include "L1Source.h"
 
 #include <string>
-#include <vector>
 #include <map>
 #include <stdint.h>
 
@@ -40,16 +39,16 @@ namespace hltsv {
         int           m_nodes;
         std::string   m_nodeid;
         
-        std::map<unsigned int, std::vector<uint32_t*>*> m_data;
+        std::map<unsigned int, std::vector<uint32_t*> > m_data;
 
-        std::map<unsigned int, std::vector<uint32_t*>*> m_data_770001;
-        std::map<unsigned int, std::vector<uint32_t*>*> m_data_760001;
-        std::map<unsigned int, std::vector<uint32_t*>*> m_data_7300a8;
-        std::map<unsigned int, std::vector<uint32_t*>*> m_data_7300a9;
-        std::map<unsigned int, std::vector<uint32_t*>*> m_data_7300aa;
-        std::map<unsigned int, std::vector<uint32_t*>*> m_data_7300ab;
-        std::map<unsigned int, std::vector<uint32_t*>*> m_data_7500ac;
-        std::map<unsigned int, std::vector<uint32_t*>*> m_data_7500ad;
+        std::map<unsigned int, uint32_t*> m_data_770001;
+        std::map<unsigned int, uint32_t*> m_data_760001;
+        std::map<unsigned int, uint32_t*> m_data_7300a8;
+        std::map<unsigned int, uint32_t*> m_data_7300a9;
+        std::map<unsigned int, uint32_t*> m_data_7300aa;
+        std::map<unsigned int, uint32_t*> m_data_7300ab;
+        std::map<unsigned int, uint32_t*> m_data_7500ac;
+        std::map<unsigned int, uint32_t*> m_data_7500ad;
         
         unsigned int  m_firstid;
         bool          m_modid;

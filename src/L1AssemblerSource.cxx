@@ -39,15 +39,14 @@ namespace hltsv {
     L1AssemblerSource::~L1AssemblerSource()
     {
         // cleanup
-        std::map<unsigned int, std::vector<uint32_t*>*>::iterator mit;
+        std::map<unsigned int, std::vector<uint32_t*> >::iterator mit;
 
-        for ( mit=m_data.begin(); mit!=m_data.end(); mit++ ) {
-            std::vector<uint32_t*>* rob_frag = (*mit).second;
-            std::vector<uint32_t*>::iterator fit;
-            for ( fit=rob_frag->begin(); fit!=rob_frag->end(); fit++ ) {
-                delete [] (*fit);
+        for ( mit=m_data.begin(); mit != m_data.end(); ++mit ) {
+            for( std::vector<uint32_t*>::iterator it = mit->second.begin();
+                 it != mit->second.end();
+                 ++it) {
+                delete *it;
             }
-            delete (*mit).second;
         }
     }
 
@@ -60,10 +59,11 @@ namespace hltsv {
 
         uint32_t* robs[dcmessages::MAXLVL1RODS];
 
-        std::vector<uint32_t*>* rob_frag = m_data[m_l1id];
+        const std::vector<uint32_t*>& rob_frag = m_data[m_l1id];
       
-        std::vector<uint32_t*>::iterator fit = rob_frag->begin();
-        for ( size_t i=0; i< rob_frag->size(); i++, fit++ ) {
+        std::vector<uint32_t*>::const_iterator fit = rob_frag.begin();
+
+        for ( size_t i=0; i< rob_frag.size(); i++, ++fit ) {
             /**
              * Update Lumi Block Number in Rob's header
              */
@@ -114,8 +114,8 @@ namespace hltsv {
             // mutex is unlocked here
         }
 
-        if (rob_frag->size()) {
-            l1Result = new dcmessages::LVL1Result( robs, rob_frag->size() );
+        if (rob_frag.size()) {
+            l1Result = new dcmessages::LVL1Result( robs, rob_frag.size() );
         } else {
             std::ostringstream mesg;
             mesg <<"looking for LVL1 RoIs to build LVL1Result with l1id " <<
@@ -162,7 +162,7 @@ namespace hltsv {
         m_modid = false;
 
         // empty the event map
-        m_data.erase(m_data.begin(), m_data.end());
+        m_data.clear();
 
         const daq::core::Partition *partition = m_config.get<daq::core::Partition>(getenv("TDAQ_PARTITION"));
         const daq::df::DFParameters *dfparams = m_config.cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
@@ -228,22 +228,6 @@ namespace hltsv {
 
                     if (nrobs > 0) {
 
-
-                        if (fit == 0) {
-
-                        m_data[m_l1id] = new std::vector<uint32_t*>;
-
-                        m_data_770001[m_l1id] = new std::vector<uint32_t*>;
-                        m_data_760001[m_l1id] = new std::vector<uint32_t*>;
-                        m_data_7500ac[m_l1id] = new std::vector<uint32_t*>;
-                        m_data_7500ad[m_l1id] = new std::vector<uint32_t*>;
-                        m_data_7300a8[m_l1id] = new std::vector<uint32_t*>;
-                        m_data_7300a9[m_l1id] = new std::vector<uint32_t*>;
-                        m_data_7300aa[m_l1id] = new std::vector<uint32_t*>;
-                        m_data_7300ab[m_l1id] = new std::vector<uint32_t*>;
-
-                        }
-
                         for ( size_t i=0; i<nrobs; i++) {
                             eformat::write::ROBFragment test_frag(const_cast<uint32_t*>(robs[i]));
     
@@ -257,50 +241,49 @@ namespace hltsv {
                                                         len);
     
 
-                            // m_data[m_l1id]->push_back(rob_frag);
                             switch (test_frag.source_id()) {
-                              case 0x00770001:
+                            case 0x00770001:
                               {
-                                m_data_770001[m_l1id]->push_back(rob_frag);
-                                break;
+                                  m_data_770001[m_l1id] = rob_frag;
+                                  break;
                               }
-                              case 0x00760001:
+                            case 0x00760001:
                               {
-                                m_data_760001[m_l1id]->push_back(rob_frag);
-                                break;
+                                  m_data_760001[m_l1id] = rob_frag;
+                                  break;
                               }
-                              case 0x007500AC:
+                            case 0x007500AC:
                               {
-                                m_data_7500ac[m_l1id]->push_back(rob_frag);
-                                break;
+                                  m_data_7500ac[m_l1id] = rob_frag;
+                                  break;
                               }
-                              case 0x007500AD:
+                            case 0x007500AD:
                               {
-                                m_data_7500ad[m_l1id]->push_back(rob_frag);
-                                break;
+                                  m_data_7500ad[m_l1id] = rob_frag;
+                                  break;
                               }
-                              case 0x007300A8:
+                            case 0x007300A8:
                               {
-                                m_data_7300a8[m_l1id]->push_back(rob_frag);
-                                break;
+                                  m_data_7300a8[m_l1id] = rob_frag;
+                                  break;
                               }
-                              case 0x007300A9:
+                            case 0x007300A9:
                               {
-                                m_data_7300a9[m_l1id]->push_back(rob_frag);
-                                break;
+                                  m_data_7300a9[m_l1id] = rob_frag;
+                                  break;
                               }
-                              case 0x007300AA:
+                            case 0x007300AA:
                               {
-                                m_data_7300aa[m_l1id]->push_back(rob_frag);
-                                break;
+                                  m_data_7300aa[m_l1id] = rob_frag;
+                                  break;
                               }
-                              case 0x007300AB:
+                            case 0x007300AB:
                               {
-                                m_data_7300ab[m_l1id]->push_back(rob_frag);
-                                break;
+                                  m_data_7300ab[m_l1id] = rob_frag;
+                                  break;
                               }
 
-                              default:
+                            default:
                                 break;
                             }
     
@@ -356,20 +339,17 @@ namespace hltsv {
 //        m_data.erase(m_data.begin(), m_data.end());
      //   m_data[m_l1id] = new std::vector<uint32_t*>;
 
-        if (!m_data[m_l1id]->empty()) {
-          (*m_data[m_l1id]).erase((*m_data[m_l1id]).begin(), (*m_data[m_l1id]).end());
-          m_data[m_l1id] = new std::vector<uint32_t*>;
-        }
+        m_data[m_l1id].clear();
 
-      (*m_data[m_l1id]).insert((*m_data[m_l1id]).end(), (*m_data_770001[m_l1id]).begin(), (*m_data_770001[m_l1id]).end() );
-      (*m_data[m_l1id]).insert((*m_data[m_l1id]).end(), (*m_data_760001[m_l1id]).begin(), (*m_data_760001[m_l1id]).end() );
-      (*m_data[m_l1id]).insert((*m_data[m_l1id]).end(), (*m_data_7300a8[m_l1id]).begin(), (*m_data_7300a8[m_l1id]).end() );
-      (*m_data[m_l1id]).insert((*m_data[m_l1id]).end(), (*m_data_7300a9[m_l1id]).begin(), (*m_data_7300a9[m_l1id]).end() );
-      (*m_data[m_l1id]).insert((*m_data[m_l1id]).end(), (*m_data_7300aa[m_l1id]).begin(), (*m_data_7300aa[m_l1id]).end() );
-      (*m_data[m_l1id]).insert((*m_data[m_l1id]).end(), (*m_data_7300ab[m_l1id]).begin(), (*m_data_7300ab[m_l1id]).end() );
-      (*m_data[m_l1id]).insert((*m_data[m_l1id]).end(), (*m_data_7500ac[m_l1id]).begin(), (*m_data_7500ac[m_l1id]).end() );
-      (*m_data[m_l1id]).insert((*m_data[m_l1id]).end(), (*m_data_7500ad[m_l1id]).begin(), (*m_data_7500ad[m_l1id]).end() );
-      
+        m_data[m_l1id].push_back(m_data_770001[m_l1id]);
+        m_data[m_l1id].push_back(m_data_760001[m_l1id]);
+        m_data[m_l1id].push_back(m_data_7300a8[m_l1id]);
+        m_data[m_l1id].push_back(m_data_7300a9[m_l1id]);
+        m_data[m_l1id].push_back(m_data_7300aa[m_l1id]);
+        m_data[m_l1id].push_back(m_data_7300ab[m_l1id]);
+        m_data[m_l1id].push_back(m_data_7500ac[m_l1id]);
+        m_data[m_l1id].push_back(m_data_7500ad[m_l1id]);
+        
     }
 
 
