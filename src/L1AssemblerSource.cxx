@@ -38,16 +38,7 @@ namespace hltsv {
 
     L1AssemblerSource::~L1AssemblerSource()
     {
-        // cleanup
-        std::map<unsigned int, std::vector<uint32_t*> >::iterator mit;
-
-        for ( mit=m_data.begin(); mit != m_data.end(); ++mit ) {
-            for( std::vector<uint32_t*>::iterator it = mit->second.begin();
-                 it != mit->second.end();
-                 ++it) {
-                delete *it;
-            }
-        }
+        m_data.clear();
     }
 
     dcmessages::LVL1Result* L1AssemblerSource::getResult()
@@ -59,7 +50,7 @@ namespace hltsv {
 
         uint32_t* robs[dcmessages::MAXLVL1RODS];
 
-        const std::vector<uint32_t*>& rob_frag = m_data[m_l1id];
+        const std::vector<uint32_t*>& rob_frag = m_data;
       
         std::vector<uint32_t*>::const_iterator fit = rob_frag.begin();
 
@@ -130,12 +121,6 @@ namespace hltsv {
             m_modid = true;
         } else {
         }
-/*
-        std::cout << " - m_firstid: " << m_firstid;
-        std::cout << " - m_l1id: " << m_l1id << std::endl;
-
-        std::cout << "m_data size: " << m_data.size() << " rob_frag->size(): " << rob_frag->size() << std::endl;
-*/
 
         return l1Result;
     }
@@ -144,17 +129,6 @@ namespace hltsv {
     {
         // clean any stored fragments
         std::map<unsigned int, std::vector<uint32_t*>*>::iterator mit;
-
-/*
-        for ( mit=m_data.begin(); mit!=m_data.end(); mit++ ) {
-            std::vector<uint32_t*>* rob_frag = (*mit).second;
-            std::vector<uint32_t*>::iterator fit;
-            for ( fit=rob_frag->begin(); fit!=rob_frag->end(); fit++ ) {
-                delete [] (*fit);
-            }
-            delete (*mit).second;
-        }
-*/
 
         // also reset l1_id index
         m_l1id = 0;
@@ -329,26 +303,16 @@ namespace hltsv {
 
     void L1AssemblerSource::assembler_task() {
 
-/*
-        std::vector<uint32_t*>* c_rob_frag = m_data[m_l1id];
-        std::vector<uint32_t*>::iterator fit;
-        for ( fit=c_rob_frag->begin(); fit!=c_rob_frag->end(); fit++ ) {
-          delete [] (*fit);
-        }
-*/
-//        m_data.erase(m_data.begin(), m_data.end());
-     //   m_data[m_l1id] = new std::vector<uint32_t*>;
+        m_data.clear();
 
-        m_data[m_l1id].clear();
-
-        m_data[m_l1id].push_back(m_data_770001[m_l1id]);
-        m_data[m_l1id].push_back(m_data_760001[m_l1id]);
-        m_data[m_l1id].push_back(m_data_7300a8[m_l1id]);
-        m_data[m_l1id].push_back(m_data_7300a9[m_l1id]);
-        m_data[m_l1id].push_back(m_data_7300aa[m_l1id]);
-        m_data[m_l1id].push_back(m_data_7300ab[m_l1id]);
-        m_data[m_l1id].push_back(m_data_7500ac[m_l1id]);
-        m_data[m_l1id].push_back(m_data_7500ad[m_l1id]);
+        m_data.push_back(m_data_770001[m_l1id]);
+        m_data.push_back(m_data_760001[m_l1id]);
+        m_data.push_back(m_data_7300a8[m_l1id]);
+        m_data.push_back(m_data_7300a9[m_l1id]);
+        m_data.push_back(m_data_7300aa[m_l1id]);
+        m_data.push_back(m_data_7300ab[m_l1id]);
+        m_data.push_back(m_data_7500ac[m_l1id]);
+        m_data.push_back(m_data_7500ad[m_l1id]);
         
     }
 

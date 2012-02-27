@@ -39,7 +39,7 @@ namespace hltsv {
         int           m_nodes;
         std::string   m_nodeid;
         
-        std::map<unsigned int, std::vector<uint32_t*> > m_data;
+        std::vector<uint32_t*>  m_data;
 
         std::map<unsigned int, uint32_t*> m_data_770001;
         std::map<unsigned int, uint32_t*> m_data_760001;
