@@ -22,6 +22,7 @@ use ttcpr
 use ac
 use hltinterface
 use tbb
+use cmdl
 
 use Boost * TDAQCExternal
 use ROOT  * DQMCExternal
@@ -97,7 +98,7 @@ macro to_install "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl
 # tests
 
 application test_l1source ../test/test_l1source.cxx
-macro test_l1sourcelinkopts "-lers -lsvl1source -lconfig -ldynlibs -ldaq-df-dal -ltbb"
+macro test_l1sourcelinkopts "-lers -lsvl1source -lconfig -ldynlibs -ldaq-df-dal -ltbb -lcmdline"
 macro test_l1source_dependencies svl1source
 
 application testDCM ../test/testDCM.cxx
