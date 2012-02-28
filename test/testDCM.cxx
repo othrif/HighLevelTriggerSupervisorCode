@@ -32,7 +32,7 @@ public:
             return DC::FATAL;
         }
 
-        m_ports = m_msgconf.create_by_group("L2SV");
+        m_ports = m_msgconf.create_by_group("HLTSV");
         
         return DC::OK;
     }

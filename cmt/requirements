@@ -86,7 +86,7 @@ macro svl1sltp_shlibflags "-leformat_write -leformat"
 macro svl1ltp_dependencies svl1source
 
 library svl1assembler L1AssemblerSource.cxx
-macro svl1assembler_shlibflags "-leformat_write -leformat"
+macro svl1assembler_shlibflags "-leformat_write -leformat -lDataReader"
 macro svl1assembler_dependencies svl1source
 
 macro constituents "svl1source hltsv_main svl1internal svl1preloaded svl1filar svl1ttc svl1ltp svl1assembler test_l1source testDCM" \

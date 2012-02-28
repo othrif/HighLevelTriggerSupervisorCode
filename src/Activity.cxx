@@ -96,6 +96,10 @@ namespace hltsv {
 
         typedef std::list<MessagePassing::Port*> PortList;
         PortList efds = m_msgconf.create_by_group("L2PU");
+	PortList dcms = m_msgconf.create_by_group("DCM");
+
+	efds.insert(efds.end(),dcms.begin(), dcms.end());
+
         if(efds.size() == 0) {
             // no nodes
             ERS_LOG("No processing nodes available");
