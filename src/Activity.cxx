@@ -134,6 +134,9 @@ namespace hltsv {
         m_network = true;
         m_thread_decision = new boost::thread(&Activity::handle_network, this);
 
+	sleep(5);
+	MessagePassing::Port::connect(efds);
+
         return DC::OK;
     }
 
@@ -415,7 +418,7 @@ namespace hltsv {
                             continue;
                         }
                         
-                        Time diff = clock.time() - event->assigned();
+                        Time diff = now - event->assigned();
 
                         if(diff.as_milliseconds() > m_timeout) {
 
@@ -442,7 +445,7 @@ namespace hltsv {
                         ++it;
                     }
                 }
-                last_check = clock.time();
+                last_check = now;
             }
         }
 
