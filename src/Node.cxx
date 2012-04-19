@@ -80,7 +80,7 @@ namespace hltsv {
         if(slots == 0) {
             m_slots   = m_max_slots;
         } else {
-            m_slots = slots;
+            m_max_slots = m_slots = slots;
         }
         m_events.clear();
         m_events.resize(m_slots, 0);
