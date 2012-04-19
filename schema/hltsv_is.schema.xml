@@ -87,15 +87,15 @@
 
  <class name="HLTSV">
   <superclass name="Info"/>
-  <attribute name="LVL1Events" type="u64" is-not-null="yes"/>
-  <attribute name="AssignedEvents" type="u64" is-not-null="yes"/>
-  <attribute name="ProcessedEvents" type="u64" is-not-null="yes"/>
-  <attribute name="Timeouts" type="u64" is-not-null="yes"/>
-  <attribute name="ProcessingNodesInitial" type="u32" is-not-null="yes"/>
-  <attribute name="ProcessingNodesDisabled" type="u32" is-not-null="yes"/>
-  <attribute name="ProcessingNodesEnabled" type="u32" is-not-null="yes"/>
-  <attribute name="ProcessingNodesAdded" type="u32" is-not-null="yes"/>
-  <attribute name="Rate" type="float" is-not-null="yes"/>
+  <attribute name="LVL1Events"  description="Number of LVL1 events" type="u64" is-not-null="yes"/>
+  <attribute name="AssignedEvents" description="Number of assigned events" type="u64" is-not-null="yes"/>
+  <attribute name="ProcessedEvents" description="Number of processed events" type="u64" is-not-null="yes"/>
+  <attribute name="Timeouts" description="Number of timeouts events" type="u64" is-not-null="yes"/>
+  <attribute name="ProcessingNodesInitial" description="Initial number of HLT hosts" type="u32" is-not-null="yes"/>
+  <attribute name="ProcessingNodesDisabled" description="Current number of disabled HLT hosts" type="u32" is-not-null="yes"/>
+  <attribute name="ProcessingNodesEnabled" description="Current number of enabled HLT hosts (Not used 2012-03-19)" type="u32" is-not-null="yes"/>
+  <attribute name="ProcessingNodesAdded" description="Number of HLT hosts added during this run" type="u32" is-not-null="yes"/>
+  <attribute name="Rate" type="float" description="Average Throughput (Hz)" is-not-null="yes"/>
  </class>
 
 </oks-schema>
