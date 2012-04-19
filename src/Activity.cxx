@@ -407,7 +407,7 @@ namespace hltsv {
                 for(EventMap::iterator it = m_events.begin(); it != m_events.end(); ) {
                     
                     EventMap::const_accessor access;
-                    if(m_events.find(access, (*it).second->lvl1_id())) {
+                    if(m_events.find(access, (*it).first)) {
                         Event *event = access->second;
                         
                         ERS_ASSERT_MSG(event != 0, "Invalid Event pointer");
