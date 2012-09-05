@@ -23,7 +23,7 @@ export DCAPPCONF=L2-DCApplicationConfig-1
   ProtoRepo@SW_Repository.Name = "Proto"
   ProtoRepo@SW_Repository.InstallationPath = "$REPOSITORY"
   ProtoRepo@SW_Repository.Uses = [ Online@SW_Repository ]
-  ProtoRepo@SW_Repository.ISInfoDescriptionFiles = [ 'share/data/hltsv_is.schema.xml' ] 
+  ProtoRepo@SW_Repository.ISInfoDescriptionFiles = [ 'hltsv/schema/hltsv_is.schema.xml' ] 
 
   hltsv_main@Binary
   hltsv_main@Binary.BinaryName = 'hltsv_main'
