@@ -6,7 +6,7 @@
 # 
 REPOSITORY=$(dirname $(dirname $(pwd)))/installed
 
-pm_part_l2.py -p test_hltsv -I daq/schema/hltsv.schema.xml
+pm_part_l2.py -p test_hltsv -I daq/schema/hltsv.schema.xml 
 pm_set.py test_hltsv.data.xml <<EOF
 
   ProtoRepo@SW_Repository
@@ -56,8 +56,6 @@ pm_set.py test_hltsv.data.xml <<EOF
 
   test_hltsv-lvl2-counter@IS_EventsAndRates.EventCounter = "DF.HLTSV.HLTSV.ProcessedEvents"
   test_hltsv-lvl2-counter@IS_EventsAndRates.Rate = "DF.HLTSV.HLTSV.Rate"
-
-  test_hltsv@Partition.Disabled = [ ROS-Segment-1@Segment ]
 
 #  Default-DFParameters-1@DFParameters.DefaultDataNetworks = [ '10.149.96.31/24' , '10.149.64.0/24' ]
 
