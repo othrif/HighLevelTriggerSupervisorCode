@@ -31,12 +31,12 @@ namespace hltsv {
         uint32_t event_type = 0x0; // params->getLumiBlock(); ?????
 
         //ROB
-        uint32_t dummy_data[32];
+        uint32_t dummy_data[250];
 
         eformat::helper::SourceIdentifier src(eformat::TDAQ_CTP, 1);
 
         eformat::write::ROBFragment rob(src.code(), run_no, m_l1id, bc_id,
-                                        lvl1_type, event_type, 32, dummy_data, 
+                                        lvl1_type, event_type, 240, dummy_data, 
                                         eformat::STATUS_FRONT);
 
         eformat::write::ROBFragment* robs[1];
