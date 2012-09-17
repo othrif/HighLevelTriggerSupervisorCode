@@ -44,8 +44,6 @@ namespace hltsv {
         EventList::iterator it = std::find(m_events.begin(), m_events.end(), event);
         ERS_ASSERT_MSG(it != m_events.end(), "Event not in Node's list");
         *it = 0;
-        m_slots++;
-        ERS_ASSERT_MSG(m_slots <= m_max_slots, "More calls to free() than allocate()")
     }
 
     MessagePassing::NodeID Node::id() const
@@ -85,6 +83,13 @@ namespace hltsv {
         m_events.clear();
         m_events.resize(m_slots, 0);
         m_enabled = true;
+    }
+
+    void Node::update(unsigned int slots)
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        m_slots += slots;
+        ERS_ASSERT_MSG(m_slots <= m_max_slots, "Too many slots added to node " << id());
     }
 
     const Node::EventList& Node::events() const

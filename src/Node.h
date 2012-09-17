@@ -31,6 +31,7 @@ namespace hltsv {
         void enable();
         void disable();
 
+        void update(unsigned int slots);
         void reset(unsigned int slots = 0);
 
         typedef std::vector<Event*> EventList;

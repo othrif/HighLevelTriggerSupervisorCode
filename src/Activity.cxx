@@ -134,7 +134,7 @@ namespace hltsv {
         m_network = true;
         m_thread_decision = new boost::thread(&Activity::handle_network, this);
 
-	sleep(5);
+        sleep(2);
 	MessagePassing::Port::connect(efds);
 
         return DC::OK;
@@ -386,9 +386,6 @@ namespace hltsv {
                 }
 
                 switch(header.type()) {
-                case 0x1234U:
-                    handle_announce(buffer);
-                    break;
                 case 0x8765U:
                     handle_decision(buffer);
                     break;
@@ -420,13 +417,13 @@ namespace hltsv {
                         
                         Time diff = now - event->assigned();
 
-                        if(diff.as_milliseconds() > m_timeout) {
+                        if(diff.as_milliseconds() < 4000000000U && diff.as_milliseconds() > m_timeout) {
 
                             // do something.
                             // but what ? There is no SFI to ask to build the event.
                             // If we re-assign there must be a way to tell the node that
                             // it should simply build the event, not process it.
-                            ERS_LOG("Timeout for event " << event->lvl1_id() << " : " <<diff.seconds() << "." << diff.nano_seconds());
+                            ERS_DEBUG(1,"Timeout for event " << event->lvl1_id() << " : " <<diff.seconds() << "." << diff.nano_seconds());
                             
                             m_stats.Timeouts++;
                             event->done();
@@ -454,40 +451,65 @@ namespace hltsv {
                 
     void Activity::handle_decision(MessagePassing::Buffer *buffer) 
     {
+        using namespace MessagePassing;
+        using namespace MessageInput;
+
         static RealTimeClock clock;
 
-        MessagePassing::Buffer::iterator it = buffer->begin();
-        it += MessageInput::MessageHeader::SIZE;
+        MessageHeader header(buffer);
+        Buffer::iterator it = buffer->begin();
+        it += MessageHeader::SIZE;
         
+        uint32_t num_lvl1;
         uint32_t lvl1_id;
+
+        it >> num_lvl1;
         
-        it >> lvl1_id;
+        while(num_lvl1 > 0) {
+
+            it >> lvl1_id;
+
+        
+            // ERS_LOG("Got decision for event " << lvl1_id);
+            
+            EventMap::accessor access;
+            if(m_events.find(access, lvl1_id)) {
+                ERS_ASSERT_MSG(access->second != 0, "Invalid event pointer");
+                Event *event = access->second;
+                if(event->active()) {
+                    event->done();
+                    m_stats.ProcessedEvents++;
+                    Time diff = clock.time() - event->assigned();
+                    m_time->Fill(diff.as_milliseconds());
+                    
+                    m_events.erase(access);
+                    delete event;
+                    
+                    add_event_to_clear(lvl1_id);
+                } else {
+                    ERS_LOG("Late reply for event" << lvl1_id);
+                }
+            } else {
+                // oops, unknown lvl1 id ???
+                ERS_LOG("Unknown level 1 ID: " << lvl1_id);
+            }
+
+            num_lvl1--;
+        }
+
+        uint32_t num_cores;
+        it >> num_cores;
+        NodeID id = header.source();
+        
+        if(Node *node = m_scheduler.find_node(id)) {
+            ERS_DEBUG(1,"Updating slots for existing node: " << id << " by " << num_cores);
+            node->update(num_cores);
+        } else {
+            ERS_LOG("Unknown node: " << id);
+        }
         
         delete buffer;
-        
-        // ERS_LOG("Got decision for event " << lvl1_id);
-        
-        EventMap::accessor access;
-        if(m_events.find(access, lvl1_id)) {
-            ERS_ASSERT_MSG(access->second != 0, "Invalid event pointer");
-            Event *event = access->second;
-            if(event->active()) {
-                event->done();
-                m_stats.ProcessedEvents++;
-                Time diff = clock.time() - event->assigned();
-                m_time->Fill(diff.as_milliseconds());
 
-                m_events.erase(access);
-                delete event;
-                
-                add_event_to_clear(lvl1_id);
-            } else {
-                ERS_LOG("Late reply for event" << lvl1_id);
-            }
-        } else {
-            // oops, unknown lvl1 id ???
-            ERS_LOG("Unknown level 1 ID: " << lvl1_id);
-        }
     }
 
     void Activity::add_event_to_clear(uint32_t lvl1_id)
