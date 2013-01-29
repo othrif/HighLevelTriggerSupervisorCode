@@ -61,26 +61,15 @@ namespace tdaq {
 namespace hltsv {
   class Event;
   class L1Source;
-  //class Activity : public UserActivity, public daq::rc::MasterTrigger {
   class Activity : public daq::rc::Controllable, 
 		   public daq::rc::MasterTrigger 
   {
+
+    using MasterTrigger::resume;
   public:
     Activity(std::string&);
     ~Activity();
     
-    /*
-    DC::StatusWord act_config();
-    DC::StatusWord act_connect();
-    DC::StatusWord act_prepareForRun();
-    DC::StatusWord act_disable(); 
-    DC::StatusWord act_enable();
-    DC::StatusWord act_stopL2SV();
-    DC::StatusWord act_unconfig();
-    DC::StatusWord act_userCommand();
-    DC::StatusWord act_disconnect();
-    DC::StatusWord act_exit();
-    */
     void configure(std::string&);
     void connect(std::string&);
     void prepareForRun(std::string&);

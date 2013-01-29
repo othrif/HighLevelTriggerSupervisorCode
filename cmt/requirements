@@ -69,33 +69,15 @@ library svl1preloaded L1PreloadedSource.cxx
 macro svl1preloaded_shlibflags "-lers -leformat_write -leformat -lDataReader"
 macro svl1preloaded_dependencies svl1source
 
-library svl1ttc L1TTCSource.cxx
-macro svl1ttc_shlibflags "-leformat_write -leformat -lttcpr"
-macro svl1ttc_dependencies svl1source
-
-#library svl1slink L1SLinkSource.cxx
-#macro svl1slink_shlibflags "-leformat_write -leformat -lslink"
-#macro svl1slink_dependencies svl1source
-
 library svl1filar L1FilarSource.cxx
 macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lttcpr"
 macro svl1filar_dependencies svl1source
 
-library svl1ltp L1LTPSource.cxx
-macro svl1sltp_shlibflags "-leformat_write -leformat"
-macro svl1ltp_dependencies svl1source
+macro constituents "svl1source hltsv_main svl1internal svl1preloaded svl1filar test_l1source testDCM" \
+       x86_64 "svl1source hltsv_main svl1internal svl1preloaded test_l1source testDCM"
 
-library svl1assembler L1AssemblerSource.cxx
-macro svl1assembler_shlibflags "-leformat_write -leformat -lDataReader"
-macro svl1assembler_dependencies svl1source
-
-macro constituents "svl1source hltsv_main svl1internal svl1preloaded svl1filar svl1ttc svl1ltp svl1assembler test_l1source testDCM" \
-       x86_64-slc5 "svl1source hltsv_main svl1internal svl1preloaded svl1ttc svl1ltp svl1assembler test_l1source testDCM"
-
-macro to_install "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc.so libsvl1filar.so libsvl1ltp.so libsvl1assembler.so libdaq-hltsv-dal.so" \
-      x86_64-slc5 "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc.so libsvl1ltp.so libsvl1assembler.so libdaq-hltsv-dal.so"
-
-# tests
+macro to_install "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1filar.so libdaq-hltsv-dal.so" \
+      x86_64 "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libdaq-hltsv-dal.so"
 
 application test_l1source ../test/test_l1source.cxx
 macro test_l1sourcelinkopts "-lers -lsvl1source -lconfig -ldynlibs -ldaq-df-dal -ltbb -lcmdline"

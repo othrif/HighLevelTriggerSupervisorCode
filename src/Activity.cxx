@@ -13,13 +13,11 @@
 #include "msginput/InputThread.h"
 #include "msginput/MessageHeader.h"
 
-//#include "ac/AppControl.h"
 #include "config/Configuration.h"
 
 #include "dal/Partition.h"
 
 #include "sysmonapps/ISResource.h"
-//#include "hltinterface/ITHistRegister.h"
 
 #include "Event.h"
 #include "Node.h"
@@ -28,20 +26,8 @@
 #include "hltsvdal/HLTSVApplication.h"
 #include "hltsvdal/HLTSVConfiguration.h"
 
-#include "boost/function.hpp"
-
 #include "RunController/ConfigurationBridge.h"
 
-//#include "monsvc/ptr.h"
-//#include "monsvc/PublishingController.h"
-//#include "monsvc/NameFilter.h"
-//#include "monsvc/FilePublisher.h"
-//#include "monsvc/OstreamPublisher.h"
-//#include "monsvc/ISPublisher.h"
-//#include "monsvc/OHPublisher.h"
-
-
-#include "monsvc/detail/Registry.h"
 #include "monsvc/MonitoringService.h"
 #include <TFile.h>
 #include <is/info.h>
@@ -70,7 +56,6 @@ namespace hltsv {
       m_thread_update_rates(0),
       m_triggerHoldCounter(0)
   {
-    //ERS_LOG("New Activity");
   }
 
   Activity::~Activity()
@@ -78,15 +63,9 @@ namespace hltsv {
   }
   
   void Activity::configure(std::string &)
-  //DC::StatusWord Activity::act_config()
   {
 
-    //AppControl *ac = AppControl::get_instance();
-    //Configuration* conf;
-    //ac->getConfiguration(&conf);
     Configuration* conf = daq::rc::ConfigurationBridge::instance()->getConfiguration();
-    //???
-    //const daq::df::HLTSVApplication *self = conf->cast<daq::df::HLTSVApplication>(ac->getDFApplication());
     const daq::df::HLTSVApplication *self = conf->cast<daq::df::HLTSVApplication>(daq::rc::ConfigurationBridge::instance()->getApplication());
     const daq::df::HLTSVConfiguration *my_conf = self->get_Configuration();
 
@@ -104,14 +83,13 @@ namespace hltsv {
       }
     } catch (ers::Issue& ex) {
       ers::fatal(ex);
-      return;// DC::FATAL;
+      return;
     }
 
-    //if(!m_msgconf.configure(ac->getNodeID(), *conf)) {
     if(!m_msgconf.configure(daq::rc::ConfigurationBridge::instance()->getNodeID(), *conf)) {
       // fatal
       ERS_LOG("Cannot configure message passing");
-      return;// DC::FATAL;
+      return;
     }
 
     m_ros_group = m_msgconf.create_group("ROS");
@@ -126,7 +104,7 @@ namespace hltsv {
     if(efds.size() == 0) {
       // no nodes
       ERS_LOG("No processing nodes available");
-      return;// DC::FATAL;
+      return;
     }
 
     for(PortList::iterator it = efds.begin(); it != efds.end(); ++it) {
@@ -142,11 +120,8 @@ namespace hltsv {
     m_resource = new tdaq::sysmon::ISResource("HLTSV", m_stats);
 
     if(source_type == "internal" || source_type == "preloaded") {
-      //IPCPartition p(getenv("TDAQ_PARTITION"));
       IPCPartition p(daq::rc::ConfigurationBridge::instance()->getPartition()->UID());
       ERS_LOG("Name = " << getName());
-      //m_cmdReceiver = new daq::rc::CommandedTrigger(IPCPartition(ac->getPartition()->UID()),
-      //					    ac->getAppName(), this);
       m_cmdReceiver = new daq::rc::CommandedTrigger(p,getName(), this);
       ERS_LOG("Pass CommandedTrigger 1");
 
@@ -157,20 +132,11 @@ namespace hltsv {
       pc->add_configuration_rule(*monsvc::ConfigurationRule::from("DFObjects:.*/=>is:(2,DF)"));
       pc->add_configuration_rule(*monsvc::ConfigurationRule::from("Histogramming:.*/=>oh:(5,DF,provider_name)"));
       
-      //pc->add_configuration_rules(*conf);
-      //#############
       ERS_LOG("registerTObject time prepare");    
       m_time = new TH1F("myTime","myTime", 2000, 0., 20000.);
       monsvc::MonitoringService::instance().register_object("myTime",m_time);
-      //hltinterface::ITHistRegister::instance()->registerTObject("", "/DEBUG/HLTSV/Time", m_time);
       ERS_LOG("registerTObject Time done");    
-
-
-
     }
-
-
-
     
     m_num_assign_threads = my_conf->get_NumberOfAssignThreads();
     m_timeout = my_conf->get_Timeout();
@@ -183,20 +149,16 @@ namespace hltsv {
     sleep(5);
     MessagePassing::Port::connect(efds);
     ERS_LOG("Configuration done");    
-    return;// DC::OK;
+    return;
   }
 
-  //DC::StatusWord Activity::act_connect()
-  void Activity::connect(std::string& name)
+  void Activity::connect(std::string& )
   {
-    //###########
     pc->start_publishing();
-    //###########
-    return;// DC::OK;
+    return;
   }
 
-  //DC::StatusWord Activity::act_prepareForRun()
-  void Activity::prepareForRun(std::string& name)
+  void Activity::prepareForRun(std::string& )
   {
     m_stats.LVL1Events = m_stats.AssignedEvents = m_stats.ProcessedEvents = m_stats.Timeouts = 
       m_stats.ProcessingNodesDisabled = m_stats.ProcessingNodesEnabled =
@@ -215,23 +177,21 @@ namespace hltsv {
     
     m_thread_input = new boost::thread(&Activity::handle_lvl1_input, this);
     
-    return; //DC::OK;
+    return; 
   }
 
-  //DC::StatusWord Activity::act_disable()
-  void Activity::disable(std::string & name)
+  void Activity::disable(std::string & )
   {
-    return;// DC::OK;
+    return;
   }
 
-  //DC::StatusWord Activity::act_enable()
-  void Activity::enable(std::string &name)
+  void Activity::enable(std::string &)
   {
-    return;// DC::OK;
+    return;
   }
   
   //DC::StatusWord Activity::act_stopL2SV()
-  void Activity::stopL2SV(std::string &name)
+  void Activity::stopL2SV(std::string &)
   {
     m_triggering = false;
     m_running = false;
@@ -264,11 +224,11 @@ namespace hltsv {
     
     m_events.clear();
     
-    return;// DC::OK;
+    return;
   }
 
   //DC::StatusWord Activity::act_unconfig()
-  void Activity::unconfigure(std::string &name)
+  void Activity::unconfigure(std::string &)
   {
     if(m_cmdReceiver) {
       m_cmdReceiver->_destroy();
@@ -296,41 +256,24 @@ namespace hltsv {
     
     boost::shared_ptr<monsvc::FilePublisher> pub(boost::make_shared<monsvc::FilePublisher>(outfile));
     monsvc::NameFilter filter;
-    //monsvc::FilePublisher file_publisher(outfile);
     monsvc::PublishingController::publish_now(pub,filter);
     
     outfile->Write();
     outfile->Close();
-    
-    //#############
-    
-    // hltinterface::ITHistRegister::instance()->releaseTObject("", "/DEBUG/HLTSV/Time");
+
+    // ? who deletes m_time ?
+
     //delete m_time;
     //m_time = 0;
     
-    return;// DC::OK;
+    return;
   }
 
-  //DC::StatusWord Activity::act_userCommand()
-  //{
-  //  return DC::OK;
-  //}
-
-  //DC::StatusWord Activity::act_disconnect()
-  void Activity::disconnect(std::string & name)
+  void Activity::disconnect(std::string & )
   {
-    //############
     pc->stop_publishing();
-
-
-    //############
     return;// DC::OK;
   }
-
-  //DC::StatusWord Activity::act_exit()
-  //{
-  //  return DC::OK;
-  //}
 
   void Activity::handle_announce(MessagePassing::Buffer *buffer)
   {
