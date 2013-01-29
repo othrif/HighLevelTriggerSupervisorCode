@@ -9,7 +9,10 @@
 #include "RunController/ConfigurationBridge.h"
 #include "RunController/Controllable.h"
 #include "RunController/ItemCtrl.h"
-//mytest 
+
+#include "queues/ProtectedQueue.h"
+
+
 class DCMActivity : public daq::rc::Controllable {
 public:
   DCMActivity(std::string& name)
@@ -19,10 +22,12 @@ public:
   ~DCMActivity()
   {
   }
-  virtual void initialize(std::string & name)
+
+  virtual void initialize(std::string & )
   {
   }
-  virtual void configure(std::string&name)
+
+  virtual void configure(std::string& )
   {
     Configuration *config = daq::rc::ConfigurationBridge::instance()->getConfiguration();
 
@@ -33,12 +38,12 @@ public:
     m_ports = m_msgconf.create_by_group("HLTSV");
   }
 
-  virtual void unconfigure(std::string &name)
+  virtual void unconfigure(std::string &)
   {
     m_msgconf.unconfigure();
     m_ports.clear();
   }
-  virtual void connect(std::string& name)
+  virtual void connect(std::string& )
   {
     MessagePassing::Buffer announce(128);
 
@@ -53,11 +58,10 @@ public:
     m_ports.front()->send(&announce, true);
 
   }
-  virtual void stopL2SV(std::string &name)
+  virtual void stopL2SV(std::string &)
   {
     m_running = false;
   }
-#endif
 
   void execute()
   {
@@ -105,7 +109,7 @@ public:
     }
   }
 
-  virtual void prepareForRun()
+    virtual void prepareForRun(std::string& )
   {
     m_running = true;
   }
