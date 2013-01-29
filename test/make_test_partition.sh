@@ -6,7 +6,8 @@
 # 
 REPOSITORY=$(dirname $(dirname $(pwd)))/installed
 
-pm_part_l2.py -p test_hltsv -I daq/schema/hltsv.schema.xml 
+#pm_part_l2.py -p test_hltsv -I daq/schema/hltsv.schema.xml
+pm_part_l2.py -p test_hltsv -I daq/schema/hltsv.schema.xml -I daq/schema/monsvc_config.schema.xml
 pm_set.py test_hltsv.data.xml <<EOF
 
   ProtoRepo@SW_Repository

@@ -23,6 +23,7 @@ use ac
 use hltinterface
 use tbb
 use cmdl
+use monsvc
 
 use Boost * TDAQCExternal
 use ROOT  * DQMCExternal
@@ -54,7 +55,7 @@ library svl1source L1Source.cxx
 macro svl1source_shlibflags "-ldcmessages"
 
 application hltsv_main  hltsv_main.cxx Activity.cxx Node.cxx Scheduler.cxx Event.cxx
-macro hltsv_mainlinkopts "-lers -ltbb -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon -lhltinterface -lhistmon -lsvl1source -ldaq-hltsv-dal"
+macro hltsv_mainlinkopts "-lers -ltbb -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon -lhltinterface -lhistmon -lsvl1source -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal"
 macro hltsv_main_dependencies "daq-hltsv-dal"
 
 macro sw.repository.binary.hltsv_main:name         "HLT Supervisor"
