@@ -47,10 +47,11 @@ namespace hltsv {
          * This is implemented in a derived class, using either
          * multicast or multiple sends.
          */
-        virtual void do_flush(std::shared_ptr<std::vector<uint32_t>> events) = 0;
+        virtual void do_flush(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events) = 0;
 
     private:
         size_t                m_threshold;
+        uint32_t              m_sequence;
         std::mutex            m_mutex;
         std::vector<uint32_t> m_event_ids;
     };
@@ -69,8 +70,10 @@ namespace hltsv {
         MultiCastROSClear(size_t threshold, const std::string& address_network);
         ~MultiCastROSClear();
 
-        virtual void do_flush(std::shared_ptr<std::vector<uint32_t>> events) override;
     private:
+
+        virtual void do_flush(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events) override;
+
         // TODO:
         // 
         // - initialize the multicast socket with the given
@@ -89,9 +92,10 @@ namespace hltsv {
         UnicastROSClear(size_t threshold, const std::vector<std::string>& data_networks, const std::string& is_server = "DF");
         ~UnicastROSClear();
 
-        virtual void do_flush(std::shared_ptr<std::vector<uint32_t>> events) override;
-
     private:
+
+        virtual void do_flush(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events) override;
+
         // TODO:
         //
         // using msgnamesvc::NameService,

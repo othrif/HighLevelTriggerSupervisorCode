@@ -26,20 +26,23 @@ namespace hltsv {
         if(m_event_ids.size() >= m_threshold) {
             std::shared_ptr<std::vector<uint32_t>> data(new std::vector<uint32_t>);
             m_event_ids.swap(*data);
+            uint32_t seq = m_sequence++;
             lock.unlock();
-            do_flush(data);
+            do_flush(seq, data);
         }
     }
 
     void ROSClear::flush()
     {
         std::shared_ptr<std::vector<uint32_t>> data(new std::vector<uint32_t>);
+        uint32_t seq;
 
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             m_event_ids.swap(*data);
+            seq = m_sequence++;
         }
-        do_flush(data);
+        do_flush(seq, data);
     }
 
 
