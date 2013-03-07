@@ -10,14 +10,14 @@
 
 namespace hltsv {
 
-    //
-    // The ROSClear interface.
-    // This is all the rest of the HLTSV sees.
-    //
-    // The instances of ROSClear should not be
-    // created before the remote side is ready, i.e.
-    // not before the connect() transition.
-    //
+    /**
+     * The ROSClear interface.
+     * This is all the rest of the HLTSV sees.
+     *
+     * The instances of ROSClear should not be
+     * created before the remote side is ready, i.e.
+     * not before the connect() transition.
+     */
     class ROSClear {
     public:
         
@@ -37,7 +37,7 @@ namespace hltsv {
          */
         void add_event(uint32_t l1_event_id);
 
-        // Flush all events to the ROS.
+        /// Flush all existing events to the ROS.
         void flush();
 
     protected:
@@ -58,13 +58,14 @@ namespace hltsv {
 
     //
     // Two possible implementations. These can go into a separate
-    // file if necessary.
+    // file if necessary. The actual instance should be created
+    // in the connect() transition based on information from the configuration
+    // database.
     //
-    // Who creates the ROSClear instance ? 
-    // Either via a ROSClear::create() function (arguments ??)
-    // or explicitly by the Activity::configure() method ? 
-    // 
 
+    /**
+     * Multicast implementation of ROSClear.
+     */
     class MultiCastROSClear : public ROSClear {
     public:
         MultiCastROSClear(size_t threshold, const std::string& address_network);
@@ -87,6 +88,9 @@ namespace hltsv {
         // boost::asio::ip::udp::socket m_socket;
     };
 
+    /**
+     * Unicast implementation of ROSClear, using TCP.
+     */
     class UnicastROSClear : public ROSClear {
     public:
         UnicastROSClear(size_t threshold, const std::vector<std::string>& data_networks, const std::string& is_server = "DF");
