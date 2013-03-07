@@ -8,27 +8,22 @@ public
 use TDAQPolicy
 
 use ers
-use queues
 use eformat
-use dcmessages
 use dynlibs
-use sysmon
-use sysmonapps
-use histmon
 use EventStorage
 use dal
 use DFConfiguration
-use ttcpr
-use ac
-use hltinterface
 use tbb
 use cmdl
 use monsvc
+use asyncmsg
 
 use Boost * TDAQCExternal
 use ROOT  * DQMCExternal
 
 private
+
+macro_append cppflags "-Wno-deprecated-declarations"
 
 use genconfig
 
@@ -54,8 +49,8 @@ macro_append daq-hltsv-dal_shlibflags "-ldaq-core-dal -ldaq-df-dal"
 library svl1source L1Source.cxx
 macro svl1source_shlibflags "-ldcmessages"
 
-application hltsv_main  hltsv_main.cxx Activity.cxx Node.cxx Scheduler.cxx Event.cxx
-macro hltsv_mainlinkopts "-lers -ltbb -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon -lhltinterface -lhistmon -lsvl1source -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal"
+application hltsv_main  hltsv_main.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx ROSSession.cxx Messages.cxx
+macro hltsv_mainlinkopts "-lers -ltbb -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon -lhltinterface -lhistmon -lsvl1source -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg"
 macro hltsv_main_dependencies "daq-hltsv-dal"
 
 macro sw.repository.binary.hltsv_main:name         "HLT Supervisor"
