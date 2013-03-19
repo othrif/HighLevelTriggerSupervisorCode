@@ -18,6 +18,9 @@ use cmdl
 use monsvc
 use asyncmsg
 
+# FIXME
+use msgnamesvc
+
 use Boost * TDAQCExternal
 use ROOT  * DQMCExternal
 
@@ -50,7 +53,7 @@ library svl1source L1Source.cxx
 macro svl1source_shlibflags "-ldcmessages"
 
 application hltsv_main  hltsv_main.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx ROSSession.cxx Messages.cxx
-macro hltsv_mainlinkopts "-lers -ltbb -leformat_write -leformat -ldcmessages -lac -lmsgconf -lsysmonapps -lsysmon -lhltinterface -lhistmon -lsvl1source -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg"
+macro hltsv_mainlinkopts "-lItemCtrl -lers -ltbb -leformat_write -leformat -lsvl1source -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg"
 macro hltsv_main_dependencies "daq-hltsv-dal"
 
 macro sw.repository.binary.hltsv_main:name         "HLT Supervisor"
@@ -68,8 +71,8 @@ library svl1filar L1FilarSource.cxx
 macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lttcpr"
 macro svl1filar_dependencies svl1source
 
-macro constituents "svl1source hltsv_main svl1internal svl1preloaded svl1filar test_l1source testDCM" \
-       x86_64 "svl1source hltsv_main svl1internal svl1preloaded test_l1source testDCM"
+macro constituents "svl1source hltsv_main svl1internal svl1preloaded svl1filar test_l1source testDCM testROS" \
+       x86_64 "svl1source hltsv_main svl1internal svl1preloaded test_l1source testDCM testROS"
 
 macro to_install "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl1filar.so libdaq-hltsv-dal.so" \
       x86_64 "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libdaq-hltsv-dal.so"
@@ -81,11 +84,17 @@ macro test_l1source_dependencies svl1source
 application testDCM ../test/testDCM.cxx
 macro testDCMlinkopts "-lers -leformat -lac -ldcmessages -lmsginput -lmsgconf -lmsg -ldaq-df-dal"
 
-macro sw.repository.binary.testDC:name         "Tester for hltsv"
-macro sw.repository.binary.testDC:description  "Tester for hltsv"
+application testROS ../test/testROS.cxx
+macro testROSlinkopts "-lasyncmsg -lItemCtrl -lers -lcmdline -ldaq-df-dal"
+
+macro sw.repository.binary.testDCM:name         "Tester for hltsv"
+macro sw.repository.binary.testDCM:description  "Tester for hltsv"
+
+macro sw.repository.binary.testROS:name         "Tester for hltsv"
+macro sw.repository.binary.testROS:description  "Tester for hltsv"
 
 apply_pattern install_libs files="${to_install}"
-apply_pattern install_apps files="hltsv_main test_l1source testDCM"
+apply_pattern install_apps files="hltsv_main test_l1source testDCM testROS"
 
 apply_pattern   install_db_files name=schema            files="../schema/hltsv.schema.xml" \
                                                         target_dir="schema"
