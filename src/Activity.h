@@ -52,7 +52,7 @@ namespace hltsv {
 
     class Activity : public daq::rc::Controllable {
     public:
-        Activity(std::string&);
+        Activity(const std::string&);
         ~Activity();
     
         // Run control commands

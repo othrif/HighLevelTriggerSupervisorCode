@@ -39,7 +39,7 @@ namespace hltsv {
 
   const size_t Num_Assign = 12;
 
-  Activity::Activity(std::string& name)
+  Activity::Activity(const std::string& name)
     : daq::rc::Controllable(name), 
       m_l1source_lib(nullptr),
       m_l1source(nullptr),
