@@ -28,8 +28,9 @@ namespace hltsv {
 
         // Constructor for single buffer.
         template<class DELETER = std::default_delete<uint32_t[]>>
-        LVL1Result(uint32_t *roi_data, uint32_t length, DELETER del = DELETER())
-            : m_data(1, roi_data),
+        LVL1Result(uint32_t lvl1_id, uint32_t *roi_data, uint32_t length, DELETER del = DELETER())
+            : m_lvl1_id(lvl1_id),
+              m_data(1, roi_data),
               m_lengths(1, length),
               m_deleter(del),
               m_reassigned(false)
@@ -38,8 +39,9 @@ namespace hltsv {
 
         // Constructor for multiple buffers.
         template<class DELETER = std::default_delete<uint32_t[]>>
-        LVL1Result(uint32_t count, uint32_t *roi_data[], uint32_t lengths[], DELETER del = DELETER())
-            : m_deleter(del),
+        LVL1Result(uint32_t lvl1_id, uint32_t count, uint32_t *roi_data[], uint32_t lengths[], DELETER del = DELETER())
+            : m_lvl1_id(lvl1_id),
+              m_deleter(del),
               m_reassigned(false)
         {
             m_data.assign(&roi_data[0], &roi_data[count]);
@@ -65,6 +67,7 @@ namespace hltsv {
         }
 
     private:
+        uint32_t                        m_lvl1_id;
         std::vector<uint32_t*>          m_data;
         std::vector<uint32_t>           m_lengths;
         std::function<void (uint32_t*)> m_deleter;

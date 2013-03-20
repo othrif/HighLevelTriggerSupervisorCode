@@ -4,6 +4,8 @@
 
 #include "ers/ers.h"
 #include "eformat/Issue.h"
+#include "eformat/write/ROBFragment.h"
+#include "eformat/util.h"
 
 #include "rcc_error/rcc_error.h"
 #include "ROSfilar/filar.h"
@@ -13,6 +15,8 @@
 
 #include "ttcpr/CMemory.h"
 #include "ttcpr/RingBuffer.h"
+
+#include "LVL1Result.h"
 
 extern "C" hltsv::L1Source *create_source(const std::string& source, Configuration& )
 {
@@ -120,7 +124,36 @@ namespace hltsv {
         LVL1Result* l1Result = 0;
 
         try {
-            l1Result = new LVL1Result( m_result, m_size );
+
+            // locate the ROD fragments
+            const uint32_t* rod[12];
+            uint32_t        rodsize[12];
+
+            uint32_t num_frags = eformat::find_rods(m_result, m_size, rod, rodsize, 12);
+            uint32_t size_word = 0;
+
+            // create the ROB fragments out of ROD fragments
+            eformat::write::ROBFragment* writers[12];
+            for (size_t i = 0; i < num_frags; ++i) {
+                writers[i] = 
+                    new eformat::write::ROBFragment(const_cast<uint32_t*>(rod[i]), rodsize[i]);
+
+                //update ROB header
+                writers[i]->rob_source_id(writers[i]->rod_source_id());
+                // m_len[i] = writers[i]->size_word();
+                size_word += writers[i]->size_word();
+            }
+
+            // make one single buffer out of the whole data
+            uint32_t *event = new uint32_t[size_word];
+            uint32_t current = 0;
+            for (size_t i = 0; i< num_frags; ++i) {
+                eformat::write::copy(*writers[i]->bind(), &event[current], writers[i]->size_word());
+                current += writers[i]->size_word();
+                delete writers[i];
+            }
+
+            l1Result = new LVL1Result( 0, event, size_word);
             
             ERS_DEBUG(3, "Created LVL1Result with l1id: " << l1Result->l1ID()
                       << " and size " << m_size );

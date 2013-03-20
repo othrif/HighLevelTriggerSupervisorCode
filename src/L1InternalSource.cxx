@@ -38,7 +38,7 @@ namespace hltsv {
                                         lvl1_type, event_type, 240, dummy_data, 
                                         eformat::STATUS_FRONT);
 
-        LVL1Result* l1Result = new LVL1Result(dummy_data, rob.size_word());
+        LVL1Result* l1Result = new LVL1Result(m_l1id, dummy_data, rob.size_word());
         m_l1id += 1;
 
         return l1Result;
