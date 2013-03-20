@@ -211,8 +211,7 @@ public:
 
         // CLEAR+appname
         m_server->listen("CLEAR");
-        IPCPartition partition(cb->getPartition()->UID());
-        daq::msgnamesvc::NameService name_service(partition,
+        daq::msgnamesvc::NameService name_service(IPCPartition(cb->getPartition()->UID()),
                                                   config->cast<daq::df::DFParameters>(cb->getPartition()->get_DataFlowParameters())->get_DefaultDataNetworks());
         name_service.publish("CLEAR", m_server->localEndpoint().port());
 
