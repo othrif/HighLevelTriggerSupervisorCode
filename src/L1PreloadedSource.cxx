@@ -12,14 +12,14 @@
 #include "DFdal/DataFile.h"
 
 #include "EventStorage/pickDataReader.h"     // universal reader
-#include "dcmessages/LVL1Result.h"
+
 
 #include "CTPfragment/CTPfragment.h"
 #include "CTPfragment/CTPdataformat.h"
 
 #include "Issues.h"
 #include "L1PreloadedSource.h"
-
+#include "LVL1Result.h"
 
 extern "C" hltsv::L1Source *create_source(const std::string& , Configuration& config)
 {
@@ -51,12 +51,13 @@ namespace hltsv {
         }
     }
 
-    dcmessages::LVL1Result* L1PreloadedSource::getResult()
+    LVL1Result* L1PreloadedSource::getResult()
     {
         // Create LVL1result, re-use ROBFragment
-        dcmessages::LVL1Result* l1Result = 0;
+        LVL1Result* l1Result = 0;
 
-        uint32_t* robs[dcmessages::MAXLVL1RODS];
+        uint32_t* robs[12]; // [dcmessages::MAXLVL1RODS];
+        uint32_t  lengths[12];
 
         std::vector<uint32_t*>* rob_frag = m_data[m_l1id];
       
@@ -89,7 +90,7 @@ namespace hltsv {
             const eformat::write::node_t* toplist = wrob.bind();
             eformat::write::copy(*toplist, *fit, wrob.size_word());
             robs[i] = *fit;
-
+            lengths[i] = wrob.size_word();
 
             uint32_t* rob = robs[i];
             // Rewrite LB and HLT counter in CTP fragment
@@ -113,7 +114,7 @@ namespace hltsv {
         }
 
         if (rob_frag->size()) {
-            l1Result = new dcmessages::LVL1Result( robs, rob_frag->size() );
+            l1Result = new LVL1Result( rob_frag->size(), robs, lengths, [](uint32_t*) {} );
         } else {
             std::ostringstream mesg;
             mesg <<"looking for LVL1 RoIs to build LVL1Result with l1id " <<

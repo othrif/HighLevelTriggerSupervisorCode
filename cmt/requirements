@@ -1,7 +1,8 @@
 
 package hltsv
 
-manager Reiner.Hauser@cern.ch Denis.Fellmann@cern.ch Per.Werner@cern.ch
+manager Reiner.Hauser@cern.ch Nicoletta.Garelli@cern.ch 
+# add: Ning, Chase, 
 
 public
 
@@ -28,6 +29,10 @@ private
 
 macro_append cppflags "-Wno-deprecated-declarations"
 
+# 
+# Generation of code for HLTSV configuration schema
+#
+
 use genconfig
 
 ignore_pattern inst_headers_
@@ -49,27 +54,39 @@ macro daq-hltsv-dal_dependencies "DFdal"
 
 macro_append daq-hltsv-dal_shlibflags "-ldaq-core-dal -ldaq-df-dal"
 
-library svl1source L1Source.cxx
-macro svl1source_shlibflags "-ldcmessages"
+#
+# A library to load the RoIB plugins
+# 
+library hltsv L1Source.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx ROSSession.cxx Messages.cxx HLTSVServer.cxx LVL1Result.cxx
+macro hltsv_shlibflags "-lItemCtrl -lers -ltbb -leformat_write -leformat -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg -ldynlibs"
 
-application hltsv_main  hltsv_main.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx ROSSession.cxx Messages.cxx HLTSVServer.cxx
-macro hltsv_mainlinkopts "-lItemCtrl -lers -ltbb -leformat_write -leformat -lsvl1source -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg"
+#
+# The HLTSV main application
+#
+application hltsv_main  hltsv_main.cxx 
+
+macro hltsv_mainlinkopts "-lhltsv"
+
 macro hltsv_main_dependencies "daq-hltsv-dal"
 
 macro sw.repository.binary.hltsv_main:name         "HLT Supervisor"
 macro sw.repository.binary.hltsv_main:description  "HLT Supervisor Application"
 
+#
+# Plugins for L1Source implementations (aka RoIBuilder)
+# 
+
+# internal generation
 library svl1internal  L1InternalSource.cxx
 macro svl1internal_shlibflags "-lers"
-macro svl1internal_dependencies svl1source
 
+# preload from file
 library svl1preloaded L1PreloadedSource.cxx
 macro svl1preloaded_shlibflags "-lers -leformat_write -leformat -lDataReader"
-macro svl1preloaded_dependencies svl1source
 
+# read from Filar (aka RoIB hardware)
 library svl1filar L1FilarSource.cxx
 macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lttcpr"
-macro svl1filar_dependencies svl1source
 
 macro constituents "svl1source hltsv_main svl1internal svl1preloaded svl1filar test_l1source testDCM testROS" \
        x86_64 "svl1source hltsv_main svl1internal svl1preloaded test_l1source testDCM testROS"
@@ -81,13 +98,23 @@ macro to_install "libsvl1source.so libsvl1internal.so libsvl1preloaded.so libsvl
 # Test applications
 #
 
-application test_l1source ../test/test_l1source.cxx
-macro test_l1sourcelinkopts "-lers -lsvl1source -lconfig -ldynlibs -ldaq-df-dal -ltbb -lcmdline"
-macro test_l1source_dependencies svl1source
+#
+# Read from L1Source and print RoI info
+#
 
+application test_l1source ../test/test_l1source.cxx
+macro test_l1sourcelinkopts "-lers -lhltsv -lconfig -ldynlibs -ldaq-df-dal -ltbb -lcmdline"
+macro test_l1source_dependencies hltsv
+
+#
+# eE for DCM
+#
 application testDCM ../test/testDCM.cxx
 macro testDCMlinkopts "-lers -leformat -lac -ldcmessages -lmsginput -lmsgconf -lmsg -ldaq-df-dal"
 
+#
+# Emulator for ROS
+#
 application testROS ../test/testROS.cxx
 macro testROSlinkopts "-lmsgnamesvc -lasyncmsg -lItemCtrl -lers -lcmdline -ldaq-df-dal"
 

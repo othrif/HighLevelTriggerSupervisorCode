@@ -25,11 +25,11 @@ namespace hltsv {
         L1PreloadedSource(Configuration& config);
         ~L1PreloadedSource();
         
-        virtual dcmessages::LVL1Result* getResult();
-        virtual void                    reset();
-        virtual void                    preset();
-        virtual void                    setLB(uint32_t lb);
-        virtual void                    setHLTCounter(uint16_t counter);
+        virtual LVL1Result* getResult();
+        virtual void        reset();
+        virtual void        preset();
+        virtual void        setLB(uint32_t lb);
+        virtual void        setHLTCounter(uint16_t counter);
         
     private:
         unsigned int  m_l1id;

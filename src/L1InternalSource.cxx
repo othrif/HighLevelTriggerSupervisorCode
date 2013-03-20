@@ -1,9 +1,9 @@
 
 #include "eformat/eformat.h"
 #include "eformat/write/eformat.h"
-#include "dcmessages/LVL1Result.h"
 
 #include "L1InternalSource.h"
+#include "LVL1Result.h"
 
 extern "C" hltsv::L1Source *create_source(const std::string&, Configuration& )
 {
@@ -21,7 +21,7 @@ namespace hltsv {
     {
     }
 
-    dcmessages::LVL1Result* L1InternalSource::getResult()
+    LVL1Result* L1InternalSource::getResult()
     {
         //create the ROB fragment 
         const uint32_t run_no	   = 0x0;
@@ -30,8 +30,7 @@ namespace hltsv {
   
         uint32_t event_type = 0x0; // params->getLumiBlock(); ?????
 
-        //ROB
-        uint32_t dummy_data[250];
+        uint32_t *dummy_data = new uint32_t[250];
 
         eformat::helper::SourceIdentifier src(eformat::TDAQ_CTP, 1);
 
@@ -39,9 +38,7 @@ namespace hltsv {
                                         lvl1_type, event_type, 240, dummy_data, 
                                         eformat::STATUS_FRONT);
 
-        eformat::write::ROBFragment* robs[1];
-        robs[0] = &rob;
-        dcmessages::LVL1Result* l1Result = new dcmessages::LVL1Result( robs, 1 );
+        LVL1Result* l1Result = new LVL1Result(dummy_data, rob.size_word());
         m_l1id += 1;
 
         return l1Result;

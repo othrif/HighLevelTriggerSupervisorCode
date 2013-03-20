@@ -24,9 +24,9 @@ namespace hltsv {
         L1FilarSource(const std::string& source_typ);
         ~L1FilarSource();
     
-        virtual dcmessages::LVL1Result* getResult();
-        virtual void                    reset();
-        virtual void                    preset();
+        virtual LVL1Result* getResult();
+        virtual void        reset();
+        virtual void        preset();
 
     private:
 

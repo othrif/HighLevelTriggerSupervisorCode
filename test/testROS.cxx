@@ -23,7 +23,8 @@
 // After the common header we have:
 //
 // uint32_t sequence number
-// uint32_t lvl1_ids[]
+// uint32_t num_lvl1_ids
+// uint32_t lvl1_ids[num_lvl1_ids]
 //
 class ClearMessage : public daq::asyncmsg::InputMessage {
 public:
@@ -36,7 +37,7 @@ public:
           m_message(size)
     {
         // minimum is sequence number
-        ERS_ASSERT_MSG(size >= sizeof(uint32_t), "ClearMessage too short, minimum is 4 bytes");
+        ERS_ASSERT_MSG(size >= 2 * sizeof(uint32_t), "ClearMessage too short, minimum is 4 bytes");
         ERS_ASSERT_MSG(size % sizeof(uint32_t) == 0, "ClearMessage not a multiple of 4 bytes");
     }
 
@@ -66,13 +67,13 @@ public:
 
     size_t num_clears() const
     {
-        return m_message.size() - 1;
+        return m_message[1];
     }
 
     uint32_t operator[](size_t idx) const
     {
-        ERS_ASSERT_MSG(idx < m_message.size() - 1, "Invalid index into ClearMessage");
-        return m_message[idx + 1];
+        ERS_ASSERT_MSG(idx < m_message.size() - 2, "Invalid index into ClearMessage");
+        return m_message[idx + 2];
     }
 
 private:
@@ -102,7 +103,11 @@ protected:
     createMessage(std::uint32_t typeId,
                   std::uint32_t transactionId, std::uint32_t size) noexcept override
     {
-        // ERS_ASSERT(typeId == ClearMessage::ID);
+        // check type ID and size consistency
+        if(typeId != ClearMessage::ID || (size % 4 != 0)) {
+            return std::unique_ptr<ClearMessage>(nullptr);
+        }
+
         return std::unique_ptr<ClearMessage>(new ClearMessage(size));
     }
 
@@ -128,6 +133,7 @@ protected:
     void onReceiveError(const boost::system::error_code& error,
                         std::unique_ptr<daq::asyncmsg::InputMessage> message) noexcept override
     {
+        std::cerr << "Receive error: " << error << std::endl;
         // Issue error message
     }
 
@@ -144,8 +150,6 @@ protected:
 
 private:
     uint32_t              m_last_sequence;
-
-
 };
 
 //
@@ -194,6 +198,8 @@ public:
         : daq::rc::Controllable(name), m_running(false)
     {
     }
+
+
     ~ROSApplication()
     {
     }

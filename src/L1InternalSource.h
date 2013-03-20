@@ -17,8 +17,8 @@ namespace hltsv {
         L1InternalSource();
         ~L1InternalSource();
     
-        virtual dcmessages::LVL1Result* getResult();
-        virtual void                    reset();
+        virtual LVL1Result* getResult();
+        virtual void        reset();
 
     private:
         unsigned int   m_l1id;

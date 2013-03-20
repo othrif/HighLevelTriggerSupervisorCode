@@ -3,7 +3,6 @@
 //
 
 #include "ers/ers.h"
-#include "dcmessages/LVL1Result.h"
 #include "eformat/Issue.h"
 
 #include "rcc_error/rcc_error.h"
@@ -112,17 +111,16 @@ namespace hltsv {
         return (fout.nvalid != 0);
     }
 
-    dcmessages::LVL1Result*
-    L1FilarSource::getResult()
+    LVL1Result* L1FilarSource::getResult()
     {
         if(!resultAvailable()) return 0;
 
         FILAR_in_t fin;
 
-        dcmessages::LVL1Result* l1Result = 0;
+        LVL1Result* l1Result = 0;
 
         try {
-            l1Result = new dcmessages::LVL1Result( m_result, m_size );
+            l1Result = new LVL1Result( m_result, m_size );
             
             ERS_DEBUG(3, "Created LVL1Result with l1id: " << l1Result->l1ID()
                       << " and size " << m_size );

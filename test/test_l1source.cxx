@@ -6,7 +6,7 @@
 
 #include "dynlibs/DynamicLibrary.h"
 #include "config/Configuration.h"
-#include "dcmessages/LVL1Result.h"
+#include "../src/LVL1Result.h"
 
 #include <iostream>
 
@@ -50,10 +50,9 @@ int main(int argc, char *argv[])
             source->reset();
 
             for(int i = 0; i < 1000; i++) {
-                if(dcmessages::LVL1Result *event = source->getResult()) {
+                if(hltsv::LVL1Result *event = source->getResult()) {
                     std::cout << "Got event: "
-                              << "L1ID: " << event->l1ID() << " BCID: " << event->bcid() << " Num LVL1 Info: " << event->nlvl1_info() 
-                              << " Size: " << event->size() << std::endl;
+                              << "L1ID: " << event->l1_id() << std::endl;
                     
                     
                 } else {

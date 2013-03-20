@@ -7,11 +7,9 @@
 
 class Configuration;
 
-namespace dcmessages {
-    class LVL1Result;
-}
-
 namespace hltsv {
+
+    class LVL1Result;
 
     /**
      * Abstract base class for interface to specfic sources
@@ -32,7 +30,7 @@ namespace hltsv {
         /** Try to get an event from LVL1.
          *  @returns A pointer to the event, NULL if none available.
          */
-        virtual dcmessages::LVL1Result* getResult(void) = 0;
+        virtual LVL1Result* getResult(void) = 0;
         
         /** Executed in PrepareForRun */
         virtual void                    reset(); 

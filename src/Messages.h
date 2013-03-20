@@ -17,6 +17,9 @@ namespace hltsv {
      */
     class UpdateMessage : public daq::asyncmsg::InputMessage {
     public:
+
+        static const uint32_t ID = 0x1000;
+
         UpdateMessage(size_t size);
         ~UpdateMessage();
         virtual uint32_t typeId() const override;
@@ -34,29 +37,32 @@ namespace hltsv {
      */
     class ProcessMessage : public daq::asyncmsg::OutputMessage {
     public:
+
+        static const uint32_t ID = 0x1001;
+
         ProcessMessage(std::shared_ptr<LVL1Result> rois);
         ~ProcessMessage();
         virtual uint32_t typeId() const override;
         virtual uint32_t transactionId() const override;
         virtual void     toBuffers(std::vector<boost::asio::const_buffer>&) const override;        
     private:
-        std::shared_ptr<LVL1Result> rois;
+        std::shared_ptr<LVL1Result> m_rois;
     };
 
     /**
      * The build event message to the DCM containing:
      *
      * - the list of ROIs
+     *
+     * Same as ProcessMessage, just a different typeId()
      */
-    class BuildMessage : public daq::asyncmsg::OutputMessage {
+    class BuildMessage : public ProcessMessage {
     public:
+
+        static const uint32_t ID = 0x1002;
+
         BuildMessage(std::shared_ptr<LVL1Result> rois);
-        ~BuildMessage();
         virtual uint32_t typeId() const override;
-        virtual uint32_t transactionId() const override;
-        virtual void     toBuffers(std::vector<boost::asio::const_buffer>&) const override;        
-    private:
-        std::shared_ptr<LVL1Result> rois;
     };
 
     /**
@@ -71,13 +77,16 @@ namespace hltsv {
 
     class ClearMessage : public daq::asyncmsg::OutputMessage {
     public:
+
+        static const uint32_t ID = 0x1003;
+
         ClearMessage(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events);
         ~ClearMessage();
         virtual uint32_t typeId()        const override;
         virtual uint32_t transactionId() const override;
         virtual void     toBuffers(std::vector<boost::asio::const_buffer>&) const override;                
     private:
-        uint32_t                               m_sequence;
+        uint32_t                               m_sequence_count[2];
         std::shared_ptr<std::vector<uint32_t>> m_events;
     };
 

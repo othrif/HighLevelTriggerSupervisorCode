@@ -5,20 +5,10 @@
 
 #include "dynlibs/DynamicLibrary.h"
 #include "clocks/Clock.h"
-#include "dcmessages/Messages.h"
-#include "dcmessages/LVL1Result.h"
-#include "dcmessages/DFM_Clear_Msg.h"
-#include "msg/Buffer.h"
-#include "msg/Port.h"
-#include "msginput/InputThread.h"
-#include "msginput/MessageHeader.h"
 
 #include "config/Configuration.h"
 
 #include "dal/Partition.h"
-
-#include "sysmonapps/ISResource.h"
-
 #include "L1Source.h"
 
 #include "hltsvdal/HLTSVApplication.h"
