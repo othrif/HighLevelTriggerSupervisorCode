@@ -102,7 +102,7 @@ namespace hltsv {
 
         // TODO:
         //
-        // using msgnamesvc::NameService,
+        // using asyncmsg::NameService,
         // lookup all 'CLEAR_*' entries and connect to them. 
         // Add each session to m_sessions.
         //

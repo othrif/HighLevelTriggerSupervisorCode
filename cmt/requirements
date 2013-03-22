@@ -19,9 +19,6 @@ use cmdl
 use monsvc
 use asyncmsg
 
-# FIXME
-use msgnamesvc
-
 use Boost * TDAQCExternal
 use ROOT  * DQMCExternal
 
@@ -116,7 +113,7 @@ macro testDCMlinkopts "-lers -leformat -lac -ldcmessages -lmsginput -lmsgconf -l
 # Emulator for ROS
 #
 application testROS ../test/testROS.cxx
-macro testROSlinkopts "-lmsgnamesvc -lasyncmsg -lItemCtrl -lers -lcmdline -ldaq-df-dal"
+macro testROSlinkopts "-lasyncmsg -lItemCtrl -lers -lcmdline -ldaq-df-dal"
 
 macro sw.repository.binary.testDCM:name         "Tester for hltsv"
 macro sw.repository.binary.testDCM:description  "Tester for hltsv"

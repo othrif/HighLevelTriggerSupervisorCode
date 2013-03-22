@@ -9,8 +9,7 @@
 #include "asyncmsg/Server.h" 
 #include "asyncmsg/Session.h" 
 #include "asyncmsg/Message.h" 
-
-#include "msgnamesvc/NameService.h"
+#include "asyncmsg/NameService.h"
 
 #include "dal/Partition.h"
 #include "DFdal/DFParameters.h"
@@ -217,7 +216,7 @@ public:
 
         // CLEAR+appname
         m_server->listen("CLEAR");
-        daq::msgnamesvc::NameService name_service(IPCPartition(cb->getPartition()->UID()),
+        daq::asyncmsg::NameService name_service(IPCPartition(cb->getPartition()->UID()),
                                                   config->cast<daq::df::DFParameters>(cb->getPartition()->get_DataFlowParameters())->get_DefaultDataNetworks());
         name_service.publish("CLEAR", m_server->localEndpoint().port());
 

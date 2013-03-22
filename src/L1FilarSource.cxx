@@ -44,11 +44,10 @@ namespace hltsv {
 
         // get channel number
         std::string channel = source_type;
-        if (channel.length() > 5)
-            {
-                channel.erase(channel.begin(), channel.end()-1);
-                m_chan = atoi(channel.c_str());
-            }
+        if (channel.length() > 5) {
+            channel.erase(channel.begin(), channel.end()-1);
+            m_chan = atoi(channel.c_str());
+        }
 
         // Open Filar device
         unsigned int code = FILAR_Open();
@@ -92,24 +91,23 @@ namespace hltsv {
             throw hltsv::FilarDevException(ERS_HERE, code);
         }
 
-        if (fout.fragstat[0])
-            {
-                ERS_DEBUG(1, " Error processing L1ID " << std::hex << m_result[5]);
-
-                // initialize next io
-                m_result = reinterpret_cast<unsigned int*>(m_rb->reqVaddr());
-                memset(m_result, 0, m_rb->elemSize());
-
-                FILAR_in_t fin;
-                fin.nvalid = 1;      
-                fin.channel = m_chan;
-                fin.pciaddr[0] = reinterpret_cast<unsigned int>(m_rb->relPaddr());
-                unsigned int code = FILAR_PagesIn(&fin);
-                if (code) {
-                    throw hltsv::FilarDevException(ERS_HERE, code);
-                }
-                return false;
+        if (fout.fragstat[0]) {
+            ERS_DEBUG(1, " Error processing L1ID " << std::hex << m_result[5]);
+            
+            // initialize next io
+            m_result = reinterpret_cast<unsigned int*>(m_rb->reqVaddr());
+            memset(m_result, 0, m_rb->elemSize());
+            
+            FILAR_in_t fin;
+            fin.nvalid = 1;      
+            fin.channel = m_chan;
+            fin.pciaddr[0] = reinterpret_cast<unsigned int>(m_rb->relPaddr());
+            unsigned int code = FILAR_PagesIn(&fin);
+            if (code) {
+                throw hltsv::FilarDevException(ERS_HERE, code);
             }
+            return false;
+        }
 
         m_size = fout.fragsize[0];
         return (fout.nvalid != 0);
@@ -211,8 +209,9 @@ namespace hltsv {
         FILAR_config_t fconfig;
  
         // reset device
-        for(int c = 0; c < MAXROLS; c++)
+        for(int c = 0; c < MAXROLS; c++) {
             fconfig.enable[c] = 0; 
+        }
 
         fconfig.enable[m_chan] = 1;
         fconfig.psize = 4;
