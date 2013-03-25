@@ -21,7 +21,7 @@ namespace hltsv {
 
     class L1FilarSource : public L1Source {
     public:
-        L1FilarSource(const std::string& source_typ);
+        L1FilarSource(const std::string& source_type);
         ~L1FilarSource();
     
         virtual LVL1Result* getResult();

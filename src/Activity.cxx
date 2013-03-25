@@ -14,6 +14,7 @@
 #include "DFdal/DataFile.h"
 
 #include "L1Source.h"
+#include "ROSClear.h"
 
 #include "hltsvdal/HLTSVApplication.h"
 #include "hltsvdal/HLTSVConfiguration.h"
@@ -22,6 +23,8 @@
 
 #include "monsvc/MonitoringService.h"
 #include "monsvc/FilePublisher.h"
+
+#include "asyncmsg/NameService.h"
 
 #include "TFile.h"
 #include <is/info.h>
@@ -54,18 +57,20 @@ namespace hltsv {
   {
 
     Configuration* conf = daq::rc::ConfigurationBridge::instance()->getConfiguration();
+
     const daq::df::HLTSVApplication *self = conf->cast<daq::df::HLTSVApplication>(daq::rc::ConfigurationBridge::instance()->getApplication());
     const daq::df::HLTSVConfiguration *my_conf = self->get_Configuration();
 
-    
     const daq::core::Partition *partition = daq::rc::ConfigurationBridge::instance()->getPartition();
-    const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
-    const std::vector<const daq::df::DataFile*>& dataFiles = dfparams->get_UsesDataFiles();
+    IPCPartition               part(partition->UID());
 
+    const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
+
+    // Load L1 Source
     std::vector<std::string> file_names;
 
+    const std::vector<const daq::df::DataFile*>& dataFiles = dfparams->get_UsesDataFiles();
     std::transform(dataFiles.begin(), dataFiles.end(), file_names.begin(), [](const daq::df::DataFile* df) { return df->get_FileName(); });
-
 
     std::string source_type = my_conf->get_L1Source();
     std::string lib_name("libsvl1");
@@ -85,26 +90,28 @@ namespace hltsv {
       return;
     }
 
+    // Initialize counters
     m_stats.LVL1Events = m_stats.AssignedEvents = m_stats.ProcessedEvents = m_stats.Timeouts = 
       m_stats.ProcessingNodesInitial = m_stats.ProcessingNodesDisabled = m_stats.ProcessingNodesEnabled =
       m_stats.ProcessingNodesAdded = 0;
     
-    m_stats.ProcessingNodesInitial = 1000;
-    
     if(source_type == "internal" || source_type == "preloaded") {
-      IPCPartition p(daq::rc::ConfigurationBridge::instance()->getPartition()->UID());
 
       // TODO
       // m_cmdReceiver = new daq::rc::CommandedTrigger(p,getName(), this);
-
-      m_publisher.reset(new monsvc::PublishingController(p,getName()));
-
-      m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("DFObjects:.*/=>is:(2,DF)"));
-      m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("Histogramming:.*/=>oh:(5,DF,provider_name)"));
-
-      m_time = monsvc::MonitoringService::instance().register_object("myTime",new TH1F("myTime","myTime", 2000, 0., 20000.));
-
+        
+        m_publisher.reset(new monsvc::PublishingController(part,getName()));
+        
+        m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("DFObjects:.*/=>is:(2,DF)"));
+        m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("Histogramming:.*/=>oh:(5,DF,provider_name)"));
+        
+        m_time = monsvc::MonitoringService::instance().register_object("myTime",new TH1F("myTime","myTime", 2000, 0., 20000.));
+        
     }
+
+    // Initialize ROS clear implementation
+    daq::asyncmsg::NameService ns(part, dfparams->get_DefaultDataNetworks());
+    m_ros_clear = std::make_shared<UnicastROSClear>(100, m_io_service, ns);
     
     m_timeout = my_conf->get_Timeout();
     

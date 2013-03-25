@@ -15,6 +15,8 @@
 #include "monsvc/ptr.h"
 #include "monsvc/PublishingController.h"
 
+#include "boost/asio/io_service.hpp"
+
 // for dynamic loading of L1Source
 namespace daq { 
     namespace dynlibs {
@@ -68,12 +70,17 @@ namespace hltsv {
     private:
 
         // for MasterTrigger interface
-        std::unique_ptr<MasterTrigger>              m_master_trigger;
-        std::unique_ptr<daq::rc::CommandedTrigger>  m_cmdReceiver;
+        std::unique_ptr<MasterTrigger>             m_master_trigger;
+        std::unique_ptr<daq::rc::CommandedTrigger> m_cmdReceiver;
     
         // L1 Source
         daq::dynlibs::DynamicLibrary    *m_l1source_lib;
         hltsv::L1Source                 *m_l1source;
+
+        boost::asio::io_service         m_io_service;
+
+        // ROS Clear interface
+        std::shared_ptr<ROSClear>       m_ros_clear;
 
         // Monitoring
         hltsv::HLTSV                    m_stats;
@@ -81,6 +88,7 @@ namespace hltsv {
 
         std::unique_ptr<monsvc::PublishingController> m_publisher;
         std::unique_ptr<TFile>                        m_outfile;
+
     
         // Running flags
         bool                            m_network;

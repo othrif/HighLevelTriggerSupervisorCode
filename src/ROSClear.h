@@ -12,8 +12,6 @@
 #include "ROSSession.h"
 #include "asyncmsg/NameService.h"
 
-class IPCPartition;
-
 namespace hltsv {
 
     /**
