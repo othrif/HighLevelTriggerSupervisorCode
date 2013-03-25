@@ -1,11 +1,10 @@
 
-#include "../src/L1Source.h"
-
 #include <stdlib.h>
 #include <string>
 
 #include "dynlibs/DynamicLibrary.h"
-#include "config/Configuration.h"
+
+#include "../src/L1Source.h"
 #include "../src/LVL1Result.h"
 
 #include <iostream>
@@ -13,17 +12,19 @@
 int main(int argc, char *argv[])
 {
     std::string source_type("internal");
-    std::string db("oksconfig:test_source.data.xml");
-
-    if(argc > 2) {
-        db = argv[2];
-    }
+    std::string file("");
 
     if(argc > 1) {
         source_type = argv[1];
     }
 
-    std::cout << "Using source type: " << source_type << std::endl;
+
+    if(argc > 2) {
+        file = argv[2];
+    }
+
+    std::cout << "Using source type: " << source_type << '\n'
+              << "Using file: " << file << std::endl;
 
     std::string libname("libsvl1");
     libname += source_type;
@@ -32,14 +33,10 @@ int main(int argc, char *argv[])
 
         DynamicLibrary lib(libname);
 
-        Configuration config(db);
-
-        if(getenv("TDAQ_PARTITION") == 0) {
-            putenv("TDAQ_PARTITION=test_source");
-        }
+        std::vector<std::string> files(1, file);
 
         if(hltsv::L1Source::creator_t maker = lib.function<hltsv::L1Source::creator_t>("create_source")) {
-            hltsv::L1Source *source = maker(source_type, config);
+            hltsv::L1Source *source = maker(source_type, files);
 
             std::cout << "Created new L1Source" << std::endl;
 

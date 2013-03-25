@@ -9,6 +9,10 @@
 #include "config/Configuration.h"
 
 #include "dal/Partition.h"
+
+#include "DFdal/DFParameters.h"
+#include "DFdal/DataFile.h"
+
 #include "L1Source.h"
 
 #include "hltsvdal/HLTSVApplication.h"
@@ -24,6 +28,8 @@
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+
+#include <algorithm>
 
 namespace hltsv {
 
@@ -51,6 +57,16 @@ namespace hltsv {
     const daq::df::HLTSVApplication *self = conf->cast<daq::df::HLTSVApplication>(daq::rc::ConfigurationBridge::instance()->getApplication());
     const daq::df::HLTSVConfiguration *my_conf = self->get_Configuration();
 
+    
+    const daq::core::Partition *partition = daq::rc::ConfigurationBridge::instance()->getPartition();
+    const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
+    const std::vector<const daq::df::DataFile*>& dataFiles = dfparams->get_UsesDataFiles();
+
+    std::vector<std::string> file_names;
+
+    std::transform(dataFiles.begin(), dataFiles.end(), file_names.begin(), [](const daq::df::DataFile* df) { return df->get_FileName(); });
+
+
     std::string source_type = my_conf->get_L1Source();
     std::string lib_name("libsvl1");
     lib_name += source_type;
@@ -58,7 +74,8 @@ namespace hltsv {
     try {
       m_l1source_lib = new DynamicLibrary(lib_name);
       if(L1Source::creator_t make = m_l1source_lib->function<L1Source::creator_t>("create_source")) {
-	m_l1source = make(source_type, *conf);
+          // fix me: get data files
+          m_l1source = make(source_type, std::vector<std::string>());
 	m_l1source->preset();
       } else {
 	// fatal

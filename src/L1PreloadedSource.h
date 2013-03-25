@@ -22,7 +22,7 @@ namespace hltsv {
      */
     class L1PreloadedSource : public L1Source {
     public:
-        L1PreloadedSource(Configuration& config);
+        L1PreloadedSource(const std::vector<std::string>& file_names);
         ~L1PreloadedSource();
         
         virtual LVL1Result* getResult();
@@ -48,7 +48,7 @@ namespace hltsv {
         
         boost::mutex  m_mutex; 
 
-        Configuration& m_config;
+        std::vector<std::string> m_file_names;
     };
 }
 

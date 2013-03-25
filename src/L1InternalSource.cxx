@@ -5,7 +5,7 @@
 #include "L1InternalSource.h"
 #include "LVL1Result.h"
 
-extern "C" hltsv::L1Source *create_source(const std::string&, Configuration& )
+extern "C" hltsv::L1Source *create_source(const std::string&, const std::vector<std::string>& /* unused */)
 {
     return new hltsv::L1InternalSource();
 }
@@ -40,6 +40,8 @@ namespace hltsv {
 
         LVL1Result* l1Result = new LVL1Result(m_l1id, dummy_data, rob.size_word());
         m_l1id += 1;
+
+        std::cerr << "m_l1id == " << m_l1id << std::endl;
 
         return l1Result;
     }

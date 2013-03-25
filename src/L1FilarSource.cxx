@@ -18,7 +18,7 @@
 
 #include "LVL1Result.h"
 
-extern "C" hltsv::L1Source *create_source(const std::string& source, Configuration& )
+extern "C" hltsv::L1Source *create_source(const std::string& source, const std::vector<std::string>& /* unused */)
 {
     return new hltsv::L1FilarSource(source);
 }

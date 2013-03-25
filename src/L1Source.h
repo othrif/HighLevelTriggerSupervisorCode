@@ -4,8 +4,7 @@
 
 #include <stdint.h>
 #include <string>
-
-class Configuration;
+#include <vector>
 
 namespace hltsv {
 
@@ -19,10 +18,19 @@ namespace hltsv {
     class L1Source {
     public:
 
-        // Aach implementation must provide a function with
-        // this signature named "create_source(source_type, config)"  that
-        // will be called to instantiate the interface.
-        typedef L1Source *(*creator_t)(const std::string& source_type, const Configuration&);
+        /** 
+         * \brief Abstract interfact to RoIBuilder.
+         * 
+         * \param[in] source_type The name of the plugin.
+         * \param[in] file_names The list of file names for the pre-loaded mode.
+         *
+         * Each implementation must provide a function with
+         * this signature named "create_source(source_type, arguments)"  that
+         * will be called to instantiate the interface.
+         *
+         */
+        
+        typedef L1Source *(*creator_t)(const std::string& source_type, const std::vector<std::string>& file_names);
 
         virtual ~L1Source();
 

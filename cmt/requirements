@@ -79,7 +79,7 @@ macro svl1internal_shlibflags "-lers"
 
 # preload from file
 library svl1preloaded L1PreloadedSource.cxx
-macro svl1preloaded_shlibflags "-lers -leformat_write -leformat -lDataReader"
+macro svl1preloaded_shlibflags "-lers -leformat_write -leformat -lCTPfragment -lDataReader"
 
 # read from Filar (aka RoIB hardware)
 library svl1filar L1FilarSource.cxx
@@ -100,7 +100,7 @@ macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1fila
 #
 
 application test_l1source ../test/test_l1source.cxx
-macro test_l1sourcelinkopts "-lers -lhltsv -lconfig -ldynlibs -ldaq-df-dal -ltbb -lcmdline"
+macro test_l1sourcelinkopts "-lers -lhltsv -ldynlibs"
 macro test_l1source_dependencies hltsv
 
 #

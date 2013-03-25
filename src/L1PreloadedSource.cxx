@@ -6,11 +6,6 @@
 #include "eformat/eformat.h"
 #include "eformat/write/ROBFragment.h"
 
-#include "config/Configuration.h"
-#include "dal/Partition.h"
-#include "DFdal/DFParameters.h"
-#include "DFdal/DataFile.h"
-
 #include "EventStorage/pickDataReader.h"     // universal reader
 
 
@@ -21,18 +16,18 @@
 #include "L1PreloadedSource.h"
 #include "LVL1Result.h"
 
-extern "C" hltsv::L1Source *create_source(const std::string& , Configuration& config)
+extern "C" hltsv::L1Source *create_source(const std::string& , const std::vector<std::string>& file_names)
 {
-    return new hltsv::L1PreloadedSource(config);
+    return new hltsv::L1PreloadedSource(file_names);
 }
 
 namespace hltsv {
 
     const unsigned int MAXUINT = 0XFFFFFFFF;
 
-    L1PreloadedSource::L1PreloadedSource(Configuration& config)
+    L1PreloadedSource::L1PreloadedSource(const std::vector<std::string>& file_names)
         : m_l1id(0),
-          m_config(config)
+          m_file_names(file_names)
     {
     }
 
@@ -152,22 +147,11 @@ namespace hltsv {
         // empty the event map
         m_data.erase(m_data.begin(), m_data.end());
 
-        const daq::core::Partition *partition = m_config.get<daq::core::Partition>(getenv("TDAQ_PARTITION"));
-        const daq::df::DFParameters *dfparams = m_config.cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
-
-        const std::vector<const daq::df::DataFile*>& dataFiles = 
-            dfparams->get_UsesDataFiles();
-
-        std::vector<std::string> l1SourceFile; 
-        for ( daq::df::DataFileIterator it = dataFiles.begin(); it != dataFiles.end(); it++) {
-            l1SourceFile.push_back((*it)->get_FileName());
-        }
-        
-        std::string file = l1SourceFile[0] + ".per-rob";
+        std::string file = m_file_names[0] + ".per-rob";
 
         if ((access(file.c_str(), R_OK | X_OK)) == -1) {
-            for (std::vector<std::string>::const_iterator it = l1SourceFile.begin();
-                 it != l1SourceFile.end(); it++) {
+            for (std::vector<std::string>::const_iterator it = m_file_names.begin();
+                 it != m_file_names.end(); it++) {
                 //Open the file and read-in event per event
                 DataReader *pDR = pickDataReader(*it);
 
@@ -263,8 +247,8 @@ namespace hltsv {
             // Read through data files, looking for LVL1 ROBFragments
             for ( size_t fit=0; fit<l1_frag.size(); fit++) {
                 m_l1id=0;
-                for (std::vector<std::string>::const_iterator it = l1SourceFile.begin();
-                     it != l1SourceFile.end(); it++) {
+                for (std::vector<std::string>::const_iterator it = m_file_names.begin();
+                     it != m_file_names.end(); it++) {
                     std::string fileName = (*it) + ".per-rob/" + l1_frag[fit] + ".data";
 	
                     //Open the file and read-in event per event
