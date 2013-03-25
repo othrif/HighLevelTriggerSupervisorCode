@@ -64,6 +64,34 @@ namespace hltsv {
     {
         return ID;
     }
+
+    ClearMessage::ClearMessage(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events)
+        : m_events(events)
+    {
+        m_sequence_count[0] = sequence;
+        m_sequence_count[1] = static_cast<uint32_t>(events->size());
+    }
+
+    ClearMessage::~ClearMessage()
+    {
+    }
+
+    uint32_t ClearMessage::typeId()        const
+    {
+        return ID;
+    }
+
+    uint32_t ClearMessage::transactionId() const 
+    {
+        return 0;
+    }
+
+    void  ClearMessage::toBuffers(std::vector<boost::asio::const_buffer>& bufs) const
+    {
+        bufs.push_back(boost::asio::buffer(m_sequence_count));
+        bufs.push_back(boost::asio::buffer(*m_events));
+    }
+
     
 }
 

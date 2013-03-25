@@ -20,7 +20,7 @@ namespace hltsv {
 
         static const uint32_t ID = 0x1000;
 
-        UpdateMessage(size_t size);
+        explicit UpdateMessage(size_t size);
         ~UpdateMessage();
         virtual uint32_t typeId() const override;
         virtual uint32_t transactionId() const override;
@@ -40,7 +40,7 @@ namespace hltsv {
 
         static const uint32_t ID = 0x1001;
 
-        ProcessMessage(std::shared_ptr<LVL1Result> rois);
+        explicit ProcessMessage(std::shared_ptr<LVL1Result> rois);
         ~ProcessMessage();
         virtual uint32_t typeId() const override;
         virtual uint32_t transactionId() const override;
@@ -61,15 +61,16 @@ namespace hltsv {
 
         static const uint32_t ID = 0x1002;
 
-        BuildMessage(std::shared_ptr<LVL1Result> rois);
+        explicit BuildMessage(std::shared_ptr<LVL1Result> rois);
         virtual uint32_t typeId() const override;
     };
 
     /**
      * The clear message to the ROS containing:
      *
-     * - a sequence number
-     * - a list of LVL1 IDs
+     * - a sequence number (4 bytes)
+     * - the number of LVL1 IDs to follow  (4 bytes)
+     * - a list of LVL1 IDs (4 bytes each)
      *
      * Note that the underlying event list may be shared by more than one clear message
      * e.g. if TCP is used instead of multicast.

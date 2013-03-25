@@ -1,5 +1,7 @@
 
 #include "ROSClear.h"
+#include "Messages.h"
+#include "asyncmsg/NameService.h"
 
 namespace hltsv {
 
@@ -45,7 +47,37 @@ namespace hltsv {
         do_flush(seq, data);
     }
 
+    UnicastROSClear::UnicastROSClear(size_t threshold, 
+                                     boost::asio::io_service& service, 
+                                     daq::asyncmsg::NameService& name_service)
+        : ROSClear(threshold)
+    {
+        std::vector<boost::asio::ip::tcp::endpoint> ros_eps = name_service.lookup("CLEAR");
 
+        // ERS_ASSERT(ros_eps != 0)  ? or just warning ?
+
+        for(size_t i = 0; i < ros_eps.size(); i++) {
+            m_sessions.push_back(std::make_shared<ROSSession>(service));
+        }
+
+        for(size_t i = 0; i < ros_eps.size(); i++) {
+            m_sessions[i]->asyncOpen("HLTSV",ros_eps[i]);
+        }
+        
+    }
+
+    UnicastROSClear::~UnicastROSClear()
+    {
+        // must do this here, while object still exists.
+        flush();
+    }
+
+    void UnicastROSClear::do_flush(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events)
+    {
+        for(auto session : m_sessions) {
+            std::unique_ptr<const daq::asyncmsg::OutputMessage> msg(new ClearMessage(sequence,events));
+            session->asyncSend(std::move(msg));
+        }
+    }
 
 }
-

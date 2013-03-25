@@ -8,6 +8,12 @@
 #include <string>
 #include <memory>
 
+#include "boost/asio.hpp"
+#include "ROSSession.h"
+#include "asyncmsg/NameService.h"
+
+class IPCPartition;
+
 namespace hltsv {
 
     /**
@@ -25,7 +31,7 @@ namespace hltsv {
          * The threshold is the number of events after which
          * the internal list of event IDs is sent to the ROS.
          */
-        ROSClear(size_t threshold = 100);
+        explicit ROSClear(size_t threshold = 100);
         virtual ~ROSClear();
 
         ROSClear(const ROSClear& ) = delete;
@@ -88,12 +94,14 @@ namespace hltsv {
         // boost::asio::ip::udp::socket m_socket;
     };
 
+    class ROSSession;
+
     /**
      * Unicast implementation of ROSClear, using TCP.
      */
     class UnicastROSClear : public ROSClear {
     public:
-        UnicastROSClear(size_t threshold, const std::vector<std::string>& data_networks, const std::string& is_server = "DF");
+        UnicastROSClear(size_t threshold, boost::asio::io_service& service, daq::asyncmsg::NameService& name_service);
         ~UnicastROSClear();
 
     private:
@@ -111,8 +119,8 @@ namespace hltsv {
         //   for(each session) {
         //      uniq_ptr<ClearMessage> msg(new ClearMessage(sequence, data));
         //      session->send(msg);
-        // 
-        // std::vector<std::shared_ptr<std::ROSSession>> m_sessions;
+    private:
+        std::vector<std::shared_ptr<ROSSession>> m_sessions;
     };
 
     
