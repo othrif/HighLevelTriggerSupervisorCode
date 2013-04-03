@@ -135,7 +135,9 @@ namespace hltsv {
     std::shared_ptr<EventScheduler> event_sched;
     std::shared_ptr<ROSClear> ros_clear;
     m_myServer = std::make_shared<HLTSVServer> (m_hltsv_io_service, event_sched, ros_clear);
-    m_myServer->listen("HLTSV-Server");
+    // the id should be read from OKS
+    std::string app_name = "HLTSV-Server";
+    m_myServer->listen(app_name);
 
     boost::asio::ip::tcp::endpoint my_endpoint = m_myServer->localEndpoint();
     ERS_LOG("Port Used: " << my_endpoint.port() );
@@ -143,7 +145,12 @@ namespace hltsv {
 
     m_myServer->start();
 
+    // Publish port in IS for DCM
+    // Not sure how I should construct the data network
+    std::vector<std::string> data_networks{"137.138.0.0/255.255.0.0"};
 
+    daq::asyncmsg::NameService HLTSV_NameService(part, data_networks);
+    HLTSV_NameService.publish(app_name, my_endpoint.port());
 
     return;
   }

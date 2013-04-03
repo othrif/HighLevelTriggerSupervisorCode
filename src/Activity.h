@@ -18,9 +18,6 @@
 // for the io_service
 #include "HLTSVServer.h"
 
-// Reiner?
-#include "boost/asio/io_service.hpp"
-
 // for dynamic loading of L1Source
 namespace daq { 
     namespace dynlibs {
