@@ -15,6 +15,10 @@
 #include "monsvc/ptr.h"
 #include "monsvc/PublishingController.h"
 
+// for the io_service
+#include "HLTSVServer.h"
+
+// Reiner?
 #include "boost/asio/io_service.hpp"
 
 // for dynamic loading of L1Source
@@ -68,6 +72,10 @@ namespace hltsv {
         void disconnect(std::string&);
 
     private:
+
+       // for the HLTSVServer
+        boost::asio::io_service m_hltsv_io_service;
+        std::shared_ptr<HLTSVServer> m_myServer;
 
         // for MasterTrigger interface
         std::unique_ptr<MasterTrigger>             m_master_trigger;
