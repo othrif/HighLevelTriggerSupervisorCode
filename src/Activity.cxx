@@ -31,6 +31,8 @@
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/thread.hpp>
+
 
 #include <algorithm>
 
@@ -55,6 +57,8 @@ namespace hltsv {
   
   void Activity::configure(std::string &)
   {
+
+    ERS_LOG(" *** ENTER IN Activity::configure() ***");
 
     Configuration* conf = daq::rc::ConfigurationBridge::instance()->getConfiguration();
 
@@ -116,6 +120,30 @@ namespace hltsv {
     m_timeout = my_conf->get_Timeout();
     
     m_network = true;
+
+    // Start ASIO server
+    ERS_LOG(" *** Start io_service ***");
+    boost::asio::io_service::work work( m_hltsv_io_service );
+    auto func = [&] () {
+      ERS_LOG(" *** Run io_service ***");
+      m_hltsv_io_service.run(); 
+      ERS_LOG(" *** io_service End ***");
+    };
+    boost::thread service_thread(func); 
+
+    ERS_LOG(" *** Start HLTSVServer ***");
+    std::shared_ptr<EventScheduler> event_sched;
+    std::shared_ptr<ROSClear> ros_clear;
+    m_myServer = std::make_shared<HLTSVServer> (m_hltsv_io_service, event_sched, ros_clear);
+    m_myServer->listen("HLTSV-Server");
+
+    boost::asio::ip::tcp::endpoint my_endpoint = m_myServer->localEndpoint();
+    ERS_LOG("Port Used: " << my_endpoint.port() );
+    ERS_LOG("IP Address: " <<my_endpoint.address() );
+
+    m_myServer->start();
+
+
 
     return;
   }
