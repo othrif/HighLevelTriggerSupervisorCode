@@ -1,4 +1,7 @@
 #include "config/Configuration.h"
+#include "dal/Partition.h"
+#include "DFdal/DFParameters.h"
+
 #include "msg/Port.h"
 #include "msgconf/MessageConfiguration.h"
 #include "msginput/MessageHeader.h"
@@ -11,6 +14,11 @@
 #include "RunController/ItemCtrl.h"
 
 #include "queues/ProtectedQueue.h"
+
+#include "ipc/core.h"
+#include "ers/ers.h"
+
+#include "asyncmsg/NameService.h"
 
 
 class DCMActivity : public daq::rc::Controllable {
@@ -29,13 +37,21 @@ public:
 
   virtual void configure(std::string& )
   {
-    Configuration *config = daq::rc::ConfigurationBridge::instance()->getConfiguration();
+    Configuration *conf = daq::rc::ConfigurationBridge::instance()->getConfiguration();
 
-    if(!m_msgconf.configure(daq::rc::ConfigurationBridge::instance()->getNodeID(),*config)){ 
-      ERS_LOG("Cannot configure message passing");
-      return;
-    }
-    m_ports = m_msgconf.create_by_group("HLTSV");
+    const daq::core::Partition *partition = daq::rc::ConfigurationBridge::instance()->getPartition();
+    IPCPartition part(partition->UID());
+    const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
+    m_testns = new daq::asyncmsg::NameService(part, dfparams->get_DefaultDataNetworks());
+
+    
+    
+//     if(!m_msgconf.configure(daq::rc::ConfigurationBridge::instance()->getNodeID(),*config)){ 
+//       ERS_LOG("Cannot configure message passing");
+//       return;
+//     }
+    //m_ports = m_msgconf.create_by_group("HLTSV");
+
   }
 
   virtual void unconfigure(std::string &)
@@ -45,17 +61,24 @@ public:
   }
   virtual void connect(std::string& )
   {
-    MessagePassing::Buffer announce(128);
 
-    MessageInput::MessageHeader header(0x1234, 0, MessagePassing::Port::self(),
-				       MessageInput::MessageHeader::SIZE + sizeof(uint32_t));
+    //Read the HLTSV port using the name Service
+    std::vector<boost::asio::ip::tcp::endpoint> result = m_testns->lookup("HLTSV-Server");
+    ERS_LOG("Found: " << result.size() << " endpoints");
+    ERS_LOG("Found the port: " << result[0].port() );
+
+    // Stop test
+//     MessagePassing::Buffer announce(128);
+
+//     MessageInput::MessageHeader header(0x1234, 0, MessagePassing::Port::self(),
+// 				       MessageInput::MessageHeader::SIZE + sizeof(uint32_t));
                         
-    MessagePassing::Buffer::iterator it = announce.begin();
-    it << header << 8; // hard-coded number of "worker" processses
+//     MessagePassing::Buffer::iterator it = announce.begin();
+//     it << header << 8; // hard-coded number of "worker" processses
 
-    announce.size(it);
+//     announce.size(it);
     
-    m_ports.front()->send(&announce, true);
+//     m_ports.front()->send(&announce, true);
 
   }
   virtual void stopL2SV(std::string &)
@@ -118,6 +141,7 @@ public:
   
 private:
   MessageConfiguration   m_msgconf;
+  daq::asyncmsg::NameService *m_testns;
   std::list<MessagePassing::Port*> m_ports;
   bool m_running;
     ProtectedQueue<dcmessages::LVL1Result*> m_queue;
@@ -133,6 +157,14 @@ private:
 
 int main(int argc, char *argv[])
 {
+
+  try{
+    IPCCore::init(argc,argv);
+  } catch(daq::ipc::Exception& ex) {
+    ers::fatal(ex);
+    exit(EXIT_FAILURE);
+  }
+
   std::string name;
   std::string parent;
   bool interactive;

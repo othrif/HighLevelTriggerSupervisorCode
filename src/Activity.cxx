@@ -113,9 +113,15 @@ namespace hltsv {
         
     }
 
+    // Initialize  HLTSV_NameService
+    // Declare it in .h?
+    std::vector<std::string> data_networks = dfparams->get_DefaultDataNetworks();
+    ERS_LOG("number of Data Networks  found: " << data_networks.size());
+    data_networks.push_back("137.138.0.0/255.255.0.0");
+    daq::asyncmsg::NameService HLTSV_NameService(part, data_networks);
+
     // Initialize ROS clear implementation
-    daq::asyncmsg::NameService ns(part, dfparams->get_DefaultDataNetworks());
-    m_ros_clear = std::make_shared<UnicastROSClear>(100, m_io_service, ns);
+    m_ros_clear = std::make_shared<UnicastROSClear>(100, m_io_service, HLTSV_NameService);
     
     m_timeout = my_conf->get_Timeout();
     
@@ -146,10 +152,6 @@ namespace hltsv {
     m_myServer->start();
 
     // Publish port in IS for DCM
-    // Not sure how I should construct the data network
-    std::vector<std::string> data_networks{"137.138.0.0/255.255.0.0"};
-
-    daq::asyncmsg::NameService HLTSV_NameService(part, data_networks);
     HLTSV_NameService.publish(app_name, my_endpoint.port());
 
     return;
