@@ -109,7 +109,7 @@ namespace hltsv {
         }
 
         if (rob_frag->size()) {
-            l1Result = new LVL1Result( m_l1id, rob_frag->size(), robs, lengths, [](uint32_t*) {} );
+            l1Result = new LVL1Result( rob_frag[0].rod_lvl1_id(), rob_frag->size(), robs, lengths, [](uint32_t*) {} );
         } else {
             std::ostringstream mesg;
             mesg <<"looking for LVL1 RoIs to build LVL1Result with l1id " <<

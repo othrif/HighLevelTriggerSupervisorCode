@@ -1,18 +1,38 @@
 
 #include "LVL1Result.h"
 
-#include <iostream>
-
-
 namespace hltsv {
- 
-
-  LVL1Result::~LVL1Result(){}
 
 
-  uint32_t LVL1Result::l1_id() const {
-    std::cout << "TO DO!" << std::endl;
-    return 999;
-  }
+    LVL1Result::~LVL1Result()
+    {
+        for(auto ptr : m_data) m_deleter(ptr);
+    }
+
+    uint32_t LVL1Result::l1_id() const
+    {
+        return m_lvl1_id;
+    }
+
+    bool     LVL1Result::reassigned() const
+    {
+        return m_reassigned;
+    }
+
+    void     LVL1Result::set_reassign()
+    {
+        m_reassigned = true;
+    }
+
+    LVL1Result::time_point LVL1Result::timestamp() const
+    {
+        return m_time_stamp;
+    }
+
+    void LVL1Result::set_timestamp(time_point ts)
+    {
+        m_time_stamp = ts;
+    }
 
 }
+

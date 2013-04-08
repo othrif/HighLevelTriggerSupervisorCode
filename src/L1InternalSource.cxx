@@ -41,8 +41,6 @@ namespace hltsv {
         LVL1Result* l1Result = new LVL1Result(m_l1id, dummy_data, rob.size_word());
         m_l1id += 1;
 
-        std::cerr << "m_l1id == " << m_l1id << std::endl;
-
         return l1Result;
     }
 
