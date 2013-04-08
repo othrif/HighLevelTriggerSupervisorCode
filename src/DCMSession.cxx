@@ -51,12 +51,6 @@ namespace hltsv {
     std::unique_ptr<daq::asyncmsg::InputMessage> 
     DCMSession::createMessage(std::uint32_t typeId, std::uint32_t transactionId, std::uint32_t size) noexcept
     {
-        // We only expect one kind of message
-
-        // ERS_ASSERT(typeId == UpdateMessage::ID)
-        //
-        // We don't use the transactionId ?
-        //
         return std::unique_ptr<daq::asyncmsg::InputMessage>(new UpdateMessage(size));
     }
     

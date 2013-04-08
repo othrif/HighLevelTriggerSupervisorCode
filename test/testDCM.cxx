@@ -20,6 +20,9 @@
 
 #include "asyncmsg/NameService.h"
 
+#include "src/DCMMessages.h"
+#include "src/HLTSVSession.h"
+
 
 class DCMActivity : public daq::rc::Controllable {
 public:
@@ -43,7 +46,6 @@ public:
     IPCPartition part(partition->UID());
     const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
     m_testns = new daq::asyncmsg::NameService(part, dfparams->get_DefaultDataNetworks());
-
     
     
 //     if(!m_msgconf.configure(daq::rc::ConfigurationBridge::instance()->getNodeID(),*config)){ 
@@ -59,15 +61,37 @@ public:
     m_msgconf.unconfigure();
     m_ports.clear();
   }
+
+
   virtual void connect(std::string& )
   {
-
-    //Read the HLTSV port using the name Service
-    std::vector<boost::asio::ip::tcp::endpoint> result = m_testns->lookup("HLTSV-Server");
-    ERS_LOG("Found: " << result.size() << " endpoints");
-    ERS_LOG("Found the port: " << result[0].port() );
-
+    
+    // Read the HLTSV port using the name Service
+    std::vector<boost::asio::ip::tcp::endpoint> hltsv_eps = m_testns->lookup("HLTSV");
+    ERS_LOG("Found: " << hltsv_eps.size() << " endpoints");
+    ERS_LOG("Found the port: " << hltsv_eps[0].port() );
+    
+    // create the session to talk to the HLTSV
+    boost::asio::io_service dcm_io_service;
+    // Start ASIO server
+    ERS_LOG(" *** Start io_service ***");
+    boost::asio::io_service::work work( dcm_io_service );
+    auto func = [&] () {
+      ERS_LOG(" *** Run io_service ***");
+      dcm_io_service.run(); 
+      ERS_LOG(" *** io_service End ***");
+    };
+    
+    boost::thread service_thread(func); 
+    m_sessions.push_back(std::make_shared<hltsv::HLTSVSession>(dcm_io_service));
+    m_sessions[0]->asyncOpen("HLTSV", hltsv_eps[0]);
+    
+    std::vector<uint32_t> l1ids;
+    l1ids.push_back(3);
+    //std::unique_ptr<const hltsv::RequestMessage> test_msg(new hltsv::RequestMessage(1,l1idss));
+    //m_sessions[0]->onSend(test_msg);
     // Stop test
+
 //     MessagePassing::Buffer announce(128);
 
 //     MessageInput::MessageHeader header(0x1234, 0, MessagePassing::Port::self(),
@@ -138,11 +162,16 @@ public:
   }
   
   
+
+
+  //*************************
   
 private:
   MessageConfiguration   m_msgconf;
   daq::asyncmsg::NameService *m_testns;
   std::list<MessagePassing::Port*> m_ports;
+  std::vector<std::shared_ptr<hltsv::HLTSVSession>> m_sessions;
+
   bool m_running;
     ProtectedQueue<dcmessages::LVL1Result*> m_queue;
     std::vector<boost::thread*>      m_handlers;

@@ -103,15 +103,16 @@ namespace hltsv {
 
       // TODO
       // m_cmdReceiver = new daq::rc::CommandedTrigger(p,getName(), this);
-        
-        m_publisher.reset(new monsvc::PublishingController(part,getName()));
-        
-        m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("DFObjects:.*/=>is:(2,DF)"));
-        m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("Histogramming:.*/=>oh:(5,DF,provider_name)"));
-        
-        m_time = monsvc::MonitoringService::instance().register_object("myTime",new TH1F("myTime","myTime", 2000, 0., 20000.));
-        
     }
+        
+    m_publisher.reset(new monsvc::PublishingController(part,getName()));
+    
+    m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("DFObjects:.*/=>is:(2,DF)"));
+    m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("Histogramming:.*/=>oh:(5,DF,provider_name)"));
+    
+    m_time = monsvc::MonitoringService::instance().register_object("myTime",new TH1F("myTime","myTime", 2000, 0., 20000.));
+       
+    
 
     // Initialize  HLTSV_NameService
     // Declare it in .h?
@@ -135,14 +136,14 @@ namespace hltsv {
       m_hltsv_io_service.run(); 
       ERS_LOG(" *** io_service End ***");
     };
-    boost::thread service_thread(func); 
+    boost::thread service_thread(func); // better movable thread (C++11)
 
     ERS_LOG(" *** Start HLTSVServer ***");
     std::shared_ptr<EventScheduler> event_sched;
     std::shared_ptr<ROSClear> ros_clear;
     m_myServer = std::make_shared<HLTSVServer> (m_hltsv_io_service, event_sched, ros_clear);
     // the id should be read from OKS
-    std::string app_name = "HLTSV-Server";
+    std::string app_name = "HLTSV";
     m_myServer->listen(app_name);
 
     boost::asio::ip::tcp::endpoint my_endpoint = m_myServer->localEndpoint();

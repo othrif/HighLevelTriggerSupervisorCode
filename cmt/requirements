@@ -54,7 +54,7 @@ macro_append daq-hltsv-dal_shlibflags "-ldaq-core-dal -ldaq-df-dal"
 #
 # A library to load the RoIB plugins
 # 
-library hltsv L1Source.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx ROSSession.cxx Messages.cxx HLTSVServer.cxx LVL1Result.cxx
+library hltsv L1Source.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx ROSSession.cxx HLTSVSession.cxx Messages.cxx DCMMessages.cxx HLTSVServer.cxx LVL1Result.cxx
 macro hltsv_shlibflags "-lItemCtrl -lers -ltbb -leformat_write -leformat -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg -ldynlibs"
 
 #
@@ -107,7 +107,7 @@ macro test_l1source_dependencies hltsv
 # Emulator for DCM
 #
 application testDCM ../test/testDCM.cxx
-macro testDCMlinkopts "-lers -leformat -lac -ldcmessages -lmsginput -lmsgconf -lmsg -ldaq-df-dal -lasyncmsg "
+macro testDCMlinkopts "-lers -leformat -lac -ldcmessages -lmsginput -lmsgconf -lmsg -ldaq-df-dal -lasyncmsg -lhltsv"
 
 #
 # Emulator for ROS
