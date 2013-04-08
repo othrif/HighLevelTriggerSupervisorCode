@@ -43,7 +43,8 @@ namespace hltsv {
         void push_events();
 
         tbb::concurrent_bounded_queue<std::weak_ptr<DCMSession>>   m_free_cores;
-        tbb::concurrent_bounded_queue<std::shared_ptr<LVL1Result>> m_reassigned_events;
+      // maybe unique pointer better ? 
+        tbb::concurrent_bounded_queue<std::shared_ptr<LVL1Result>> m_reassigned_events; 
     };
 }
 
