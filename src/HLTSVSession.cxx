@@ -1,3 +1,4 @@
+//#include "ers/ers.h"
 
 #include "src/DCMMessages.h"
 #include "src/HLTSVSession.h"
@@ -15,6 +16,7 @@ namespace hltsv {
   
   void HLTSVSession::onOpen() noexcept
   {
+    //ERS_LOG(" *** CONNECTED TO HLTSV! I believe... ***");
   }
   
   void HLTSVSession::onOpenError(const boost::system::error_code& error) noexcept
@@ -37,6 +39,7 @@ namespace hltsv {
   
   void HLTSVSession::onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept
   {
+
   }
   
   void HLTSVSession::onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept

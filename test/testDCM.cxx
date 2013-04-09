@@ -83,11 +83,11 @@ public:
     };
     
     boost::thread service_thread(func); 
-    m_sessions.push_back(std::make_shared<hltsv::HLTSVSession>(dcm_io_service));
-    m_sessions[0]->asyncOpen("HLTSV", hltsv_eps[0]);
+    m_session = std::make_shared<hltsv::HLTSVSession>(dcm_io_service);
+    m_session->asyncOpen("HLTSV", hltsv_eps[0]);
     
-    std::vector<uint32_t> l1ids;
-    l1ids.push_back(3);
+    //    std::vector<uint32_t> l1ids;
+    //l1ids.push_back(3);
     //std::unique_ptr<const hltsv::RequestMessage> test_msg(new hltsv::RequestMessage(1,l1idss));
     //m_sessions[0]->onSend(test_msg);
     // Stop test
@@ -170,7 +170,7 @@ private:
   MessageConfiguration   m_msgconf;
   daq::asyncmsg::NameService *m_testns;
   std::list<MessagePassing::Port*> m_ports;
-  std::vector<std::shared_ptr<hltsv::HLTSVSession>> m_sessions;
+  std::shared_ptr<hltsv::HLTSVSession> m_session;
 
   bool m_running;
     ProtectedQueue<dcmessages::LVL1Result*> m_queue;
