@@ -1,7 +1,7 @@
 //#include "ers/ers.h"
 
-#include "src/DCMMessages.h"
-#include "src/HLTSVSession.h"
+#include "DCMMessages.h"
+#include "HLTSVSession.h"
 
 namespace hltsv {
 

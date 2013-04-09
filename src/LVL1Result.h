@@ -7,6 +7,8 @@
 #include <functional>
 #include <vector>
 
+#include "boost/asio/buffer.hpp"
+
 namespace hltsv {
 
     /** The ROIs received from RoIBuilder.
@@ -60,14 +62,22 @@ namespace hltsv {
         time_point timestamp() const;
         void       set_timestamp(time_point ts = clock::now());
 
+        uint64_t   global_id() const;
+        void       set_global_id(uint64_t global_id);
+
         template<class ConstBufferSequence>
         void insert(ConstBufferSequence& buffers) const
         {
             // add the internal representation to the ASIO ConstBufferSequence 'buffers'.
+            buffers.push_back(boost::asio::buffer(&m_global_id, sizeof(m_global_id))); 
+            for(size_t i = 0; i < m_data.size(); i++) {
+                buffers.push_back(boost::asio::buffer(m_data[i], m_lengths[i]));
+            }
         }
 
     private:
         uint32_t                        m_lvl1_id;
+        uint64_t                        m_global_id;
         std::vector<uint32_t*>          m_data;
         std::vector<uint32_t>           m_lengths;
         std::function<void (uint32_t*)> m_deleter;

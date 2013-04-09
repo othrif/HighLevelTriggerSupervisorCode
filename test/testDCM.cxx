@@ -20,8 +20,8 @@
 
 #include "asyncmsg/NameService.h"
 
-#include "src/DCMMessages.h"
-#include "src/HLTSVSession.h"
+#include "DCMMessages.h"
+#include "HLTSVSession.h"
 
 
 class DCMActivity : public daq::rc::Controllable {

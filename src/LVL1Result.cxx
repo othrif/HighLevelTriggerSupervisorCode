@@ -34,5 +34,16 @@ namespace hltsv {
         m_time_stamp = ts;
     }
 
+    uint64_t   LVL1Result::global_id() const
+    {
+        return m_global_id;
+    }
+    
+    void LVL1Result::set_global_id(uint64_t global_id)
+    {
+        m_global_id = global_id;
+    }
+
+
 }
 

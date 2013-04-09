@@ -51,12 +51,15 @@ namespace hltsv {
         // Create LVL1result, re-use ROBFragment
         LVL1Result* l1Result = 0;
 
-        uint32_t* robs[12]; // [dcmessages::MAXLVL1RODS];
-        uint32_t  lengths[12];
+        uint32_t* robs[MAXLVL1RODS]; 
+        uint32_t  lengths[MAXLVL1RODS];
 
         std::vector<uint32_t*>* rob_frag = m_data[m_l1id];
       
         std::vector<uint32_t*>::iterator fit = rob_frag->begin();
+
+        uint32_t lvl1_id = 0;
+
         for ( size_t i=0; i< rob_frag->size(); i++, fit++ ) {
             /**
              * Update Lumi Block Number in Rob's header
@@ -105,11 +108,15 @@ namespace hltsv {
                 }
             }
 
+            if(i == 0) {
+                lvl1_id = wrob.rod_lvl1_id();
+            }
+
             // mutex is unlocked here
         }
 
         if (rob_frag->size()) {
-            l1Result = new LVL1Result( m_l1id, rob_frag->size(), robs, lengths, [](uint32_t*) {} );
+            l1Result = new LVL1Result( lvl1_id, rob_frag->size(), robs, lengths, [](uint32_t*) {} );
         } else {
             std::ostringstream mesg;
             mesg <<"looking for LVL1 RoIs to build LVL1Result with l1id " <<

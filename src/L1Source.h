@@ -10,6 +10,9 @@ namespace hltsv {
 
     class LVL1Result;
 
+    /// The maximum number of possible RODs in the RoIB data.
+    static const size_t MAXLVL1RODS = 12;
+
     /**
      * Abstract base class for interface to specfic sources
      * of LVL1Result objects.
@@ -34,7 +37,8 @@ namespace hltsv {
 
         virtual ~L1Source();
 
-    public:    
+    public:
+
         /** Try to get an event from LVL1.
          *  @returns A pointer to the event, NULL if none available.
          */
