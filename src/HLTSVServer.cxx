@@ -2,6 +2,8 @@
 #include "HLTSVServer.h"
 #include "DCMSession.h"
 
+#include "ers/ers.h"
+
 
 namespace hltsv {
     
@@ -33,6 +35,7 @@ namespace hltsv {
 
     void HLTSVServer::onAccept(std::shared_ptr<daq::asyncmsg::Session> session) noexcept 
     {
+	ERS_LOG("HLTSV Server accepted a DCM connection!");
         // save a reference to the new session
         std::shared_ptr<DCMSession> dcm(session, dynamic_cast<DCMSession*>(session.get()));
         m_sessions.push_back(dcm);
@@ -41,6 +44,7 @@ namespace hltsv {
         auto new_session = std::make_shared<DCMSession>(m_service,
                                                         m_scheduler,
                                                         m_ros_clear);
+	ERS_LOG("HLTSV waiting for more connections");
         asyncAccept(new_session);
     }
 

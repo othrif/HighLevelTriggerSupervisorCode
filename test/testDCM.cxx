@@ -72,18 +72,19 @@ public:
     ERS_LOG("Found the port: " << hltsv_eps[0].port() );
     
     // create the session to talk to the HLTSV
-    boost::asio::io_service dcm_io_service;
     // Start ASIO server
     ERS_LOG(" *** Start io_service ***");
-    boost::asio::io_service::work work( dcm_io_service );
+    boost::asio::io_service::work work( m_dcm_io_service );
     auto func = [&] () {
       ERS_LOG(" *** Run io_service ***");
-      dcm_io_service.run(); 
+      m_dcm_io_service.run(); 
       ERS_LOG(" *** io_service End ***");
     };
     
     boost::thread service_thread(func); 
-    m_session = std::make_shared<hltsv::HLTSVSession>(dcm_io_service);
+    ERS_LOG(" *** installed service thread *** ");
+    m_session = std::make_shared<hltsv::HLTSVSession>(m_dcm_io_service);
+    ERS_LOG(" *** created HLTSVSession *** ");
     m_session->asyncOpen("HLTSV", hltsv_eps[0]);
     
     //    std::vector<uint32_t> l1ids;
@@ -112,12 +113,14 @@ public:
 
   void execute()
   {
+    ERS_LOG(" *** enter execute() *** ");
     
     using namespace MessagePassing;
     using namespace MessageInput;
     
     Buffer reply(128);
     
+    ERS_LOG(" *** entering run run loop (m_running = " << m_running << ") *** ");
     while(m_running) {
       
       if(Buffer *buf = Port::receive(100000)) {
@@ -170,6 +173,7 @@ private:
   MessageConfiguration   m_msgconf;
   daq::asyncmsg::NameService *m_testns;
   std::list<MessagePassing::Port*> m_ports;
+  boost::asio::io_service m_dcm_io_service;
   std::shared_ptr<hltsv::HLTSVSession> m_session;
 
   bool m_running;
@@ -193,6 +197,7 @@ int main(int argc, char *argv[])
     ers::fatal(ex);
     exit(EXIT_FAILURE);
   }
+  ERS_LOG("AAA");
 
   std::string name;
   std::string parent;
@@ -203,12 +208,16 @@ int main(int argc, char *argv[])
   CmdArgBool    iMode('i',"iMode", "turn on interactive mode", CmdArg::isOPT);
   CmdArgStr     segname('s',"segname", "segname", "segment name", CmdArg::isOPT);
   CmdArgStr     parentname('P',"parentname", "parentname", "parent name", CmdArg::isREQ);
+
+  ERS_LOG("BBB");
   
   segname = "";
   parentname = "";
   
   CmdLine       cmd(*argv, &app, &uniqueId, &iMode, &segname, &parentname, NULL);
   CmdArgvIter   argv_iter(--argc, (const char * const *) ++argv);
+
+  ERS_LOG("CCC");
   
   unsigned int status = cmd.parse(argv_iter);
   if (status) {
@@ -220,5 +229,8 @@ int main(int argc, char *argv[])
   parent = parentname;
   
   daq::rc::ItemCtrl control(new DCMActivity(name), interactive, parent);
+
+  ERS_LOG("DDD");
   control.run();
+  ERS_LOG("EEE");
 }

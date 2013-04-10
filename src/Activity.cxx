@@ -118,7 +118,6 @@ namespace hltsv {
     // Declare it in .h?
     std::vector<std::string> data_networks = dfparams->get_DefaultDataNetworks();
     ERS_LOG("number of Data Networks  found: " << data_networks.size());
-    data_networks.push_back("137.138.0.0/255.255.0.0");
     daq::asyncmsg::NameService HLTSV_NameService(part, data_networks);
 
     // Initialize ROS clear implementation
@@ -150,11 +149,10 @@ namespace hltsv {
     ERS_LOG("Port Used: " << my_endpoint.port() );
     ERS_LOG("IP Address: " <<my_endpoint.address() );
 
-    m_myServer->start();
-
     // Publish port in IS for DCM
     HLTSV_NameService.publish(app_name, my_endpoint.port());
 
+    m_myServer->start();
     return;
   }
 
