@@ -108,53 +108,55 @@ public:
   {
     ERS_LOG(" *** enter execute() *** ");
     
-    using namespace MessagePassing;
-    using namespace MessageInput;
+//     using namespace MessagePassing;
+//     using namespace MessageInput;
     
-    Buffer reply(128);
+//     Buffer reply(128);
     
-    ERS_LOG(" *** entering run run loop (m_running = " << m_running << ") *** ");
-    while(m_running) {
+//     ERS_LOG(" *** entering run run loop (m_running = " << m_running << ") *** ");
+//     while(m_running) {
       
-      if(Buffer *buf = Port::receive(100000)) {
+//       if(Buffer *buf = Port::receive(100000)) {
 	
-	MessageHeader input(buf);
-	if(!input.valid()) {
-	  delete buf;
-	  continue;
-	}
+// 	MessageHeader input(buf);
+// 	if(!input.valid()) {
+// 	  delete buf;
+// 	  continue;
+// 	}
 	
-	dcmessages::LVL1Result l1result(buf);
+// 	dcmessages::LVL1Result l1result(buf);
         
-	delete buf;
+// 	delete buf;
 	
-	// ERS_LOG("Got event " << l1result.l1ID());
+// 	// ERS_LOG("Got event " << l1result.l1ID());
 	
-	MessageHeader header(0x8765U,
-			     0, 
-			     Port::self(), 
-			     MessageHeader::SIZE + sizeof(uint32_t));
+// 	MessageHeader header(0x8765U,
+// 			     0, 
+// 			     Port::self(), 
+// 			     MessageHeader::SIZE + sizeof(uint32_t));
                 
-	Buffer::iterator it = reply.begin();
-	it << header << l1result.l1ID();
+// 	Buffer::iterator it = reply.begin();
+// 	it << header << l1result.l1ID();
 	
-	reply.size(it);
+// 	reply.size(it);
 	
-	if(Port *port = Port::find(input.source())) {
-	  port->send(&reply, true);
-	} else {
-	  ERS_LOG("Invalid source node ID: " << input.source());
-	}
+// 	if(Port *port = Port::find(input.source())) {
+// 	  port->send(&reply, true);
+// 	} else {
+// 	  ERS_LOG("Invalid source node ID: " << input.source());
+// 	}
 	
-	// ERS_LOG("Sent reply " << l1result.l1ID());
+// 	// ERS_LOG("Sent reply " << l1result.l1ID());
         
-      }
-    }
+//       }
+//     }
   }
 
     virtual void prepareForRun(std::string& )
   {
+    ERS_LOG(" *** enter prepareForRun *** ");
     m_running = true;
+    execute();
   }
   
   
