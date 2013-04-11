@@ -27,9 +27,9 @@
 class DCMActivity : public daq::rc::Controllable {
 public:
   DCMActivity(std::string& name)
-    : daq::rc::Controllable(name), m_running(false)    
+    : daq::rc::Controllable(name),
+      m_work(m_dcm_io_service), m_running(false)
   {
-    m_work = new boost::asio::io_service::work(m_dcm_io_service);
   }
 
   ~DCMActivity()
@@ -55,6 +55,7 @@ public:
   {
     m_msgconf.unconfigure();
     m_ports.clear();
+    delete m_testns;
   }
 
 
@@ -169,8 +170,8 @@ private:
   daq::asyncmsg::NameService *m_testns;
   std::list<MessagePassing::Port*> m_ports;
   boost::asio::io_service m_dcm_io_service;
+  boost::asio::io_service::work m_work;
   std::shared_ptr<hltsv::HLTSVSession> m_session;
-  boost::asio::io_service::work *m_work;
 
   bool m_running;
   ProtectedQueue<dcmessages::LVL1Result*> m_queue;
