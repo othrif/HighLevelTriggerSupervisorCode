@@ -71,6 +71,7 @@ namespace hltsv {
     private:
 
        // for the HLTSVServer
+        boost::asio::io_service::work *m_work;
         boost::asio::io_service m_hltsv_io_service;
         std::shared_ptr<HLTSVServer> m_myServer;
 

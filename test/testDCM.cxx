@@ -27,9 +27,11 @@
 class DCMActivity : public daq::rc::Controllable {
 public:
   DCMActivity(std::string& name)
-    : daq::rc::Controllable(name), m_running(false)
+    : daq::rc::Controllable(name), m_running(false)    
   {
+    m_work = new boost::asio::io_service::work(m_dcm_io_service);
   }
+
   ~DCMActivity()
   {
   }
@@ -47,13 +49,6 @@ public:
     const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
     m_testns = new daq::asyncmsg::NameService(part, dfparams->get_DefaultDataNetworks());
     
-    
-//     if(!m_msgconf.configure(daq::rc::ConfigurationBridge::instance()->getNodeID(),*config)){ 
-//       ERS_LOG("Cannot configure message passing");
-//       return;
-//     }
-    //m_ports = m_msgconf.create_by_group("HLTSV");
-
   }
 
   virtual void unconfigure(std::string &)
@@ -70,19 +65,17 @@ public:
     std::vector<boost::asio::ip::tcp::endpoint> hltsv_eps = m_testns->lookup("HLTSV");
     ERS_LOG("Found: " << hltsv_eps.size() << " endpoints");
     ERS_LOG("Found the port: " << hltsv_eps[0].port() );
-    
-    // create the session to talk to the HLTSV
-    // Start ASIO server
+
+    // Start ASIO Client
     ERS_LOG(" *** Start io_service ***");
-    boost::asio::io_service::work work( m_dcm_io_service );
     auto func = [&] () {
       ERS_LOG(" *** Run io_service ***");
       m_dcm_io_service.run(); 
       ERS_LOG(" *** io_service End ***");
     };
-    
     boost::thread service_thread(func); 
     ERS_LOG(" *** installed service thread *** ");
+    // create the session to talk to the HLTSV    
     m_session = std::make_shared<hltsv::HLTSVSession>(m_dcm_io_service);
     ERS_LOG(" *** created HLTSVSession *** ");
     m_session->asyncOpen("HLTSV", hltsv_eps[0]);
@@ -175,17 +168,18 @@ private:
   std::list<MessagePassing::Port*> m_ports;
   boost::asio::io_service m_dcm_io_service;
   std::shared_ptr<hltsv::HLTSVSession> m_session;
+  boost::asio::io_service::work *m_work;
 
   bool m_running;
-    ProtectedQueue<dcmessages::LVL1Result*> m_queue;
-    std::vector<boost::thread*>      m_handlers;
-    tbb::atomic<uint32_t>            m_outstanding;
-    uint32_t                         m_cores;
-
-    uint32_t                         m_l2_processing;
-    uint32_t                         m_l2_accept;
-    uint32_t                         m_event_building;
-    uint32_t                         m_event_filter;
+  ProtectedQueue<dcmessages::LVL1Result*> m_queue;
+  std::vector<boost::thread*>      m_handlers;
+  tbb::atomic<uint32_t>            m_outstanding;
+  uint32_t                         m_cores;
+  
+  uint32_t                         m_l2_processing;
+  uint32_t                         m_l2_accept;
+  uint32_t                         m_event_building;
+  uint32_t                         m_event_filter;
 };
 
 int main(int argc, char *argv[])
@@ -197,7 +191,6 @@ int main(int argc, char *argv[])
     ers::fatal(ex);
     exit(EXIT_FAILURE);
   }
-  ERS_LOG("AAA");
 
   std::string name;
   std::string parent;
@@ -209,7 +202,6 @@ int main(int argc, char *argv[])
   CmdArgStr     segname('s',"segname", "segname", "segment name", CmdArg::isOPT);
   CmdArgStr     parentname('P',"parentname", "parentname", "parent name", CmdArg::isREQ);
 
-  ERS_LOG("BBB");
   
   segname = "";
   parentname = "";
@@ -217,7 +209,6 @@ int main(int argc, char *argv[])
   CmdLine       cmd(*argv, &app, &uniqueId, &iMode, &segname, &parentname, NULL);
   CmdArgvIter   argv_iter(--argc, (const char * const *) ++argv);
 
-  ERS_LOG("CCC");
   
   unsigned int status = cmd.parse(argv_iter);
   if (status) {
@@ -230,7 +221,6 @@ int main(int argc, char *argv[])
   
   daq::rc::ItemCtrl control(new DCMActivity(name), interactive, parent);
 
-  ERS_LOG("DDD");
   control.run();
-  ERS_LOG("EEE");
+
 }

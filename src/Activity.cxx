@@ -49,6 +49,7 @@ namespace hltsv {
       m_running(false),
       m_triggering(false)
   {
+    m_work = new boost::asio::io_service::work(m_hltsv_io_service);
   }
 
   Activity::~Activity()
@@ -118,6 +119,7 @@ namespace hltsv {
     // Declare it in .h?
     std::vector<std::string> data_networks = dfparams->get_DefaultDataNetworks();
     ERS_LOG("number of Data Networks  found: " << data_networks.size());
+    data_networks.push_back("137.138.0.0/255.255.0.0"); 
     daq::asyncmsg::NameService HLTSV_NameService(part, data_networks);
 
     // Initialize ROS clear implementation
@@ -129,7 +131,6 @@ namespace hltsv {
 
     // Start ASIO server
     ERS_LOG(" *** Start io_service ***");
-    boost::asio::io_service::work work( m_hltsv_io_service );
     auto func = [&] () {
       ERS_LOG(" *** Run io_service ***");
       m_hltsv_io_service.run(); 
@@ -152,6 +153,7 @@ namespace hltsv {
     // Publish port in IS for DCM
     HLTSV_NameService.publish(app_name, my_endpoint.port());
 
+    //  HLTSVServer::start() calls Server::asyncAccept() which calls HLTSVServer::onAccept
     m_myServer->start();
     return;
   }
