@@ -41,6 +41,8 @@ namespace hltsv {
   void HLTSVSession::onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept
   {
 
+    ERS_LOG("HLTSVSession::onSend");
+
   }
   
   void HLTSVSession::onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept

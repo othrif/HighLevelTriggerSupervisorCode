@@ -2,6 +2,9 @@
 #include "EventScheduler.h"
 #include "DCMSession.h"
 
+#include "ers/ers.h"
+
+
 namespace hltsv {
 
     EventScheduler::~EventScheduler()
@@ -16,9 +19,12 @@ namespace hltsv {
     // Add a DCM that has additional 'count' available cores.
     void EventScheduler::request_events(std::shared_ptr<DCMSession> dcm, unsigned int count)
     {
-        while(count-- > 0) {
-            m_free_cores.push(dcm);
-        }
+      ERS_LOG("EventScheduler::request_events, with count=" << count );
+
+//         while(count-- > 0) {
+//             m_free_cores.push(dcm);
+//         }
+      ERS_LOG("EventScheduler::request_events,m_free_cores=" << m_free_cores.size() );
     }
 
 

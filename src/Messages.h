@@ -25,7 +25,7 @@ namespace hltsv {
         virtual uint32_t typeId() const override;
         virtual uint32_t transactionId() const override;
         virtual void     toBuffers(std::vector<boost::asio::mutable_buffer>&) override;
-      // missing methods to decode the first 2 words of the payload (possibly num free core & # L1ID done)
+        uint32_t num_request(); // method to decode the first word of the payload
     private:
         std::unique_ptr<uint32_t[]> m_data;
         uint32_t                    m_size;

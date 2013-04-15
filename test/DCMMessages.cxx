@@ -1,5 +1,7 @@
 
 #include "DCMMessages.h"
+#include "ers/ers.h"
+
 
 namespace hltsv {
 
@@ -26,6 +28,7 @@ namespace hltsv {
   
   void RequestMessage::toBuffers(std::vector<boost::asio::const_buffer>& buffers) const
   {
+    ERS_LOG("tobuffer called, "<< m_prefix.reqRoIs);
     buffers.push_back(boost::asio::buffer(&m_prefix, sizeof(m_prefix)));
     buffers.push_back(boost::asio::buffer(m_l1ids));
   }

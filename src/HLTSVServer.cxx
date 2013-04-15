@@ -38,6 +38,7 @@ namespace hltsv {
 	ERS_LOG("HLTSV Server accepted a DCM connection!");
         // save a reference to the new session
         std::shared_ptr<DCMSession> dcm(session, dynamic_cast<DCMSession*>(session.get()));
+
         m_sessions.push_back(dcm);
             
         // start the next accept

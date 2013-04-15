@@ -23,6 +23,8 @@
 #include "DCMMessages.h"
 #include "HLTSVSession.h"
 
+
+// *******************
 class DCMActivity : public daq::rc::Controllable {
 public:
   DCMActivity(std::string & name);
@@ -35,7 +37,7 @@ public:
   virtual void stopL2SV(std::string & );
   virtual void prepareForRun(std::string & );
 
-  void execute();
+  //void execute();
 
 private:
   MessageConfiguration m_msgconf;
@@ -57,15 +59,21 @@ private:
   uint32_t                         m_event_filter;
 };
 
+// *******************
+
+
+
 DCMActivity::DCMActivity(std::string &name)
     : daq::rc::Controllable(name),
       m_work(m_dcm_io_service), m_running(false)
 {
 }
 
+
 DCMActivity::~DCMActivity()
 {
 }
+
 
 void DCMActivity::configure(std::string & )
 {
@@ -75,8 +83,8 @@ void DCMActivity::configure(std::string & )
   IPCPartition part(partition->UID());
   const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
   m_testns = new daq::asyncmsg::NameService(part, dfparams->get_DefaultDataNetworks());
-  
 }
+
 
 void DCMActivity::unconfigure(std::string & )
 {
@@ -84,9 +92,9 @@ void DCMActivity::unconfigure(std::string & )
   delete m_testns;
 }
 
+
 void DCMActivity::connect(std::string &)
-{
-  
+{  
   // Read the HLTSV port using the name Service
   std::vector<boost::asio::ip::tcp::endpoint> hltsv_eps = m_testns->lookup("HLTSV");
   ERS_LOG("Found: " << hltsv_eps.size() << " endpoints");
@@ -101,90 +109,64 @@ void DCMActivity::connect(std::string &)
   };
   boost::thread service_thread(func); 
   ERS_LOG(" *** installed service thread *** ");
+
   // create the session to talk to the HLTSV    
   m_session = std::make_shared<hltsv::HLTSVSession>(m_dcm_io_service);
   ERS_LOG(" *** created HLTSVSession *** ");
   m_session->asyncOpen("HLTSV", hltsv_eps[0]);
-  
-  //    std::vector<uint32_t> l1ids;
-  //l1ids.push_back(3);
-  //std::unique_ptr<const hltsv::RequestMessage> test_msg(new hltsv::RequestMessage(1,l1idss));
-  //m_sessions[0]->onSend(test_msg);
-  // Stop test
 
-//     MessagePassing::Buffer announce(128);
-
-//     MessageInput::MessageHeader header(0x1234, 0, MessagePassing::Port::self(),
-// 				       MessageInput::MessageHeader::SIZE + sizeof(uint32_t));
-                        
-//     MessagePassing::Buffer::iterator it = announce.begin();
-//     it << header << 8; // hard-coded number of "worker" processses
-
-//     announce.size(it);
-    
-//     m_ports.front()->send(&announce, true);
 }
+
 
 void DCMActivity::stopL2SV(std::string & )
 {
   m_running = false;
 }
 
+
 void DCMActivity::prepareForRun(std::string & )
 {
   ERS_LOG(" *** enter prepareForRun *** ");
   m_running = true;
-  execute();
+
+
+  auto execute = [&] () {
+    ERS_LOG(" *** Run thread for running ***");
+    std::vector<uint32_t> l1ids;
+    uint32_t reqRoIs = 3;
+    std::unique_ptr<const hltsv::RequestMessage> test_msg(new hltsv::RequestMessage(reqRoIs,l1ids));
+    
+    while(m_running) {
+      
+      m_session->asyncSend(std::move(test_msg));
+      ERS_LOG(" *** DCM::execute onSend *** ");
+      break;
+    }
+    sleep(20);
+    ERS_LOG(" *** End of running thread ***");
+  };
+  boost::thread execute_thread(execute); 
 }
   
  
-void DCMActivity::execute()
-{
-  ERS_LOG(" *** enter execute() *** ");
+// void DCMActivity::execute()
+// {
+//   ERS_LOG(" *** enter execute() *** ");
+
+//   std::vector<uint32_t> l1ids;
+//   uint32_t reqRoIs = 3;
+//   std::unique_ptr<const hltsv::RequestMessage> test_msg(new hltsv::RequestMessage(reqRoIs,l1ids));
     
-//     using namespace MessagePassing;
-//     using namespace MessageInput;
-    
-//     Buffer reply(128);
-    
-//     ERS_LOG(" *** entering run run loop (m_running = " << m_running << ") *** ");
-//     while(m_running) {
+//   while(m_running) {
       
-//       if(Buffer *buf = Port::receive(100000)) {
-	
-// 	MessageHeader input(buf);
-// 	if(!input.valid()) {
-// 	  delete buf;
-// 	  continue;
-// 	}
-	
-// 	dcmessages::LVL1Result l1result(buf);
-        
-// 	delete buf;
-	
-// 	// ERS_LOG("Got event " << l1result.l1ID());
-	
-// 	MessageHeader header(0x8765U,
-// 			     0, 
-// 			     Port::self(), 
-// 			     MessageHeader::SIZE + sizeof(uint32_t));
-                
-// 	Buffer::iterator it = reply.begin();
-// 	it << header << l1result.l1ID();
-	
-// 	reply.size(it);
-	
-// 	if(Port *port = Port::find(input.source())) {
-// 	  port->send(&reply, true);
-// 	} else {
-// 	  ERS_LOG("Invalid source node ID: " << input.source());
-// 	}
-	
-// 	// ERS_LOG("Sent reply " << l1result.l1ID());
-        
-//       }
-//     }
-}
+//     m_session->asyncSend(std::move(test_msg));
+//     ERS_LOG(" *** DCM::execute onSend *** ");
+//     break;
+//   }
+//   sleep(20);
+
+// }
+
 
 int main(int argc, char *argv[])
 {

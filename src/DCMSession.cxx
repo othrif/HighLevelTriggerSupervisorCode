@@ -1,6 +1,9 @@
 
 #include "DCMSession.h"
 #include "Messages.h"
+#include "EventScheduler.h"
+
+#include "ers/ers.h"
 
 namespace hltsv {
 
@@ -41,6 +44,10 @@ namespace hltsv {
     void DCMSession::onOpen() noexcept 
     {
         // TODO: nothing really, we wait for the first UpdateMessage
+      ERS_LOG("DCMSession::onOpen()");
+      // each dcm session is ready to receive incoming messages
+      asyncReceive();
+
     }
 
     void DCMSession::onOpenError(const boost::system::error_code& error) noexcept
@@ -56,16 +63,26 @@ namespace hltsv {
     
     void DCMSession::onReceive(std::unique_ptr<daq::asyncmsg::InputMessage> message)
     {
-        // ERS_ASSERT(message->typeId() == UpdateMessage::ID)
-        std::unique_ptr<UpdateMessage> msg(dynamic_cast<UpdateMessage*>(message.release()));
-
-        // Put every LVL1 ID from the UpdateMessage to m_clear->add_event();
-        // m_scheduler->request_events(msg.available_cores());
+      // ERS_ASSERT(message->typeId() == UpdateMessage::ID)
+      ERS_LOG("DCMSession::onReceive");
+      std::unique_ptr<UpdateMessage> msg(dynamic_cast<UpdateMessage*>(message.release()));
+      
+      // Put every LVL1 ID from the UpdateMessage to m_clear->add_event();
+      ERS_LOG("msg=" << msg->num_request());
+      
+      // Pass to the scheduler the number of requested RoIs
+      std::shared_ptr<DCMSession>test(this);
+      m_scheduler->request_events(test, msg->num_request());
+      
+      ERS_LOG("DCMSession::onReceive done with request_event");
+      // DCM session is ready for receiving new messages
+      asyncReceive();
     }
 
     void DCMSession::onReceiveError(const boost::system::error_code& error, std::unique_ptr<daq::asyncmsg::InputMessage> message) noexcept
     {
-        // TODO: report, do we close this connection ?
+      ERS_LOG("DCMSession::onReceiveError, with error: " << error);
+	// TODO: report, do we close this connection ?
     }
 
     void DCMSession::onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept

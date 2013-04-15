@@ -177,6 +177,7 @@ namespace hltsv {
 
     // m_thread_update_rates = new boost::thread(&Activity::update_rates, this);
     
+
     return; 
   }
 

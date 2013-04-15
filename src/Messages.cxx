@@ -2,6 +2,8 @@
 #include "Messages.h"
 #include "LVL1Result.h"
 
+#include "ers/ers.h"
+
 namespace hltsv {
     
     UpdateMessage::UpdateMessage(size_t size)
@@ -28,9 +30,15 @@ namespace hltsv {
 
     void UpdateMessage::toBuffers(std::vector<boost::asio::mutable_buffer>& buffers) 
     {
-        buffers.push_back(boost::asio::buffer(m_data.get(), m_size));
+      ERS_LOG("UpdateMessage::toBuffers");
+      buffers.push_back(boost::asio::buffer(m_data.get(), m_size));
     }
-    
+
+    uint32_t UpdateMessage::num_request() {
+      return m_data.get()[0];
+    }
+
+  //******    
     ProcessMessage::ProcessMessage(std::shared_ptr<LVL1Result> rois)
         : m_rois(rois)
     {
