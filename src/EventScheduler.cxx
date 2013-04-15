@@ -7,6 +7,13 @@
 
 namespace hltsv {
 
+  EventScheduler::EventScheduler() :
+    m_free_cores()
+  {
+    ERS_LOG("EventScheduler::EventScheduler()" << m_free_cores.size());
+  }
+
+
     EventScheduler::~EventScheduler()
     {
         // this should only be called when no more events are coming.
@@ -21,9 +28,9 @@ namespace hltsv {
     {
       ERS_LOG("EventScheduler::request_events, with count=" << count );
 
-//         while(count-- > 0) {
-//             m_free_cores.push(dcm);
-//         }
+        while(count-- > 0) {
+            m_free_cores.push(dcm);
+        }
       ERS_LOG("EventScheduler::request_events,m_free_cores=" << m_free_cores.size() );
     }
 

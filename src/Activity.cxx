@@ -15,6 +15,7 @@
 
 #include "L1Source.h"
 #include "ROSClear.h"
+#include "EventScheduler.h"
 
 #include "hltsvdal/HLTSVApplication.h"
 #include "hltsvdal/HLTSVConfiguration.h"
@@ -139,9 +140,8 @@ namespace hltsv {
     boost::thread service_thread(func); // better movable thread (C++11)
 
     ERS_LOG(" *** Start HLTSVServer ***");
-    std::shared_ptr<EventScheduler> event_sched;
-    std::shared_ptr<ROSClear> ros_clear;
-    m_myServer = std::make_shared<HLTSVServer> (m_hltsv_io_service, event_sched, ros_clear);
+    std::shared_ptr<EventScheduler> event_sched (new EventScheduler());
+    m_myServer = std::make_shared<HLTSVServer> (m_hltsv_io_service, event_sched, m_ros_clear);
     // the id should be read from OKS
     std::string app_name = "HLTSV";
     m_myServer->listen(app_name);

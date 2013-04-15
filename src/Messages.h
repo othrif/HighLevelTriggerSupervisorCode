@@ -18,7 +18,7 @@ namespace hltsv {
     class UpdateMessage : public daq::asyncmsg::InputMessage {
     public:
 
-        static const uint32_t ID = 0x1000;
+      static const uint32_t ID = 0x00DCDF01;
 
         explicit UpdateMessage(size_t size);
         ~UpdateMessage();

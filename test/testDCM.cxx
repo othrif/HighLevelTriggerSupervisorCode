@@ -130,7 +130,7 @@ void DCMActivity::prepareForRun(std::string & )
   m_running = true;
 
 
-  auto execute = [&] () {
+  auto func = [&] () {
     ERS_LOG(" *** Run thread for running ***");
     std::vector<uint32_t> l1ids;
     uint32_t reqRoIs = 3;
@@ -145,7 +145,7 @@ void DCMActivity::prepareForRun(std::string & )
     sleep(20);
     ERS_LOG(" *** End of running thread ***");
   };
-  boost::thread execute_thread(execute); 
+  boost::thread execute_thread(func); 
 }
   
  

@@ -27,7 +27,7 @@ namespace hltsv {
     {
         // Create a ProcessMessage which ontains the ROIs
         //
-        // call send(); let the onSend() method add the message
+        // call asyncSend(); let the onSend() method add the message
         // to the local list.
     }
 
@@ -71,8 +71,8 @@ namespace hltsv {
       ERS_LOG("msg=" << msg->num_request());
       
       // Pass to the scheduler the number of requested RoIs
-      std::shared_ptr<DCMSession>test(this);
-      m_scheduler->request_events(test, msg->num_request());
+      auto s_this(std::static_pointer_cast<DCMSession>(shared_from_this()));
+      m_scheduler->request_events(s_this, msg->num_request());
       
       ERS_LOG("DCMSession::onReceive done with request_event");
       // DCM session is ready for receiving new messages

@@ -14,7 +14,7 @@ namespace hltsv {
   class RequestMessage : public daq::asyncmsg::OutputMessage {
   public:
     
-    static const uint32_t ID = 0x1000;
+    static const uint32_t ID = 0x00DCDF00;
     
     explicit RequestMessage(uint32_t reqRoIs, const std::vector<uint32_t>& l1ids);
     ~RequestMessage();

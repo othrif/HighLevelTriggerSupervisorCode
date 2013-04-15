@@ -16,7 +16,7 @@ namespace hltsv {
   
   void HLTSVSession::onOpen() noexcept
   {
-    ERS_LOG(" *** CONNECTED TO HLTSV! I believe... ***");
+    ERS_LOG(" *** CONNECTED TO HLTSV ***");
   }
   
   void HLTSVSession::onOpenError(const boost::system::error_code& error) noexcept
