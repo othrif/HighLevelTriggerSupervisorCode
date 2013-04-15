@@ -79,6 +79,8 @@ namespace hltsv {
         std::unique_ptr<MasterTrigger>             m_master_trigger;
         std::unique_ptr<daq::rc::CommandedTrigger> m_cmdReceiver;
     
+        // Event Scheduler
+        std::shared_ptr<EventScheduler> m_event_sched;
         // L1 Source
         daq::dynlibs::DynamicLibrary    *m_l1source_lib;
         hltsv::L1Source                 *m_l1source;

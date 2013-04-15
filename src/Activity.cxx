@@ -14,6 +14,7 @@
 #include "DFdal/DataFile.h"
 
 #include "L1Source.h"
+#include "LVL1Result.h"
 #include "ROSClear.h"
 #include "EventScheduler.h"
 
@@ -140,8 +141,8 @@ namespace hltsv {
     boost::thread service_thread(func); // better movable thread (C++11)
 
     ERS_LOG(" *** Start HLTSVServer ***");
-    std::shared_ptr<EventScheduler> event_sched (new EventScheduler());
-    m_myServer = std::make_shared<HLTSVServer> (m_hltsv_io_service, event_sched, m_ros_clear);
+    m_event_sched = std::make_shared<EventScheduler>();
+    m_myServer = std::make_shared<HLTSVServer> (m_hltsv_io_service, m_event_sched, m_ros_clear);
     // the id should be read from OKS
     std::string app_name = "HLTSV";
     m_myServer->listen(app_name);
@@ -177,6 +178,16 @@ namespace hltsv {
 
     // m_thread_update_rates = new boost::thread(&Activity::update_rates, this);
     
+    auto func = [&] () {
+      ERS_LOG(" *** triggering L1Source ***");
+      while(m_triggering) {
+	m_event_sched->schedule_event( std::shared_ptr<LVL1Result>(m_l1source->getResult()));
+	ERS_LOG("1 Event has been scheduled");
+	sleep(1);
+      }
+      ERS_LOG(" *** trigger_thread End ***");
+    };
+    boost::thread trigger_thread(func); // better movable thread (C++11)
 
     return; 
   }

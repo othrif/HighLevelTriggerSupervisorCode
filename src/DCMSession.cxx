@@ -25,9 +25,12 @@ namespace hltsv {
 
     void DCMSession::handle_event(std::shared_ptr<LVL1Result> rois)
     {
-        // Create a ProcessMessage which ontains the ROIs
-        //
-        // call asyncSend(); let the onSend() method add the message
+      // Create a ProcessMessage which ontains the ROIs
+      ERS_LOG("DCMSession::handle_event");
+      std::unique_ptr<const hltsv::ProcessMessage> roi_msg(new hltsv::ProcessMessage(rois));
+      // call asyncSend();
+      asyncSend(std::move(roi_msg));
+        // let the onSend() method add the message
         // to the local list.
     }
 
@@ -87,6 +90,7 @@ namespace hltsv {
 
     void DCMSession::onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept
     {
+      ERS_LOG(" DCMSession::onSend");
         // TODO: add to local list of sent events 
     }
 

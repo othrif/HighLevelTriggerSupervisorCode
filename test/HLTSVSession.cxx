@@ -27,15 +27,17 @@ namespace hltsv {
   std::unique_ptr<daq::asyncmsg::InputMessage> 
   HLTSVSession::createMessage(std::uint32_t typeId, std::uint32_t transactionId, std::uint32_t size) noexcept
   {
-    return std::unique_ptr<daq::asyncmsg::InputMessage>();
+    return std::unique_ptr<daq::asyncmsg::InputMessage>(new AssignMessage(size));
   }
   
   void HLTSVSession::onReceive(std::unique_ptr<daq::asyncmsg::InputMessage> message)
   {
+    ERS_LOG("HLTSVSession::onReceive message of type: " << message->typeId());
   }
   
   void HLTSVSession::onReceiveError(const boost::system::error_code& error, std::unique_ptr<daq::asyncmsg::InputMessage> message) noexcept
   {
+    ERS_LOG("HLTSVSession::onReceiveError with code: " << error);
   }
   
   void HLTSVSession::onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept

@@ -29,6 +29,21 @@ namespace hltsv {
     std::vector<uint32_t> m_l1ids;
     
   };
+
+  class AssignMessage : public daq::asyncmsg::InputMessage {
+  public:
+
+    static const uint32_t ID = 0x00DCDF01;
+    explicit AssignMessage(size_t size);
+    ~AssignMessage();
+    virtual uint32_t typeId() const override;
+    virtual uint32_t transactionId() const override;
+    virtual void     toBuffers(std::vector<boost::asio::mutable_buffer>&) override;
+
+  private:
+    std::unique_ptr<uint32_t[]> m_data;
+    uint32_t                    m_size;
+  };
 }
 
 #endif // DCMMESSAGES_H_

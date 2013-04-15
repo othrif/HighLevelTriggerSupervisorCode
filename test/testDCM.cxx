@@ -126,46 +126,32 @@ void DCMActivity::stopL2SV(std::string & )
 
 void DCMActivity::prepareForRun(std::string & )
 {
-  ERS_LOG(" *** enter prepareForRun *** ");
+  ERS_LOG(" *** enter DCMActivity:prepareForRun *** ");
   m_running = true;
+
+  std::vector<uint32_t> l1ids;
+  uint32_t reqRoIs = 3;
+  std::unique_ptr<const hltsv::RequestMessage> test_msg(new hltsv::RequestMessage(reqRoIs,l1ids));
+  m_session->asyncSend(std::move(test_msg));
+  //m_session->asyncReceive();
 
 
   auto func = [&] () {
     ERS_LOG(" *** Run thread for running ***");
-    std::vector<uint32_t> l1ids;
-    uint32_t reqRoIs = 3;
-    std::unique_ptr<const hltsv::RequestMessage> test_msg(new hltsv::RequestMessage(reqRoIs,l1ids));
-    
-    while(m_running) {
       
-      m_session->asyncSend(std::move(test_msg));
-      ERS_LOG(" *** DCM::execute onSend *** ");
-      break;
+    while(m_running) {      
+      m_session->asyncReceive();
+      sleep(2);
     }
-    sleep(20);
+
     ERS_LOG(" *** End of running thread ***");
   };
   boost::thread execute_thread(func); 
+
+  ERS_LOG(" *** end of DCMActivity:prepareForRun *** ");
+
 }
   
- 
-// void DCMActivity::execute()
-// {
-//   ERS_LOG(" *** enter execute() *** ");
-
-//   std::vector<uint32_t> l1ids;
-//   uint32_t reqRoIs = 3;
-//   std::unique_ptr<const hltsv::RequestMessage> test_msg(new hltsv::RequestMessage(reqRoIs,l1ids));
-    
-//   while(m_running) {
-      
-//     m_session->asyncSend(std::move(test_msg));
-//     ERS_LOG(" *** DCM::execute onSend *** ");
-//     break;
-//   }
-//   sleep(20);
-
-// }
 
 
 int main(int argc, char *argv[])

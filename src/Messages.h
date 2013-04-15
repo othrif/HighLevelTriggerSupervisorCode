@@ -18,7 +18,7 @@ namespace hltsv {
     class UpdateMessage : public daq::asyncmsg::InputMessage {
     public:
 
-      static const uint32_t ID = 0x00DCDF01;
+      static const uint32_t ID = 0x00DCDF00;
 
         explicit UpdateMessage(size_t size);
         ~UpdateMessage();
@@ -39,7 +39,7 @@ namespace hltsv {
     class ProcessMessage : public daq::asyncmsg::OutputMessage {
     public:
 
-        static const uint32_t ID = 0x1001;
+      static const uint32_t ID = 0x00DCDF01;
 
         explicit ProcessMessage(std::shared_ptr<LVL1Result> rois);
         ~ProcessMessage();
@@ -60,7 +60,7 @@ namespace hltsv {
     class BuildMessage : public ProcessMessage {
     public:
 
-        static const uint32_t ID = 0x1002;
+        static const uint32_t ID = 0x00DCDF0F;
 
         explicit BuildMessage(std::shared_ptr<LVL1Result> rois);
         virtual uint32_t typeId() const override;

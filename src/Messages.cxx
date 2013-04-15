@@ -60,7 +60,8 @@ namespace hltsv {
 
     void  ProcessMessage::toBuffers(std::vector<boost::asio::const_buffer>& buffers) const 
     {
-        m_rois->insert(buffers);
+      ERS_LOG("ProcessMessage::toBuffers");
+      m_rois->insert(buffers);
     }
 
     BuildMessage::BuildMessage(std::shared_ptr<LVL1Result> rois)
