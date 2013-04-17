@@ -70,6 +70,7 @@ namespace hltsv {
         {
             // add the internal representation to the ASIO ConstBufferSequence 'buffers'.
             buffers.push_back(boost::asio::buffer(&m_global_id, sizeof(m_global_id))); 
+	    buffers.push_back(boost::asio::buffer(&m_lvl1_id, sizeof(m_lvl1_id)));
             for(size_t i = 0; i < m_data.size(); i++) {
                 buffers.push_back(boost::asio::buffer(m_data[i], m_lengths[i]));
             }
