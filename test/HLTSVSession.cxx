@@ -32,7 +32,14 @@ namespace hltsv {
   
   void HLTSVSession::onReceive(std::unique_ptr<daq::asyncmsg::InputMessage> message)
   {
-    ERS_LOG("HLTSVSession::onReceive message of type: " << message->typeId());
+    std::unique_ptr<AssignMessage> msg(dynamic_cast<AssignMessage*>(message.release()));
+
+    // grab only the l1id and put it on the list of assigned IDs
+    m_assigned_l1ids.push(msg->lvl1_id());
+    //ERS_LOG("pushed L1ID " << msg->lvl1_id() << " onto list, now of size " << m_assigned_l1ids.size());
+
+    // get ready to recieve another message
+    asyncReceive();
   }
   
   void HLTSVSession::onReceiveError(const boost::system::error_code& error, std::unique_ptr<daq::asyncmsg::InputMessage> message) noexcept
@@ -50,5 +57,26 @@ namespace hltsv {
   void HLTSVSession::onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept
   {
   }
+
+  //******************************************
+
+  void HLTSVSession::send_update(uint32_t req_RoIs, const std::vector<uint32_t> &l1ids)
+  {
+    std::unique_ptr<const hltsv::RequestMessage> update_msg(new hltsv::RequestMessage(req_RoIs, l1ids));
+    asyncSend(std::move(update_msg));
+  }
+
+  uint32_t HLTSVSession::get_next_assignment()
+  {
+    uint32_t l1id;
+    m_assigned_l1ids.pop(l1id);
+    return l1id;
+  }
   
+  void HLTSVSession::abort_queue()
+  {
+    // wake up any threads waiting for a new assignment
+    m_assigned_l1ids.abort();
+  }
 }
+

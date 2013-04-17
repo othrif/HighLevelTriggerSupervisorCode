@@ -23,6 +23,10 @@
 #include "DCMMessages.h"
 #include "HLTSVSession.h"
 
+#include <stdlib.h>
+
+// Fixme: Let's make this a config. param
+#define NUM_DCM_CORES	8
 
 // *******************
 class DCMActivity : public daq::rc::Controllable {
@@ -34,10 +38,11 @@ public:
   virtual void configure(std::string & );
   virtual void unconfigure(std::string & );
   virtual void connect(std::string & );
+  virtual void disconnect(std::string & );
   virtual void stopL2SV(std::string & );
   virtual void prepareForRun(std::string & );
 
-  //void execute();
+  void execute(unsigned worker_id);
 
 private:
   MessageConfiguration m_msgconf;
@@ -45,11 +50,12 @@ private:
   std::shared_ptr<hltsv::HLTSVSession> m_session;
 
   boost::asio::io_service m_dcm_io_service;
-  boost::asio::io_service::work m_work;
+  std::unique_ptr<boost::asio::io_service::work> m_work;
+  boost::thread m_service_thread;
+  std::vector<std::unique_ptr<boost::thread>> m_work_threads;
 
   bool m_running;
   ProtectedQueue<dcmessages::LVL1Result*> m_queue;
-  std::vector<boost::thread*>      m_handlers;
   tbb::atomic<uint32_t>            m_outstanding;
   uint32_t                         m_cores;
   
@@ -65,7 +71,7 @@ private:
 
 DCMActivity::DCMActivity(std::string &name)
     : daq::rc::Controllable(name),
-      m_work(m_dcm_io_service), m_running(false)
+      m_running(false)
 {
 }
 
@@ -97,6 +103,9 @@ void DCMActivity::connect(std::string &)
 {  
   // Read the HLTSV port using the name Service
   std::vector<boost::asio::ip::tcp::endpoint> hltsv_eps = m_testns->lookup("HLTSV");
+
+  // There can be only one!
+  assert(hltsv_eps.size() == 1);
   ERS_LOG("Found: " << hltsv_eps.size() << " endpoints");
   ERS_LOG("Found the port: " << hltsv_eps[0].port() );
 
@@ -107,52 +116,99 @@ void DCMActivity::connect(std::string &)
     m_dcm_io_service.run(); 
     ERS_LOG(" *** io_service End ***");
   };
-  boost::thread service_thread(func); 
+  // at connect, we should not have a service thread running yet (i.e. equals Not-a-Thread)
+  assert(m_service_thread.get_id() == boost::thread::id());
+  m_work.reset( new boost::asio::io_service::work(m_dcm_io_service) );
+  m_service_thread = boost::thread(func); 
   ERS_LOG(" *** installed service thread *** ");
 
   // create the session to talk to the HLTSV    
   m_session = std::make_shared<hltsv::HLTSVSession>(m_dcm_io_service);
   ERS_LOG(" *** created HLTSVSession *** ");
   m_session->asyncOpen("HLTSV", hltsv_eps[0]);
-
 }
 
+void DCMActivity::disconnect(std::string & )
+{
+  ERS_LOG("DCMActivity::disconnect(): close HLTSV connection");
+  // disconnect from HLTSV
+  m_session->close();
+  ERS_LOG("DCMActivity::disconnect(): join to service thread");
+
+  // allow io_service to finish what it's doing by explictly destroying the work object
+  m_work.reset();
+  m_service_thread.join();
+}
 
 void DCMActivity::stopL2SV(std::string & )
 {
+  // stop the run loop and wake any threads waiting on HLTSV
   m_running = false;
-}
+  m_session->abort_queue();
 
+  // join to the work threads and delete them
+  for (auto & worker : m_work_threads)
+  {
+    worker->join();
+  }
+  m_work_threads.clear();
+}
 
 void DCMActivity::prepareForRun(std::string & )
 {
   ERS_LOG(" *** enter DCMActivity:prepareForRun *** ");
   m_running = true;
 
+  // Announce initial state to HLTSV (assumes connection opened succesfully!)
   std::vector<uint32_t> l1ids;
-  uint32_t reqRoIs = 3;
-  std::unique_ptr<const hltsv::RequestMessage> test_msg(new hltsv::RequestMessage(reqRoIs,l1ids));
-  m_session->asyncSend(std::move(test_msg));
-  //m_session->asyncReceive();
+  m_session->send_update(NUM_DCM_CORES, l1ids);
 
+  // listen for first update from HLTSV
+  m_session->asyncReceive();
 
-  auto func = [&] () {
-    ERS_LOG(" *** Run thread for running ***");
-      
-    while(m_running) {      
-      m_session->asyncReceive();
-      sleep(2);
-    }
-
-    ERS_LOG(" *** End of running thread ***");
-  };
-  boost::thread execute_thread(func); 
+  // spin off worker threads to run execute()
+  for (unsigned worker_id = 0; worker_id < NUM_DCM_CORES; ++worker_id)
+  {
+    std::unique_ptr<boost::thread> worker(new boost::thread(
+		std::bind(&DCMActivity::execute, this, worker_id)
+		));
+    m_work_threads.push_back( std::move(worker) );
+  }
 
   ERS_LOG(" *** end of DCMActivity:prepareForRun *** ");
 
 }
-  
 
+// main run loop for the DCM worker cores
+void DCMActivity::execute(unsigned worker_id)
+{
+  ERS_LOG(" *** Worker #" << worker_id << ": Entering DCMActivty::execute() *** ");
+
+  unsigned l1id;
+  std::vector<uint32_t> l1id_list;  // needed for handing off to HLTSVSession
+  l1id_list.push_back(0);
+  while (m_running)
+  {
+    try {
+      l1id = m_session->get_next_assignment();
+    }
+    catch (tbb::user_abort &e) {
+      // queue was aborted by StopL2SV. we're done here!
+      break;
+    }
+
+    ERS_LOG("Worker #" << worker_id << ": got assigned L1ID " << l1id);
+
+    // sleep for a random time between 5-50ms
+    usleep( (45000.0 * rand() / RAND_MAX) + 5000);
+
+    // finished "processing", send back the L1ID and request a new one.
+    l1id_list[0] = l1id;
+    m_session->send_update(1, l1id_list);
+  }
+
+  ERS_LOG(" *** Exiting DCMActivity::execute() *** ");
+}
 
 int main(int argc, char *argv[])
 {

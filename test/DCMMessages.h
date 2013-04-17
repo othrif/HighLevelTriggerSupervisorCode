@@ -40,9 +40,14 @@ namespace hltsv {
     virtual uint32_t transactionId() const override;
     virtual void     toBuffers(std::vector<boost::asio::mutable_buffer>&) override;
 
+    uint64_t         global_id() const;
+    uint32_t         lvl1_id() const;
+
   private:
+    uint64_t                    m_global_id;
+    uint32_t                    m_lvl1_id;
+    size_t                      m_data_size;
     std::unique_ptr<uint32_t[]> m_data;
-    uint32_t                    m_size;
   };
 }
 

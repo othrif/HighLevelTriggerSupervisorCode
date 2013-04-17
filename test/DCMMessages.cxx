@@ -28,7 +28,6 @@ namespace hltsv {
   
   void RequestMessage::toBuffers(std::vector<boost::asio::const_buffer>& buffers) const
   {
-    ERS_LOG("RequestMessage::tobuffer called, "<< m_prefix.reqRoIs);
     buffers.push_back(boost::asio::buffer(&m_prefix, sizeof(m_prefix)));
     buffers.push_back(boost::asio::buffer(m_l1ids));
   }
@@ -36,8 +35,8 @@ namespace hltsv {
   // ******
 
     AssignMessage::AssignMessage(size_t size)
-        : m_data(new uint32_t[size/sizeof(uint32_t) + 1]),
-          m_size(size)
+        : m_data_size(size - 3*sizeof(uint32_t)),
+          m_data(new uint32_t[m_data_size/sizeof(uint32_t) + 1])
     {
     }
 
@@ -48,7 +47,7 @@ namespace hltsv {
     uint32_t AssignMessage::typeId() const
     {
         // will be hard-coded
-        return 1;
+        return ID;
     }
 
     uint32_t AssignMessage::transactionId() const 
@@ -59,9 +58,18 @@ namespace hltsv {
 
     void AssignMessage::toBuffers(std::vector<boost::asio::mutable_buffer>& buffers) 
     {
-      ERS_LOG("AssignMessage::toBuffers");
-      buffers.push_back(boost::asio::buffer(m_data.get(), m_size));
+      buffers.push_back(boost::asio::buffer(&m_global_id, sizeof(uint64_t)));
+      buffers.push_back(boost::asio::buffer(&m_lvl1_id, sizeof(uint32_t)));
+      buffers.push_back(boost::asio::buffer(m_data.get(), m_data_size));
     }
 
+    uint64_t AssignMessage::global_id() const
+    {
+      return m_global_id;
+    }
 
+    uint32_t AssignMessage::lvl1_id() const
+    {
+      return m_lvl1_id;
+    }
 } 

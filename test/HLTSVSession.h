@@ -6,6 +6,7 @@
 #include <list>
 
 #include "asyncmsg/Session.h"
+#include "tbb/concurrent_queue.h"
 
 namespace hltsv {
 
@@ -25,7 +26,12 @@ namespace hltsv {
     virtual void onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept override;
     virtual void onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept override;
     
+    void     send_update(uint32_t req_RoIs, const std::vector<uint32_t>& l1ids);
+    uint32_t get_next_assignment();
+    void     abort_queue();
     
+  private:
+    tbb::concurrent_bounded_queue<uint32_t> m_assigned_l1ids;
   };
   
 }

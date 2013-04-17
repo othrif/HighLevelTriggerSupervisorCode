@@ -181,9 +181,9 @@ namespace hltsv {
     auto func = [&] () {
       ERS_LOG(" *** triggering L1Source ***");
       while(m_triggering) {
-	m_event_sched->schedule_event( std::shared_ptr<LVL1Result>(m_l1source->getResult()));
-	ERS_LOG("1 Event has been scheduled");
-	sleep(1);
+	std::shared_ptr<LVL1Result> result(m_l1source->getResult());
+	m_event_sched->schedule_event(result);
+	ERS_LOG("L1ID #" << result->l1_id() << "  has been scheduled");
       }
       ERS_LOG(" *** trigger_thread End ***");
     };
