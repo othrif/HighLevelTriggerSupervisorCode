@@ -122,6 +122,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   DCM@RunControlTemplateApplication.Program = testDCM@Binary
   DCM@RunControlTemplateApplication.Instances = 2
   DCM@RunControlTemplateApplication.ProcessEnvironment = [ DCMVariables@VariableSet ]
+  DCM@RunControlTemplateApplication.RestartableDuringRun = True
 
 #
 # DCM segments x ${NUM_SEGMENTS}

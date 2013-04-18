@@ -13,7 +13,8 @@ namespace hltsv {
                            std::shared_ptr<ROSClear> clear)
         : daq::asyncmsg::Session(service),
           m_scheduler(scheduler),
-          m_clear(clear)
+          m_clear(clear),
+          m_in_error(false)
     {
     }
 
@@ -24,15 +25,23 @@ namespace hltsv {
         // re-schedule them ?
     }
 
-    void DCMSession::handle_event(std::shared_ptr<LVL1Result> rois)
+    bool DCMSession::handle_event(std::shared_ptr<LVL1Result> rois)
     {
-      // Create a ProcessMessage which ontains the ROIs
-      ERS_LOG("DCMSession::handle_event");
-      std::unique_ptr<const hltsv::ProcessMessage> roi_msg(new hltsv::ProcessMessage(rois));
-      // call asyncSend();
-      asyncSend(std::move(roi_msg));
-        // let the onSend() method add the message
-        // to the local list.
+        if(!m_in_error) {
+
+            // Create a ProcessMessage which ontains the ROIs
+            ERS_LOG("DCMSession::handle_event");
+            std::unique_ptr<const hltsv::ProcessMessage> roi_msg(new hltsv::ProcessMessage(rois));
+            // call asyncSend();
+            asyncSend(std::move(roi_msg));
+            // let the onSend() method add the message
+            // to the local list.
+
+            return true;
+
+        } else {
+            return false;
+        }
     }
 
     void DCMSession::check_timeouts()
@@ -57,6 +66,7 @@ namespace hltsv {
     void DCMSession::onOpenError(const boost::system::error_code& error) noexcept
     {
         // TODO: report ? who closes me ?
+        m_in_error = true;
     }
 
     std::unique_ptr<daq::asyncmsg::InputMessage> 
@@ -91,6 +101,7 @@ namespace hltsv {
     {
       ERS_LOG("DCMSession::onReceiveError, with error: " << error);
 	// TODO: report, do we close this connection ?
+      m_in_error = true;
     }
 
     void DCMSession::onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept
@@ -102,6 +113,8 @@ namespace hltsv {
     void DCMSession::onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept
     {
         // TODO: recover the LVL1 info and re-schedule on another node.
+        ERS_LOG("Send error");
+        m_in_error = true;
     }
 
 }

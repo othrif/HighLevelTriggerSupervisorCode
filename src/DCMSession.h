@@ -39,8 +39,12 @@ namespace hltsv {
 
         ~DCMSession();
 
-        // Called back from EventScheduler when an event is available.
-        void handle_event(std::shared_ptr<LVL1Result> rois);
+        /**
+         * Called back from EventScheduler when an event is available.
+         * If the session cannot handle the event (e.g. because it's in 
+         * an error state, it should return false.
+         */
+        bool handle_event(std::shared_ptr<LVL1Result> rois);
 
         // Called by somebody...
         void check_timeouts();
@@ -62,6 +66,7 @@ namespace hltsv {
         std::shared_ptr<EventScheduler>        m_scheduler;
         std::shared_ptr<ROSClear>              m_clear;
         std::list<std::shared_ptr<LVL1Result>> m_events;
+        bool                                   m_in_error;
     };
 
 }

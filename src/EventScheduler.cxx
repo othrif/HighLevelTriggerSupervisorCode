@@ -51,7 +51,9 @@ namespace hltsv {
             m_free_cores.pop(dcm);
             real_dcm = dcm.lock();
             if(real_dcm) {
-                real_dcm->handle_event(rois);
+                if(!real_dcm->handle_event(rois)) {
+                    continue;
+                }
             }
         } while(!real_dcm);        
     }
@@ -68,7 +70,9 @@ namespace hltsv {
                 m_free_cores.pop(dcm);
                 real_dcm = dcm.lock();
                 if(real_dcm) {
-                    real_dcm->handle_event(revent);
+                    if(!real_dcm->handle_event(revent)) {
+                        continue;
+                    }
                 }
             } while(!real_dcm);
         }
