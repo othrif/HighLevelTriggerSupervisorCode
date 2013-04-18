@@ -15,8 +15,9 @@
 #include "DFdal/DFParameters.h"
 
 #include <memory>
+#include <thread>
 
-#include "ers/Assertion.h"
+#include "ers/ers.h"
 
 // The clear message
 // After the common header we have:
@@ -29,11 +30,11 @@ class ClearMessage : public daq::asyncmsg::InputMessage {
 public:
 
 
-    static const uint32_t ID = 0x12345678;
+    static const uint32_t ID = 10003;
 
     ClearMessage(uint32_t size)
         : daq::asyncmsg::Message(),
-          m_message(size)
+          m_message(size/sizeof(uint32_t))
     {
         // minimum is sequence number
         ERS_ASSERT_MSG(size >= 2 * sizeof(uint32_t), "ClearMessage too short, minimum is 4 bytes");
@@ -87,52 +88,58 @@ class ClearSession : public daq::asyncmsg::Session {
 public:
     ClearSession(boost::asio::io_service& service)
         : daq::asyncmsg::Session(service),
-          m_last_sequence(0)
+          m_expected_sequence(0)
     {
     }
 
 protected:
 
-    // we are accepted, not opening ourselves
-    void onOpen() noexcept override {}
-    void onOpenError(const boost::system::error_code& error) noexcept override {}
+    void onOpen() noexcept override 
+    {
+        ERS_LOG("Session is open");
+        asyncReceive();
+    }
+
+    void onOpenError(const boost::system::error_code& error) noexcept override 
+    {
+        ERS_LOG("Open error..." << error);
+    }
 
     // we only expect a ClearMessage
     std::unique_ptr<daq::asyncmsg::InputMessage> 
     createMessage(std::uint32_t typeId,
                   std::uint32_t transactionId, std::uint32_t size) noexcept override
     {
-        // check type ID and size consistency
-        if(typeId != ClearMessage::ID || (size % 4 != 0)) {
-            return std::unique_ptr<ClearMessage>(nullptr);
-        }
-
+        ERS_LOG("createMessage, size = " << size);
         return std::unique_ptr<ClearMessage>(new ClearMessage(size));
     }
 
     void onReceive(std::unique_ptr<daq::asyncmsg::InputMessage> message) override
     {
+        ERS_LOG("onReceive");
         std::unique_ptr<ClearMessage> msg(dynamic_cast<ClearMessage*>(message.release()));
 
-        if(m_last_sequence + 1 != msg->sequence_no()) {
-            std::cerr << "Unexpected sequence no, got: " << msg->sequence_no() << " expected: " << m_last_sequence+1 << std::endl;
+        if(m_expected_sequence != msg->sequence_no()) {
+            ERS_LOG("Unexpected sequence no, got: " << msg->sequence_no() << " expected: " << m_expected_sequence);
         }
 
-        m_last_sequence = msg->sequence_no();
+        m_expected_sequence = msg->sequence_no() + 1;
 
-        std::cout << "Got clear message, seq = " << msg->sequence_no() << '\n'
-                  << "LVL1 IDs: " << msg->num_clears() << '\n';
+        ERS_LOG("Got clear message, seq = " << msg->sequence_no() << " number ofLVL1 IDs: " << msg->num_clears());
 
+#if 0
         for(size_t i = 0; i < msg->num_clears(); i++) {
-            std::cout << (*msg)[i] << ' ';
+            ERS_LOG((*msg)[i]);
         }
-        std::cout << std::endl;
+#endif
+
+        asyncReceive();
     }
 
     void onReceiveError(const boost::system::error_code& error,
                         std::unique_ptr<daq::asyncmsg::InputMessage> message) noexcept override
     {
-        std::cerr << "Receive error: " << error << std::endl;
+        ERS_LOG("Receive error: " << error);
         // Issue error message
     }
 
@@ -148,7 +155,7 @@ protected:
     }
 
 private:
-    uint32_t              m_last_sequence;
+    uint32_t              m_expected_sequence;
 };
 
 //
@@ -160,13 +167,15 @@ public:
 
     ClearServer(boost::asio::io_service& service)
         : daq::asyncmsg::Server(service),
-          m_session(new ClearSession(service))
+          m_service(service)
     {
     }
 
     void onAccept(std::shared_ptr<daq::asyncmsg::Session> session) noexcept override
     {
-        // fine, nothing to do
+        ERS_LOG("Accepted connection from "<< session->remoteEndpoint());
+
+        m_session = session;
     }
 
     void onAcceptError(const boost::system::error_code& error,
@@ -177,18 +186,21 @@ public:
 
     void start() 
     {
-        asyncAccept(std::shared_ptr<daq::asyncmsg::Session>(m_session));
+        auto session = std::make_shared<ClearSession>(m_service);
+        asyncAccept(session);
     }
 
     void stop()
     {
         if(m_session) {
             m_session->close();
+            m_session.reset();
         }
     }
 
 private:
-    std::shared_ptr<ClearSession> m_session;
+    boost::asio::io_service&                 m_service;
+    std::shared_ptr<daq::asyncmsg::Session>  m_session;
 };
 
 class ROSApplication : public daq::rc::Controllable {
@@ -220,10 +232,14 @@ public:
                                                   config->cast<daq::df::DFParameters>(cb->getPartition()->get_DataFlowParameters())->get_DefaultDataNetworks());
         name_service.publish("CLEAR", m_server->localEndpoint().port());
 
+        m_server->start();
+
+        m_io_thread = std::thread([&]() { m_service.run(); ERS_LOG("io_service finished"); });
     }
 
     virtual void unconfigure(std::string &) override
     {
+        m_server->stop();
     }
     
     virtual void connect(std::string& ) override
@@ -240,12 +256,11 @@ public:
         m_running = true;
     }
   
-  
-  
 private:
+    std::thread                  m_io_thread;
     bool                         m_running;
     boost::asio::io_service      m_service;
-    std::unique_ptr<ClearServer> m_server;
+    std::shared_ptr<ClearServer> m_server;
 };
 
 int main(int argc, char *argv[])

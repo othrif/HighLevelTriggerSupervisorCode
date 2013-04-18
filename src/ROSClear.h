@@ -44,6 +44,9 @@ namespace hltsv {
         /// Flush all existing events to the ROS.
         void flush();
 
+        /// Do any connect operation that is necessary
+        virtual void connect();
+
     protected:
         
         /** 
@@ -92,36 +95,6 @@ namespace hltsv {
         // boost::asio::ip::udp::socket m_socket;
     };
 
-    class ROSSession;
-
-    /**
-     * Unicast implementation of ROSClear, using TCP.
-     */
-    class UnicastROSClear : public ROSClear {
-    public:
-        UnicastROSClear(size_t threshold, boost::asio::io_service& service, daq::asyncmsg::NameService& name_service);
-        ~UnicastROSClear();
-
-    private:
-
-        virtual void do_flush(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events) override;
-
-        // TODO:
-        //
-        // using asyncmsg::NameService,
-        // lookup all 'CLEAR_*' entries and connect to them. 
-        // Add each session to m_sessions.
-        //
-        // do_flush(data):
-        //        //
-        //   for(each session) {
-        //      uniq_ptr<ClearMessage> msg(new ClearMessage(sequence, data));
-        //      session->send(msg);
-    private:
-        std::vector<std::shared_ptr<ROSSession>> m_sessions;
-    };
-
-    
 }
 
 #endif // HLTSV_ROSCLEAR_H_

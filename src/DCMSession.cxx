@@ -2,6 +2,7 @@
 #include "DCMSession.h"
 #include "Messages.h"
 #include "EventScheduler.h"
+#include "ROSClear.h"
 
 #include "ers/ers.h"
 
@@ -69,8 +70,12 @@ namespace hltsv {
       // ERS_ASSERT(message->typeId() == UpdateMessage::ID)
       ERS_LOG("DCMSession::onReceive");
       std::unique_ptr<UpdateMessage> msg(dynamic_cast<UpdateMessage*>(message.release()));
-      
+
+      for(uint32_t i = 0; i < msg->num_l1ids(); i++) {
+          m_clear->add_event(msg->l1id(i));
+      }
       // Put every LVL1 ID from the UpdateMessage to m_clear->add_event();
+
       ERS_LOG("msg=" << msg->num_request());
       
       // Pass to the scheduler the number of requested RoIs

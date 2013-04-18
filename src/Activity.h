@@ -85,8 +85,6 @@ namespace hltsv {
         daq::dynlibs::DynamicLibrary    *m_l1source_lib;
         hltsv::L1Source                 *m_l1source;
 
-        boost::asio::io_service         m_io_service;
-
         // ROS Clear interface
         std::shared_ptr<ROSClear>       m_ros_clear;
 

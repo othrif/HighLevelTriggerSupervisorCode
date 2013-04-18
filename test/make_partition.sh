@@ -152,7 +152,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 #
   ROS@Segment
   ROS@Segment.IsControlledBy = DefRC@RunControlTemplateApplication
-# ROS@Segment.Applications += [ ROS-1@RunControlApplication ]
+  ROS@Segment.Applications += [ ROS-1@RunControlApplication ]
 
 #
 # Data flow parameters.

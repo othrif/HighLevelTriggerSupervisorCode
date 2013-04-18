@@ -34,8 +34,19 @@ namespace hltsv {
       buffers.push_back(boost::asio::buffer(m_data.get(), m_size));
     }
 
-    uint32_t UpdateMessage::num_request() {
-      return m_data.get()[0];
+    uint32_t UpdateMessage::num_request() const
+    {
+        return m_data[0];
+    }
+
+    size_t UpdateMessage::num_l1ids() const
+    {
+        return static_cast<size_t>(m_data[1]);
+    }
+
+    uint32_t UpdateMessage::l1id(size_t index) const
+    {
+        return m_data[index-2];
     }
 
   //******    

@@ -16,6 +16,7 @@
 #include "L1Source.h"
 #include "LVL1Result.h"
 #include "ROSClear.h"
+#include "UnicastROSClear.h"
 #include "EventScheduler.h"
 
 #include "hltsvdal/HLTSVApplication.h"
@@ -125,7 +126,7 @@ namespace hltsv {
     daq::asyncmsg::NameService HLTSV_NameService(part, data_networks);
 
     // Initialize ROS clear implementation
-    m_ros_clear = std::make_shared<UnicastROSClear>(100, m_io_service, HLTSV_NameService);
+    m_ros_clear = std::make_shared<UnicastROSClear>(100, m_hltsv_io_service, HLTSV_NameService);
     
     m_timeout = my_conf->get_Timeout();
     
@@ -161,6 +162,7 @@ namespace hltsv {
 
   void Activity::connect(std::string& )
   {
+      m_ros_clear->connect();
       m_publisher->start_publishing();
       return;
   }

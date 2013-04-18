@@ -54,7 +54,7 @@ macro_append daq-hltsv-dal_shlibflags "-ldaq-core-dal -ldaq-df-dal"
 #
 # A library to load the RoIB plugins
 # 
-library hltsv L1Source.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx ROSSession.cxx Messages.cxx HLTSVServer.cxx LVL1Result.cxx
+library hltsv L1Source.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx UnicastROSClear.cxx MulticastROSClear.cxx ROSSession.cxx Messages.cxx HLTSVServer.cxx LVL1Result.cxx
 macro hltsv_shlibflags "-lItemCtrl -lers -ltbb -leformat_write -leformat -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg -ldynlibs"
 
 #
@@ -127,8 +127,8 @@ macro sw.repository.binary.testROS:description  "Tester for hltsv"
 apply_pattern install_libs files="${to_install}"
 apply_pattern install_apps files="hltsv_main test_l1source testDCM testROS"
 
-apply_pattern   install_db_files name=schema            files="../schema/hltsv.schema.xml" \
-                                                        target_dir="schema"
+#apply_pattern   install_db_files name=schema            files="../schema/hltsv.schema.xml" \
+#                                                        target_dir="schema"
 
 apply_pattern   install_data name=isschema              files="../schema/hltsv_is.schema.xml"\
 							target_dir="schema"
