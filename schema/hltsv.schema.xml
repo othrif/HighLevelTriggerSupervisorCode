@@ -88,9 +88,7 @@
 
 
  <class name="HLTSVApplication" description="Describes the HLT Supervisor.">
-  <superclass name="DFApplication"/>
-  <superclass name="DFMessagePassingNode"/>
-  <superclass name="Application"/>
+  <superclass name="RunControlApplication"/>
   <superclass name="Resource"/>
   <relationship name="Configuration" class-type="HLTSVConfiguration" low-cc="one" high-cc="one" is-composite="no" is-exclusive="no" is-dependent="no"/>
  </class>

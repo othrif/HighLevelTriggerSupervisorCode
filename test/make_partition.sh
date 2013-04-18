@@ -38,7 +38,7 @@ case "$2" in
         ;;
     *)
         NUM_SEGMENTS=1
-        DATA_NETWORKS=
+        DATA_NETWORKS='["137.138.0.0/255.255.255"]'
         SEGMENTS[1]="${DEFAULT_HOST}@Computer"
         
         if [ ! -f farm.data.xml ]; then
@@ -48,26 +48,7 @@ case "$2" in
         ;;
 esac
 
-./pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
-
-#
-# IS counter configuration: publish everything
-#
-  HLTSV_Resource@DC_ISResourceUpdate
-  HLTSV_Resource@DC_ISResourceUpdate.activeOnNodes = [ 'HLTSV' ]
-  HLTSV_Resource@DC_ISResourceUpdate.name = 'HLTSV'
-  HLTSV_Resource@DC_ISResourceUpdate.delay = 10
-  HLTSV_Resource@DC_ISResourceUpdate.isServer = 'DF'
-
-  HLTSV_Histograms@DC_HistogramTypeUpdate
-
-#
-# Global IS counter config: everything goes to DF IS server
-#
-  HLTSVAppConfig@DCApplicationConfig
-  HLTSVAppConfig@DCApplicationConfig.ISDefaultServer = 'DF'
-  HLTSVAppConfig@DCApplicationConfig.refDC_ISResourceUpdate = [ HLTSV_Resource@DC_ISResourceUpdate ]
-  HLTSVAppConfig@DCApplicationConfig.refDC_HistogramTypeUpdate = [ HLTSV_Histograms@DC_HistogramTypeUpdate ]
+pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 
 #
 # HLTSV configuration: use defaults for everything
@@ -78,11 +59,10 @@ esac
 # HLTSV application
 #
   HLTSV@HLTSVApplication
-  HLTSV@HLTSVApplication.Configuration       = HLTSVConfig@HLTSVConfiguration
-  HLTSV@HLTSVApplication.Program             = hltsv_main@Binary
-  HLTSV@HLTSVApplication.ReceiveMulticast    = True
-  HLTSV@HLTSVApplication.DFApplicationConfig = HLTSVAppConfig@DCApplicationConfig
+  HLTSV@HLTSVApplication.Program              = hltsv_main@Binary
   HLTSV@HLTSVApplication.RestartableDuringRun = True
+  HLTSV@HLTSVApplication.RunsOn               = ${DEFAULT_HOST}@Computer
+  HLTSV@HLTSVApplication.Configuration        = HLTSVConfig@HLTSVConfiguration
 
 #
 # Dummy DCM application
@@ -92,27 +72,28 @@ esac
 # repository just for the testDCM application
 #
   ProtoRepo@SW_Repository
-  ProtoRepo@SW_Repository.Tags = [ i686-slc5-gcc43-opt@Tag ,  i686-slc5-gcc43-dbg@Tag  ]
-  ProtoRepo@SW_Repository.Name = "Proto"
+  ProtoRepo@SW_Repository.Tags = [ x86_64-slc5-gcc47-opt@Tag ,  x86_64-slc5-gcc47-dbg@Tag  ]
+  ProtoRepo@SW_Repository.Name = "HLTSVTestProto"
   ProtoRepo@SW_Repository.InstallationPath = "$REPOSITORY"
   ProtoRepo@SW_Repository.Uses = [ Online@SW_Repository ]
   ProtoRepo@SW_Repository.ISInfoDescriptionFiles = [ 'share/data/hltsv/schema/hltsv_is.schema.xml' ] 
 
+
 # 
-# the testDCM binary
+# the testDCM and testROS binary
 #
   testDCM@Binary
   testDCM@Binary.BinaryName = 'testDCM'
   testDCM@Binary.BelongsTo =  ProtoRepo@SW_Repository
 
-  ProtoRepo@SW_Repository.SW_Objects = [ testDCM@Binary ]
+  testROS@Binary
+  testROS@Binary.BinaryName = 'testROS'
+  testROS@Binary.BelongsTo =  ProtoRepo@SW_Repository
 
-# dummy L2PU configuration
-  dcmConfig@L2PUConfiguration
- 
+  ProtoRepo@SW_Repository.SW_Objects = [ testDCM@Binary , testROS@Binary ]
 
 #
-# Configuration via environment variables
+# Configuration via environment variables for DCM
 #
 
   DCM_L2_PROCESSING@Variable
@@ -135,14 +116,12 @@ esac
   DCMVariables@VariableSet.Contains = [ DCM_L2_PROCESSING@Variable , DCM_L2_ACCEPT@Variable , DCM_EVENT_BUILDING@Variable , DCM_EVENT_FILTER@Variable ]  
 
 # 
-# L2PU application with testDCM binary
+# template application with testDCM binary
 #
-  DCM@L2PUTemplateApplication
-  DCM@L2PUTemplateApplication.Program = testDCM@Binary
-  DCM@L2PUTemplateApplication.DFApplicationConfig = HLTSVAppConfig@DCApplicationConfig
-  DCM@L2PUTemplateApplication.L2PUConfiguration = dcmConfig@L2PUConfiguration
-  DCM@L2PUTemplateApplication.Instances = 128
-  DCM@L2PUTemplateApplication.ProcessEnvironment = [ DCMVariables@VariableSet ]
+  DCM@RunControlTemplateApplication
+  DCM@RunControlTemplateApplication.Program = testDCM@Binary
+  DCM@RunControlTemplateApplication.Instances = 2
+  DCM@RunControlTemplateApplication.ProcessEnvironment = [ DCMVariables@VariableSet ]
 
 #
 # DCM segments x ${NUM_SEGMENTS}
@@ -150,16 +129,23 @@ esac
   $(for i in $(seq 1 ${NUM_SEGMENTS}) ; do 
      echo DCM-Segment-${i}@HLTSegment 
      echo DCM-Segment-${i}@HLTSegment.IsControlledBy = DefRC@RunControlTemplateApplication 
-     echo DCM-Segment-${i}@HLTSegment.TemplateApplications = [ DCM@L2PUTemplateApplication ]
+     echo DCM-Segment-${i}@HLTSegment.TemplateApplications = [ DCM@TemplateApplication ]
      echo DCM-Segment-${i}@HLTSegment.TemplateHosts = [ ${SEGMENTS[${i}]} ]
     done)
+
+#
+# application with testROS binary
+# 
+
+  ROS-1@RunControlApplication
+  ROS-1@RunControlApplication.Program = testROS@Binary
 
 #
 # Main HLT segment
 # 
   HLT@Segment
   HLT@Segment.IsControlledBy = DefRC@RunControlTemplateApplication
-  HLT@Segment.Applications += [ HLTSV@HLTSVApplication ]
+  HLT@Segment.Resources += [ HLTSV@HLTSVApplication ]
 
 #
 # ROS segment
@@ -172,17 +158,19 @@ esac
 # Set network parameters here.
 # 
   Dataflow@DFParameters
-  Dataflow@DFParameters.Protocol = 'tcp'
   Dataflow@DFParameters.DefaultDataNetworks = [ ${DATA_NETWORKS} ]
+
+# The partition itself
 
   ${PARTITION}@Partition
   ${PARTITION}@Partition.OnlineInfrastructure = setup@OnlineSegment 
-  ${PARTITION}@Partition.DefaultTags = [ i686-slc5-gcc43-opt@Tag ,  i686-slc5-gcc43-dbg@Tag ]
+  ${PARTITION}@Partition.DefaultTags = [ x86_64-slc5-gcc47-opt@Tag ,  x86_64-slc5-gcc47-dbg@Tag , x86_64-slc6-gcc47-opt@Tag , x86_64-slc6-gcc47-dbg@Tag ]
   ${PARTITION}@Partition.DataFlowParameters = Dataflow@DFParameters
   ${PARTITION}@Partition.Parameters = [ CommonParameters@VariableSet ]
   ${PARTITION}@Partition.DefaultHost = ${DEFAULT_HOST}@Computer
   ${PARTITION}@Partition.RepositoryRoot = "${REPOSITORY}"
 
+# add segments
   ${PARTITION}@Partition.Segments = [ HLT@Segment ]
 
   $(for i in $(seq 1 ${NUM_SEGMENTS}) ; do 
@@ -205,4 +193,5 @@ esac
   counters@IS_InformationSources.LVL2 = lvl2-counter@IS_EventsAndRates
 
   ${PARTITION}@Partition.IS_InformationSource = counters@IS_InformationSources
+
 EOF
