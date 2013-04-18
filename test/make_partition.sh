@@ -38,7 +38,7 @@ case "$2" in
         ;;
     *)
         NUM_SEGMENTS=1
-        DATA_NETWORKS='["137.138.0.0/255.255.255"]'
+        DATA_NETWORKS='"137.138.0.0/255.255.0.0"'
         SEGMENTS[1]="${DEFAULT_HOST}@Computer"
         
         if [ ! -f farm.data.xml ]; then
@@ -152,6 +152,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 #
   ROS@Segment
   ROS@Segment.IsControlledBy = DefRC@RunControlTemplateApplication
+# ROS@Segment.Applications += [ ROS-1@RunControlApplication ]
 
 #
 # Data flow parameters.
