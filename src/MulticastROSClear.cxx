@@ -1,38 +1,64 @@
 
 #include "MulticastROSClear.h"
+#include "Messages.h"
+#include "ers/ers.h"
 
 namespace hltsv {
 
+    class MCSession : public daq::asyncmsg::UDPSession {
+    public:
+        MCSession(boost::asio::io_service& service)
+            : daq::asyncmsg::UDPSession(service)
+        {
+        }
 
-    MulticastROSClear::MulticastROSClear(size_t threshold, boost::asio::io_service& service, const std::string& address_network)
+    protected:
+        std::unique_ptr<daq::asyncmsg::InputMessage> createMessage(uint32_t, uint32_t, uint32_t) noexcept override
+        {
+            ERS_ASSERT_MSG(false, "Should never happen");
+            return std::unique_ptr<daq::asyncmsg::InputMessage>();
+        }
+
+
+        void onReceive(std::unique_ptr<daq::asyncmsg::InputMessage>) noexcept override
+        {
+            ERS_ASSERT_MSG(false, "Should never happen");
+        }
+
+        void onReceiveError(const boost::system::error_code&, std::unique_ptr<daq::asyncmsg::InputMessage>) noexcept override
+        {
+            ERS_ASSERT_MSG(false, "Should never happen");
+        }
+
+        void onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage>) noexcept override
+        {
+            // just delete message
+        }
+
+        void onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage>) noexcept override
+        {
+            ERS_LOG("send error: " << error);
+        }
+        
+    };
+
+    MulticastROSClear::MulticastROSClear(size_t threshold, boost::asio::io_service& service, const std::string& outgoing)
         : ROSClear(threshold),
-          m_socket(service)
+          m_session(new MCSession(service))
     {
+        m_session->setOutgoingInterface(outgoing);
     }
 
     MulticastROSClear::~MulticastROSClear()
     {
     }
 
-    void MulticastROSClear::connect()
-    {
-        // TODO:
-        // 
-        // - initialize the multicast socket with the given
-        //   address and outgoing network interface.
-
-    }
-
     void MulticastROSClear::do_flush(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events)
     {
+        using namespace daq::asyncmsg;
 
-        // 
-        // TODO
-        //
-        //   async_send(m_socket, ...);
-        //   TODO: what about queuing ???
-        //
-        // 
+        std::unique_ptr<const OutputMessage> msg(new ClearMessage(sequence,events));
+        m_session->asyncSend(std::move(msg));
     }
 
 }
