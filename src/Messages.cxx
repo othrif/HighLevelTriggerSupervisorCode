@@ -6,6 +6,9 @@
 
 namespace hltsv {
     
+    // 
+    // Update Message
+    // 
     UpdateMessage::UpdateMessage(size_t size)
         : m_data(new uint32_t[size/sizeof(uint32_t) + 1]),
           m_size(size)
@@ -49,7 +52,9 @@ namespace hltsv {
         return m_data[index-2];
     }
 
-  //******    
+    // //////////////////////////////////////////////////
+    // ProcessMessage
+    // //////////////////////////////////////////////////
     ProcessMessage::ProcessMessage(std::shared_ptr<LVL1Result> rois)
         : m_rois(rois)
     {
@@ -85,11 +90,14 @@ namespace hltsv {
         return ID;
     }
 
+    //
+    // ClearMessage
+    // 
+
     ClearMessage::ClearMessage(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events)
-        : m_events(events)
+        : m_sequence(sequence),
+          m_events(events)
     {
-        m_sequence_count[0] = sequence;
-        m_sequence_count[1] = static_cast<uint32_t>(events->size());
     }
 
     ClearMessage::~ClearMessage()
@@ -103,12 +111,11 @@ namespace hltsv {
 
     uint32_t ClearMessage::transactionId() const 
     {
-        return 0;
+        return m_sequence;
     }
 
     void  ClearMessage::toBuffers(std::vector<boost::asio::const_buffer>& bufs) const
     {
-        bufs.push_back(boost::asio::buffer(m_sequence_count));
         bufs.push_back(boost::asio::buffer(*m_events));
     }
 

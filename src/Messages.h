@@ -82,7 +82,7 @@ namespace hltsv {
     class ClearMessage : public daq::asyncmsg::OutputMessage {
     public:
 
-        static const uint32_t ID = 0x1003;
+        static const uint32_t ID = 0x00DCDF20;
 
         ClearMessage(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events);
         ~ClearMessage();
@@ -90,7 +90,7 @@ namespace hltsv {
         virtual uint32_t transactionId() const override;
         virtual void     toBuffers(std::vector<boost::asio::const_buffer>&) const override;                
     private:
-        uint32_t                               m_sequence_count[2];
+        uint32_t                               m_sequence;
         std::shared_ptr<std::vector<uint32_t>> m_events;
     };
 

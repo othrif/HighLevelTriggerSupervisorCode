@@ -30,11 +30,12 @@ class ClearMessage : public daq::asyncmsg::InputMessage {
 public:
 
 
-    static const uint32_t ID = 10003;
+    static const uint32_t ID = 0x00DCDF20;
 
-    ClearMessage(uint32_t size)
+    ClearMessage(uint32_t size, uint32_t transactionId)
         : daq::asyncmsg::Message(),
-          m_message(size/sizeof(uint32_t))
+          m_message(size/sizeof(uint32_t)),
+          m_transactionId(transactionId)
     {
         // minimum is sequence number
         ERS_ASSERT_MSG(size >= 2 * sizeof(uint32_t), "ClearMessage too short, minimum is 4 bytes");
@@ -43,14 +44,12 @@ public:
 
     std::uint32_t typeId() const  override
     {
-        // don't care
-        return 0;
+        return ID;
     }
 
     std::uint32_t transactionId() const override
     {
-        // don't care
-        return 0;
+        return m_transactionId;
     }
 
     void toBuffers(std::vector<boost::asio::mutable_buffer>& buffers) override
@@ -62,22 +61,22 @@ public:
 
     uint32_t sequence_no() const
     {
-        return m_message[0];
+        return m_transactionId;
     }
 
     size_t num_clears() const
     {
-        return m_message[1];
+        return m_message.size();
     }
 
     uint32_t operator[](size_t idx) const
     {
-        ERS_ASSERT_MSG(idx < m_message.size() - 2, "Invalid index into ClearMessage");
-        return m_message[idx + 2];
+        return m_message.at(idx);
     }
 
 private:
     std::vector<uint32_t> m_message;
+    uint32_t              m_transactionId;
 };
 
 //
@@ -96,13 +95,13 @@ protected:
 
     void onOpen() noexcept override 
     {
-        ERS_LOG("Session is open");
+        ERS_DEBUG(3,"Session is open");
         asyncReceive();
     }
 
     void onOpenError(const boost::system::error_code& error) noexcept override 
     {
-        ERS_LOG("Open error..." << error);
+        ERS_DEBUG(3,"Open error..." << error);
     }
 
     // we only expect a ClearMessage
@@ -110,13 +109,14 @@ protected:
     createMessage(std::uint32_t typeId,
                   std::uint32_t transactionId, std::uint32_t size) noexcept override
     {
-        ERS_LOG("createMessage, size = " << size);
-        return std::unique_ptr<ClearMessage>(new ClearMessage(size));
+        ERS_ASSERT_MSG(typeId == ClearMessage::ID, "Unexpected type ID in message: " << typeId);
+        ERS_DEBUG(3,"createMessage, size = " << size);
+        return std::unique_ptr<ClearMessage>(new ClearMessage(size, transactionId));
     }
 
     void onReceive(std::unique_ptr<daq::asyncmsg::InputMessage> message) override
     {
-        ERS_LOG("onReceive");
+        ERS_DEBUG(3,"onReceive");
         std::unique_ptr<ClearMessage> msg(dynamic_cast<ClearMessage*>(message.release()));
 
         if(m_expected_sequence != msg->sequence_no()) {
@@ -125,13 +125,7 @@ protected:
 
         m_expected_sequence = msg->sequence_no() + 1;
 
-        ERS_LOG("Got clear message, seq = " << msg->sequence_no() << " number ofLVL1 IDs: " << msg->num_clears());
-
-#if 0
-        for(size_t i = 0; i < msg->num_clears(); i++) {
-            ERS_LOG((*msg)[i]);
-        }
-#endif
+        ERS_DEBUG(1,"Got clear message, seq = " << msg->sequence_no() << " number ofLVL1 IDs: " << msg->num_clears());
 
         asyncReceive();
     }
@@ -174,14 +168,13 @@ public:
     void onAccept(std::shared_ptr<daq::asyncmsg::Session> session) noexcept override
     {
         ERS_LOG("Accepted connection from "<< session->remoteEndpoint());
-
         m_session = session;
     }
 
     void onAcceptError(const boost::system::error_code& error,
                        std::shared_ptr<daq::asyncmsg::Session> session) noexcept override
     {
-        // TODO: issue error message
+        ERS_LOG("Accept error: " << error);
     }
 
     void start() 
@@ -212,10 +205,6 @@ public:
 
 
     ~ROSApplication()
-    {
-    }
-
-    virtual void initialize(std::string & ) override
     {
     }
 
