@@ -37,10 +37,14 @@ namespace hltsv {
 
             // Create a ProcessMessage which ontains the ROIs
             ERS_LOG("DCMSession::handle_event: #" << rois->l1_id());
-            std::unique_ptr<const hltsv::ProcessMessage> roi_msg(new hltsv::ProcessMessage(rois));
 
-            // call asyncSend();
-            asyncSend(std::move(roi_msg));
+            if(!rois->reassigned()) {
+                std::unique_ptr<const hltsv::ProcessMessage> roi_msg(new hltsv::ProcessMessage(rois));
+                asyncSend(std::move(roi_msg));
+            } else {
+                std::unique_ptr<const hltsv::BuildMessage> roi_msg(new hltsv::BuildMessage(rois));
+                asyncSend(std::move(roi_msg));
+            }
 
             m_events.push_back(rois);
 

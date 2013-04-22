@@ -19,7 +19,7 @@ namespace hltsv {
         return m_reassigned;
     }
 
-    void     LVL1Result::set_reassign()
+    void     LVL1Result::set_reassigned()
     {
         m_reassigned = true;
     }

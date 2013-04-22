@@ -85,6 +85,7 @@ namespace hltsv {
     // Re-assign an event if there was a problem with the DCM.
     void EventScheduler::reassign_event(std::shared_ptr<LVL1Result> rois)
     {
+        rois->set_reassigned();
         m_reassigned_events.push(rois);
     }
 

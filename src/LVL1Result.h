@@ -57,7 +57,7 @@ namespace hltsv {
 
         uint32_t l1_id() const;
         bool     reassigned() const;
-        void     set_reassign();
+        void     set_reassigned();
 
         time_point timestamp() const;
         void       set_timestamp(time_point ts = clock::now());
