@@ -10,8 +10,7 @@ namespace hltsv {
     // Update Message
     // 
     UpdateMessage::UpdateMessage(size_t size)
-        : m_data(new uint32_t[size/sizeof(uint32_t) + 1]),
-          m_size(size)
+        : m_data(size/sizeof(uint32_t))
     {
     }
 
@@ -32,8 +31,7 @@ namespace hltsv {
 
     void UpdateMessage::toBuffers(std::vector<boost::asio::mutable_buffer>& buffers) 
     {
-      ERS_LOG("UpdateMessage::toBuffers");
-      buffers.push_back(boost::asio::buffer(m_data.get(), m_size));
+        buffers.push_back(boost::asio::buffer(m_data));
     }
 
     uint32_t UpdateMessage::num_request() const
@@ -43,12 +41,12 @@ namespace hltsv {
 
     size_t UpdateMessage::num_l1ids() const
     {
-        return static_cast<size_t>(m_data[1]);
+        return m_data.size() - 1;
     }
 
     uint32_t UpdateMessage::l1id(size_t index) const
     {
-        return m_data[index-2];
+        return m_data[index+1];
     }
 
     // //////////////////////////////////////////////////

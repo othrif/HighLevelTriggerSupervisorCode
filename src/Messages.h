@@ -29,8 +29,7 @@ namespace hltsv {
         size_t           num_l1ids() const;
         uint32_t         l1id(size_t index) const;
     private:
-        std::unique_ptr<uint32_t[]> m_data;
-        uint32_t                    m_size;
+        std::vector<uint32_t> m_data;
     };
 
     /**
@@ -47,7 +46,7 @@ namespace hltsv {
         ~ProcessMessage();
         virtual uint32_t typeId() const override;
         virtual uint32_t transactionId() const override;
-        virtual void     toBuffers(std::vector<boost::asio::const_buffer>&) const override;        
+        virtual void     toBuffers(std::vector<boost::asio::const_buffer>&) const override;
     private:
         struct prefix {
             uint64_t global_id;

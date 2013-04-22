@@ -22,10 +22,7 @@ namespace hltsv {
     virtual uint32_t transactionId() const override;
     virtual void     toBuffers(std::vector<boost::asio::const_buffer>& buffers) const override;
   private:
-    struct {
-      uint32_t reqRoIs;
-      uint32_t numl1ids;
-    } m_prefix;
+    uint32_t              m_reqRoIs;
     std::vector<uint32_t> m_l1ids;
     
   };

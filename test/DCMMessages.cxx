@@ -8,8 +8,7 @@ namespace hltsv {
   RequestMessage::RequestMessage(uint32_t reqRoIs, const std::vector<uint32_t>& l1ids)
     : m_l1ids(l1ids)
   {
-    m_prefix.reqRoIs = reqRoIs;
-    m_prefix. numl1ids = l1ids.size();
+      m_reqRoIs = reqRoIs;
   }
   
   RequestMessage::~RequestMessage()
@@ -28,7 +27,7 @@ namespace hltsv {
   
   void RequestMessage::toBuffers(std::vector<boost::asio::const_buffer>& buffers) const
   {
-    buffers.push_back(boost::asio::buffer(&m_prefix, sizeof(m_prefix)));
+    buffers.push_back(boost::asio::buffer(&m_reqRoIs, sizeof(m_reqRoIs)));
     buffers.push_back(boost::asio::buffer(m_l1ids));
   }
    
