@@ -4,6 +4,7 @@
 
 #include <memory>
 #include "tbb/concurrent_queue.h"
+#include <atomic>
 
 namespace hltsv {
 
@@ -37,6 +38,9 @@ namespace hltsv {
       
       // Re-assign an event if there was a problem with the DCM.
       void reassign_event(std::shared_ptr<LVL1Result> rois);
+
+     // reset the global event ID to 0
+      void reset();
       
     private: // implementation
       
@@ -46,6 +50,8 @@ namespace hltsv {
       tbb::concurrent_bounded_queue<std::weak_ptr<DCMSession>>   m_free_cores;
       // maybe unique pointer better ? 
       tbb::concurrent_bounded_queue<std::shared_ptr<LVL1Result>> m_reassigned_events; 
+
+      std::atomic<uint64_t> m_global_id;
     };
 }
 
