@@ -21,8 +21,7 @@ namespace hltsv {
 
     uint32_t UpdateMessage::typeId() const
     {
-        // will be hard-coded
-        return 1;
+        return ID;
     }
 
     uint32_t UpdateMessage::transactionId() const 
@@ -58,6 +57,8 @@ namespace hltsv {
     ProcessMessage::ProcessMessage(std::shared_ptr<LVL1Result> rois)
         : m_rois(rois)
     {
+        m_prefix.global_id = rois->global_id();
+        m_prefix.l1_id     = rois->l1_id();
     }
 
     ProcessMessage::~ProcessMessage()
@@ -77,6 +78,7 @@ namespace hltsv {
     void  ProcessMessage::toBuffers(std::vector<boost::asio::const_buffer>& buffers) const 
     {
       ERS_LOG("ProcessMessage::toBuffers");
+      buffers.push_back(boost::asio::buffer(&m_prefix, sizeof(m_prefix)));
       m_rois->insert(buffers);
     }
 
