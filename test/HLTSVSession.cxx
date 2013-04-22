@@ -36,6 +36,9 @@ namespace hltsv {
 
     // grab only the l1id and put it on the list of assigned IDs
     m_assigned_l1ids.push(msg->lvl1_id());
+
+    ERS_LOG("got global ID: " << msg->global_id());
+
     //ERS_LOG("pushed L1ID " << msg->lvl1_id() << " onto list, now of size " << m_assigned_l1ids.size());
 
     // get ready to recieve another message
