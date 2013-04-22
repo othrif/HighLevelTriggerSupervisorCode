@@ -3,8 +3,11 @@
 #include "Messages.h"
 #include "EventScheduler.h"
 #include "ROSClear.h"
+#include "LVL1Result.h"
 
 #include "ers/ers.h"
+
+#include <functional>
 
 namespace hltsv {
 
@@ -14,7 +17,8 @@ namespace hltsv {
         : daq::asyncmsg::Session(service),
           m_scheduler(scheduler),
           m_clear(clear),
-          m_in_error(false)
+          m_in_error(false),
+          m_timer(service)
     {
     }
 
@@ -29,13 +33,19 @@ namespace hltsv {
     {
         if(!m_in_error) {
 
+            rois->set_timestamp();
+
             // Create a ProcessMessage which ontains the ROIs
-            ERS_LOG("DCMSession::handle_event");
+            ERS_LOG("DCMSession::handle_event: #" << rois->l1_id());
             std::unique_ptr<const hltsv::ProcessMessage> roi_msg(new hltsv::ProcessMessage(rois));
+
             // call asyncSend();
             asyncSend(std::move(roi_msg));
-            // let the onSend() method add the message
-            // to the local list.
+
+            m_events.push_back(rois);
+
+            // this might start the timer for the first time
+            restart_timer();
 
             return true;
 
@@ -44,10 +54,38 @@ namespace hltsv {
         }
     }
 
-    void DCMSession::check_timeouts()
+
+    void DCMSession::check_timeouts(const boost::system::error_code& error)
     {
-        // check all events on local list
-        // if timestamp > timeout value, reschedule them
+        // If a new timeout is scheduled on the timer, we get
+        // an operation_aborted error.
+
+        if(!error) {             // ok, timer has expired
+
+            // get current time
+            auto now = LVL1Result::clock::now();
+
+            // check all events on local list
+            for(auto it = m_events.begin(); it != m_events.end(); ) {
+                // if timestamp > timeout value, reschedule them         
+                auto event = *it;
+
+                if(event->timestamp() + std::chrono::seconds(10) > now) {
+                    // reschedule this event
+                    ERS_LOG("Reassigning: " << event->l1_id());
+                    m_scheduler->reassign_event(event);
+                    it = m_events.erase(it);
+                    continue;
+                } else {
+                    ++it;
+                }
+            }
+
+            restart_timer();
+
+        } else {
+            // ERS_LOG("Timer aborted or cancelled")
+        }
     }
 
     //
@@ -56,43 +94,47 @@ namespace hltsv {
 
     void DCMSession::onOpen() noexcept 
     {
-        // TODO: nothing really, we wait for the first UpdateMessage
       ERS_LOG("DCMSession::onOpen()");
-      // each dcm session is ready to receive incoming messages
       asyncReceive();
-
     }
 
     void DCMSession::onOpenError(const boost::system::error_code& error) noexcept
     {
-        // TODO: report ? who closes me ?
+        // TODO: report;  Who closes me ?
         m_in_error = true;
     }
 
     std::unique_ptr<daq::asyncmsg::InputMessage> 
     DCMSession::createMessage(std::uint32_t typeId, std::uint32_t transactionId, std::uint32_t size) noexcept
     {
+        ERS_ASSERT_MSG(typeId == UpdateMessage::ID, "Unexpected message type: " << typeId << " instead of " << UpdateMessage::ID);
         return std::unique_ptr<daq::asyncmsg::InputMessage>(new UpdateMessage(size));
     }
     
     void DCMSession::onReceive(std::unique_ptr<daq::asyncmsg::InputMessage> message)
     {
-      // ERS_ASSERT(message->typeId() == UpdateMessage::ID)
-      ERS_LOG("DCMSession::onReceive");
       std::unique_ptr<UpdateMessage> msg(dynamic_cast<UpdateMessage*>(message.release()));
 
       for(uint32_t i = 0; i < msg->num_l1ids(); i++) {
           m_clear->add_event(msg->l1id(i));
+
+          auto ev = std::find_if(m_events.begin(), m_events.end(), [&](std::shared_ptr<LVL1Result> event) -> bool { return event->l1_id() == msg->l1id(i); });
+          if(ev == m_events.end()) {
+              ERS_LOG("Error: invalid event id: " << msg->l1id(i));
+          } else {
+              ERS_LOG("Erasing event: " << msg->l1id(i));
+              m_events.erase(ev);
+          }
       }
-      // Put every LVL1 ID from the UpdateMessage to m_clear->add_event();
 
       ERS_LOG("msg=" << msg->num_request());
       
       // Pass to the scheduler the number of requested RoIs
       auto s_this(std::static_pointer_cast<DCMSession>(shared_from_this()));
       m_scheduler->request_events(s_this, msg->num_request());
+
+      restart_timer();
       
-      ERS_LOG("DCMSession::onReceive done with request_event");
       // DCM session is ready for receiving new messages
       asyncReceive();
     }
@@ -100,21 +142,49 @@ namespace hltsv {
     void DCMSession::onReceiveError(const boost::system::error_code& error, std::unique_ptr<daq::asyncmsg::InputMessage> message) noexcept
     {
       ERS_LOG("DCMSession::onReceiveError, with error: " << error);
-	// TODO: report, do we close this connection ?
+
+      // TODO: report, do we close this connection ?
       m_in_error = true;
+
+      // reassign events
+      for(auto event : m_events) {
+          m_scheduler->reassign_event(event);
+      }
+
+      m_events.clear();
+
     }
 
     void DCMSession::onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept
     {
-      ERS_LOG(" DCMSession::onSend");
-        // TODO: add to local list of sent events 
     }
 
     void DCMSession::onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept
     {
-        // TODO: recover the LVL1 info and re-schedule on another node.
-        ERS_LOG("Send error");
+        ERS_LOG("Send error: " << error);
         m_in_error = true;
+
+        // reassign events
+        for(auto event : m_events) {
+            m_scheduler->reassign_event(event);
+        }
+        
+        m_events.clear();
+    }
+
+    void DCMSession::restart_timer()
+    {
+        if(!m_events.empty()) {
+            auto expire_duration = (m_events.front()->timestamp() + std::chrono::seconds(10)) - LVL1Result::clock::now();
+
+            {
+                auto expire_ms = boost::posix_time::milliseconds(std::chrono::duration_cast<std::chrono::milliseconds>(expire_duration).count());
+                ERS_LOG("restarting timer with: " << expire_ms.total_milliseconds() << " ms");
+            }
+
+            m_timer.expires_from_now(boost::posix_time::milliseconds(std::chrono::duration_cast<std::chrono::milliseconds>(expire_duration).count()));
+            m_timer.async_wait(std::bind(&DCMSession::check_timeouts, this, std::placeholders::_1));
+        }
     }
 
 }

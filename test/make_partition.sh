@@ -51,6 +51,24 @@ esac
 pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 
 #
+# repository 
+#
+  ProtoRepo@SW_Repository
+  ProtoRepo@SW_Repository.Tags = [ x86_64-slc5-gcc47-opt@Tag ,  x86_64-slc5-gcc47-dbg@Tag  ]
+  ProtoRepo@SW_Repository.Name = "HLTSVTestProto"
+  ProtoRepo@SW_Repository.InstallationPath = "$REPOSITORY"
+  ProtoRepo@SW_Repository.Uses = [ Online@SW_Repository ]
+  ProtoRepo@SW_Repository.ISInfoDescriptionFiles = [ 'share/data/hltsv/schema/hltsv_is.schema.xml' ] 
+
+
+# hack if binary in release did no build
+hltsv_main@Binary
+hltsv_main@Binary.BinaryName = 'hltsv_main'
+hltsv_main@Binary.BelongsTo  = ProtoRepo@SW_Repository
+ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
+
+
+#
 # HLTSV configuration: use defaults for everything
 #
   HLTSVConfig@HLTSVConfiguration
@@ -64,33 +82,18 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   HLTSV@HLTSVApplication.RunsOn               = ${DEFAULT_HOST}@Computer
   HLTSV@HLTSVApplication.Configuration        = HLTSVConfig@HLTSVConfiguration
 
-#
-# Dummy DCM application
 # 
-
+# the testDCM and testROS binary, if not available in release
 #
-# repository just for the testDCM application
-#
-  ProtoRepo@SW_Repository
-  ProtoRepo@SW_Repository.Tags = [ x86_64-slc5-gcc47-opt@Tag ,  x86_64-slc5-gcc47-dbg@Tag  ]
-  ProtoRepo@SW_Repository.Name = "HLTSVTestProto"
-  ProtoRepo@SW_Repository.InstallationPath = "$REPOSITORY"
-  ProtoRepo@SW_Repository.Uses = [ Online@SW_Repository ]
-  ProtoRepo@SW_Repository.ISInfoDescriptionFiles = [ 'share/data/hltsv/schema/hltsv_is.schema.xml' ] 
+#  testDCM@Binary
+#  testDCM@Binary.BinaryName = 'testDCM'
+#  testDCM@Binary.BelongsTo =  ProtoRepo@SW_Repository
 
+#  testROS@Binary
+#  testROS@Binary.BinaryName = 'testROS'
+#  testROS@Binary.BelongsTo =  ProtoRepo@SW_Repository
 
-# 
-# the testDCM and testROS binary
-#
-  testDCM@Binary
-  testDCM@Binary.BinaryName = 'testDCM'
-  testDCM@Binary.BelongsTo =  ProtoRepo@SW_Repository
-
-  testROS@Binary
-  testROS@Binary.BinaryName = 'testROS'
-  testROS@Binary.BelongsTo =  ProtoRepo@SW_Repository
-
-  ProtoRepo@SW_Repository.SW_Objects = [ testDCM@Binary , testROS@Binary ]
+#  ProtoRepo@SW_Repository.SW_Objects = [ testDCM@Binary , testROS@Binary ]
 
 #
 # Configuration via environment variables for DCM

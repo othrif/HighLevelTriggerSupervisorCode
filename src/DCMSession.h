@@ -7,6 +7,8 @@
 
 #include "asyncmsg/Session.h"
 
+#include "boost/asio/deadline_timer.hpp"
+
 namespace hltsv {
 
     // The ROIs received from RoIBuilder
@@ -19,7 +21,7 @@ namespace hltsv {
     class EventScheduler;
 
     /**
-     * For now this is a place holder class. 
+     * The Session object representing a single DCM. 
      *
      * It will inherit from the message passing session object.
      * The assumption is that there is one such object per DCM
@@ -46,9 +48,6 @@ namespace hltsv {
          */
         bool handle_event(std::shared_ptr<LVL1Result> rois);
 
-        // Called by somebody...
-        void check_timeouts();
-
         // Session interface
 
         virtual void onOpen() noexcept override;
@@ -63,10 +62,15 @@ namespace hltsv {
         virtual void onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept override;
 
     private:
+        void restart_timer();
+        void check_timeouts(const boost::system::error_code& error);
+
         std::shared_ptr<EventScheduler>        m_scheduler;
         std::shared_ptr<ROSClear>              m_clear;
         std::list<std::shared_ptr<LVL1Result>> m_events;
         bool                                   m_in_error;
+        boost::asio::deadline_timer            m_timer;
+        bool                                   m_start_timer;
     };
 
 }
