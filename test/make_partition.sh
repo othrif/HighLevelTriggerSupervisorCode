@@ -12,19 +12,27 @@ INCLUDES="-I daq/sw/repository.data.xml -I daq/schema/df.schema.xml -I daq/segme
 PARTITION=$1
 REPOSITORY=$(dirname $(dirname $(pwd)))/installed
 DEFAULT_HOST=$(hostname)
+LOGROOT="/tmp"
+
+# default TCP multicast
+MULTICAST=""
 
 case "$2" in
     b4)
-        NUM_SEGMENTS=4
-        DATA_NETWORKS=
-        SEGMENTS[1]=(pc-preseries-xpu-050{01..31}.cern.ch@Computer)
-        SEGMENTS[2]=(pc-preseries-xpu-060{01..31}.cern.ch@Computer)
-        SEGMENTS[3]=(pc-preseries-xpu-070{01..31}.cern.ch@Computer)
-        SEGMENTS[4]=(pc-preseries-xpu-080{01..31}.cern.ch@Computer)
-        INCLUDES="${INCLUDES} -I daq/hw/hosts-bld4.data.xml"
+        NUM_SEGMENTS=1
+        DATA_NETWORKS='"10.193.64.0/255.255.254.0", "10.193.128.0/255.255.254.0"'
+
+        x=(pc-tbed-r3-0{3..9}.cern.ch@Computer)
+        y=(pc-tbed-r3-{10..20}.cern.ch@Computer)
+        SEGMENTS[1]=$(echo ${x[*]} ${y[*]} | sed 's; ; , ;g')
+
+        HLTSV_HOST=pc-tbed-r3-01.cern.ch
+        ROS_HOST=pc-tbed-r3-02.cern.ch
+
+        INCLUDES="${INCLUDES} -I daq/hw/hosts.data.xml"
         ;;
     pre)
-        NUM_SEGMENTS=3
+        NUM_SEGMENTS=1
         DATA_NETWORKS=
         SEGMENTS[1]=(pc-preseries-xpu-910{01..31}.cern.ch@Computer)
         SEGMENTS[2]=(pc-preseries-xpu-940{01..31}.cern.ch@Computer)
@@ -79,7 +87,7 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
   HLTSV@HLTSVApplication
   HLTSV@HLTSVApplication.Program              = hltsv_main@Binary
   HLTSV@HLTSVApplication.RestartableDuringRun = True
-  HLTSV@HLTSVApplication.RunsOn               = ${DEFAULT_HOST}@Computer
+  HLTSV@HLTSVApplication.RunsOn               = ${HLTSV_HOST:-DEFAULT_HOST}@Computer
   HLTSV@HLTSVApplication.Configuration        = HLTSVConfig@HLTSVConfiguration
 
 # 
@@ -123,7 +131,7 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
 #
   DCM@RunControlTemplateApplication
   DCM@RunControlTemplateApplication.Program = testDCM@Binary
-  DCM@RunControlTemplateApplication.Instances = 2
+  DCM@RunControlTemplateApplication.Instances = 0
   DCM@RunControlTemplateApplication.ProcessEnvironment = [ DCMVariables@VariableSet ]
   DCM@RunControlTemplateApplication.RestartableDuringRun = True
 
@@ -143,6 +151,7 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
 
   ROS-1@RunControlApplication
   ROS-1@RunControlApplication.Program = testROS@Binary
+  ROS-1@RunControlApplication.RunsOn = ${ROS_HOST:-DEFAULT_HOST}@Computer
 
 #
 # Main HLT segment
@@ -164,7 +173,7 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
 # 
   Dataflow@DFParameters
   Dataflow@DFParameters.DefaultDataNetworks = [ ${DATA_NETWORKS} ]
-  Dataflow@DFParameters.MulticastAddress = ""
+  Dataflow@DFParameters.MulticastAddress = "${MULTICAST}"
 
 # The partition itself
 
@@ -175,6 +184,7 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
   ${PARTITION}@Partition.Parameters = [ CommonParameters@VariableSet ]
   ${PARTITION}@Partition.DefaultHost = ${DEFAULT_HOST}@Computer
   ${PARTITION}@Partition.RepositoryRoot = "${REPOSITORY}"
+  ${PARTITION}@Partition.LogRoot = "${LOGROOT}"
 
 # add segments
   ${PARTITION}@Partition.Segments = [ HLT@Segment ]
