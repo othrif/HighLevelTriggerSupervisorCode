@@ -59,14 +59,15 @@ namespace hltsv {
         ~Activity();
     
         // Run control commands
-        void configure(std::string&);
-        void connect(std::string&);
-        void prepareForRun(std::string&);
-        void disable(std::string&);
-        void enable(std::string&);
-        void stopL2SV(std::string&);
-        void unconfigure(std::string&);
-        void disconnect(std::string&);
+        void configure(std::string&) override;
+        void connect(std::string&) override;
+        void prepareForRun(std::string&) override;
+        void disable(std::string&) override;
+        void enable(std::string&) override;
+        void stopL2SV(std::string&) override;
+        void stopSFO(std::string&) override;
+        void unconfigure(std::string&) override;
+        void disconnect(std::string&) override;
 
     private:
 

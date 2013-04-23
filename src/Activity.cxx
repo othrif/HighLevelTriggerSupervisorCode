@@ -229,6 +229,11 @@ namespace hltsv {
     return;
   }
 
+  void Activity::stopSFO(std::string& )
+  {
+    m_ros_clear->flush();
+  }
+
   //DC::StatusWord Activity::act_unconfig()
   void Activity::unconfigure(std::string &)
   {
