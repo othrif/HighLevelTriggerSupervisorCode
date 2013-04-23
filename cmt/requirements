@@ -25,6 +25,9 @@ use ROOT  * DQMCExternal
 
 private
 
+# hack from Andrei for nightly build
+set_prepend LD_LIBRARY_PATH $(bin)
+
 macro_append cppflags "-Wno-deprecated-declarations"
 
 # 
@@ -53,7 +56,7 @@ macro daq-hltsv-dal_dependencies "DFdal"
 macro_append daq-hltsv-dal_shlibflags "-ldaq-core-dal -ldaq-df-dal"
 
 #
-# A library to load the RoIB plugins
+# Main HLTSV library
 # 
 library hltsv L1Source.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx UnicastROSClear.cxx MulticastROSClear.cxx ROSSession.cxx Messages.cxx HLTSVServer.cxx LVL1Result.cxx
 macro hltsv_shlibflags "-lItemCtrl -lers -ltbb -leformat_write -leformat -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg -ldynlibs"
@@ -102,7 +105,7 @@ macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1fila
 #
 
 application test_l1source ../test/test_l1source.cxx
-macro test_l1sourcelinkopts "-lers -lhltsv -ldynlibs"
+macro test_l1sourcelinkopts "-lhltsv -lers -ldynlibs"
 macro test_l1source_dependencies hltsv
 
 #
