@@ -10,6 +10,7 @@
 #include "asyncmsg/Session.h" 
 #include "asyncmsg/Message.h" 
 #include "asyncmsg/NameService.h"
+#include "asyncmsg/UDPSession.h"
 
 #include "dal/Partition.h"
 #include "DFdal/DFParameters.h"
@@ -95,13 +96,13 @@ protected:
 
     void onOpen() noexcept override 
     {
-        ERS_DEBUG(3,"Session is open");
+        ERS_LOG("Session is open");
         asyncReceive();
     }
 
     void onOpenError(const boost::system::error_code& error) noexcept override 
     {
-        ERS_DEBUG(3,"Open error..." << error);
+        ERS_LOG("Open error..." << error);
     }
 
     // we only expect a ClearMessage
@@ -131,21 +132,84 @@ protected:
     }
 
     void onReceiveError(const boost::system::error_code& error,
-                        std::unique_ptr<daq::asyncmsg::InputMessage> message) noexcept override
+                        std::unique_ptr<daq::asyncmsg::InputMessage> /* message */) noexcept override
+    {
+         ERS_LOG("Receive error: " << error);
+        // Issue error message
+    }
+
+    void onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> /* message */) noexcept override
+    {
+        // never used
+        ERS_LOG("Should never happen");
+    }
+
+    void onSendError(const boost::system::error_code& error,
+                     std::unique_ptr<const daq::asyncmsg::OutputMessage> /* message */) noexcept override
+    {
+        // never used
+        ERS_LOG("Should never happen: " << error);
+    }
+
+private:
+    uint32_t              m_expected_sequence;
+};
+
+class UDPClearSession : public daq::asyncmsg::UDPSession {
+public:
+
+
+    UDPClearSession(boost::asio::io_service& service, const std::string& multicast_address)
+        : daq::asyncmsg::UDPSession(service, 9000),
+          m_expected_sequence(0)
+    {
+        joinMulticastGroup(multicast_address);
+    }
+    
+    // we only expect a ClearMessage
+    std::unique_ptr<daq::asyncmsg::InputMessage> 
+    createMessage(std::uint32_t typeId,
+                  std::uint32_t transactionId, std::uint32_t size) noexcept override
+    {
+        ERS_ASSERT_MSG(typeId == ClearMessage::ID, "Unexpected type ID in message: " << typeId);
+        ERS_DEBUG(3,"createMessage, size = " << size);
+        return std::unique_ptr<ClearMessage>(new ClearMessage(size, transactionId));
+    }
+
+    void onReceive(std::unique_ptr<daq::asyncmsg::InputMessage> message) override
+    {
+        ERS_DEBUG(3,"onReceive");
+        std::unique_ptr<ClearMessage> msg(dynamic_cast<ClearMessage*>(message.release()));
+
+        if(m_expected_sequence != msg->sequence_no()) {
+            ERS_LOG("Unexpected sequence no, got: " << msg->sequence_no() << " expected: " << m_expected_sequence);
+        }
+
+        m_expected_sequence = msg->sequence_no() + 1;
+
+        ERS_LOG("Got clear message, seq = " << msg->sequence_no() << " number ofLVL1 IDs: " << msg->num_clears());
+
+        asyncReceive();
+    }
+
+    void onReceiveError(const boost::system::error_code& error,
+                        std::unique_ptr<daq::asyncmsg::InputMessage> /* message */) noexcept override
     {
         ERS_LOG("Receive error: " << error);
         // Issue error message
     }
 
-    void onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept override
+    void onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> /* message */) noexcept override
     {
         // never used
+        ERS_LOG("should never happen");
     }
 
     void onSendError(const boost::system::error_code& error,
-                     std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept override
+                     std::unique_ptr<const daq::asyncmsg::OutputMessage> /* message */) noexcept override
     {
         // never used
+        ERS_LOG("should never happen" << error);
     }
 
 private:
@@ -172,7 +236,7 @@ public:
     }
 
     void onAcceptError(const boost::system::error_code& error,
-                       std::shared_ptr<daq::asyncmsg::Session> session) noexcept override
+                       std::shared_ptr<daq::asyncmsg::Session> /* session */) noexcept override
     {
         ERS_LOG("Accept error: " << error);
     }
@@ -213,22 +277,46 @@ public:
         daq::rc::ConfigurationBridge *cb = daq::rc::ConfigurationBridge::instance();
         Configuration *config = cb->getConfiguration();
 
-        m_server.reset(new ClearServer(m_service));
+        const daq::df::DFParameters *dfparams = config->cast<daq::df::DFParameters>(cb->getPartition()->get_DataFlowParameters());
 
-        // CLEAR+appname
-        m_server->listen("CLEAR");
-        daq::asyncmsg::NameService name_service(IPCPartition(cb->getPartition()->UID()),
-                                                  config->cast<daq::df::DFParameters>(cb->getPartition()->get_DataFlowParameters())->get_DefaultDataNetworks());
-        name_service.publish("CLEAR", m_server->localEndpoint().port());
+        if(dfparams->get_MulticastAddress().empty()) {
 
-        m_server->start();
+            // TCP version
+            
+            m_server.reset(new ClearServer(m_service));
+            
+            // CLEAR+appname
+            m_server->listen("CLEAR");
+            daq::asyncmsg::NameService name_service(IPCPartition(cb->getPartition()->UID()),
+                                                    dfparams->get_DefaultDataNetworks());
+            name_service.publish("CLEAR", m_server->localEndpoint().port());
+            
+            m_server->start();
+
+        } else {
+            // UDP version
+
+            // hack, parsing entry
+            auto mc = dfparams->get_MulticastAddress();
+            auto n = mc.find('/');
+            auto mcast = mc.substr(0, n);
+
+            ERS_LOG("Configuring for multicast: " << mcast);
+
+            m_udp_session = std::make_shared<UDPClearSession>(m_service, mcast);
+            m_udp_session->asyncReceive();
+
+        }
+        
 
         m_io_thread = std::thread([&]() { m_service.run(); ERS_LOG("io_service finished"); });
     }
 
     virtual void unconfigure(std::string &) override
     {
-        m_server->stop();
+        if(m_server) {
+            m_server->stop();
+        } // else stop UDPsession
     }
     
     virtual void connect(std::string& ) override
@@ -250,6 +338,7 @@ private:
     bool                         m_running;
     boost::asio::io_service      m_service;
     std::shared_ptr<ClearServer> m_server;
+    std::shared_ptr<UDPClearSession> m_udp_session;
 };
 
 int main(int argc, char *argv[])

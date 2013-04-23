@@ -21,11 +21,11 @@ namespace hltsv {
   
   void HLTSVSession::onOpenError(const boost::system::error_code& error) noexcept
   {
-    ERS_LOG(" *** Error opening connection to HLTSV! *** ");
+    ERS_LOG(" *** Error opening connection to HLTSV! *** " << error);
   }
   
   std::unique_ptr<daq::asyncmsg::InputMessage> 
-  HLTSVSession::createMessage(std::uint32_t typeId, std::uint32_t transactionId, std::uint32_t size) noexcept
+  HLTSVSession::createMessage(std::uint32_t , std::uint32_t , std::uint32_t size) noexcept
   {
     return std::unique_ptr<daq::asyncmsg::InputMessage>(new AssignMessage(size));
   }
@@ -45,7 +45,7 @@ namespace hltsv {
     asyncReceive();
   }
   
-  void HLTSVSession::onReceiveError(const boost::system::error_code& error, std::unique_ptr<daq::asyncmsg::InputMessage> message) noexcept
+  void HLTSVSession::onReceiveError(const boost::system::error_code& error, std::unique_ptr<daq::asyncmsg::InputMessage> ) noexcept
   {
     ERS_LOG("HLTSVSession::onReceiveError with code: " << error);
   }
@@ -57,8 +57,9 @@ namespace hltsv {
 
   }
   
-  void HLTSVSession::onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept
+  void HLTSVSession::onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> ) noexcept
   {
+    ERS_LOG("sendError: " << error);
   }
 
   //******************************************

@@ -104,12 +104,13 @@ namespace hltsv {
 
     void DCMSession::onOpenError(const boost::system::error_code& error) noexcept
     {
+        ERS_LOG("openError: " << error);
         // TODO: report;  Who closes me ?
         m_in_error = true;
     }
 
     std::unique_ptr<daq::asyncmsg::InputMessage> 
-    DCMSession::createMessage(std::uint32_t typeId, std::uint32_t transactionId, std::uint32_t size) noexcept
+    DCMSession::createMessage(std::uint32_t typeId, std::uint32_t /* transactionId */, std::uint32_t size) noexcept
     {
         ERS_ASSERT_MSG(typeId == UpdateMessage::ID, "Unexpected message type: " << typeId << " instead of " << UpdateMessage::ID);
         return std::unique_ptr<daq::asyncmsg::InputMessage>(new UpdateMessage(size));
@@ -143,7 +144,7 @@ namespace hltsv {
       asyncReceive();
     }
 
-    void DCMSession::onReceiveError(const boost::system::error_code& error, std::unique_ptr<daq::asyncmsg::InputMessage> message) noexcept
+    void DCMSession::onReceiveError(const boost::system::error_code& error, std::unique_ptr<daq::asyncmsg::InputMessage> ) noexcept
     {
       ERS_LOG("DCMSession::onReceiveError, with error: " << error);
 
@@ -159,11 +160,11 @@ namespace hltsv {
 
     }
 
-    void DCMSession::onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept
+    void DCMSession::onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> ) noexcept
     {
     }
-
-    void DCMSession::onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept
+    
+    void DCMSession::onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> ) noexcept
     {
         ERS_LOG("Send error: " << error);
         m_in_error = true;

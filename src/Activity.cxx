@@ -138,6 +138,9 @@ namespace hltsv {
         auto n = mc.find('/');
         auto mcast = mc.substr(0, n);
         auto outgoing = mc.substr(n + 1);
+
+        ERS_LOG("Configuring for multicast: " << mcast << '/' << outgoing);
+
         m_ros_clear = std::make_shared<MulticastROSClear>(100, m_hltsv_io_service, mcast, outgoing);
     }
     
