@@ -42,10 +42,11 @@ namespace hltsv {
         
     };
 
-    MulticastROSClear::MulticastROSClear(size_t threshold, boost::asio::io_service& service, const std::string& outgoing)
+    MulticastROSClear::MulticastROSClear(size_t threshold, boost::asio::io_service& service, const std::string& multicast_address, const std::string& outgoing)
         : ROSClear(threshold),
           m_session(new MCSession(service))
     {
+        m_session->connect(boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(multicast_address), 9000));
         m_session->setOutgoingInterface(outgoing);
     }
 

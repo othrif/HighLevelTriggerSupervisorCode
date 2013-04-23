@@ -14,7 +14,7 @@ namespace hltsv {
      */
     class MulticastROSClear : public ROSClear {
     public:
-        MulticastROSClear(size_t threshold, boost::asio::io_service& service, const std::string& outgoing);
+        MulticastROSClear(size_t threshold, boost::asio::io_service& service, const std::string& multicast_address, const std::string& outgoing);
         ~MulticastROSClear();
 
     private:

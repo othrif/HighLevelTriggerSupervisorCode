@@ -17,6 +17,7 @@
 #include "LVL1Result.h"
 #include "ROSClear.h"
 #include "UnicastROSClear.h"
+#include "MulticastROSClear.h"
 #include "EventScheduler.h"
 
 #include "hltsvdal/HLTSVApplication.h"
@@ -126,7 +127,19 @@ namespace hltsv {
     daq::asyncmsg::NameService HLTSV_NameService(part, data_networks);
 
     // Initialize ROS clear implementation
-    m_ros_clear = std::make_shared<UnicastROSClear>(100, m_hltsv_io_service, HLTSV_NameService);
+    if(dfparams->get_MulticastAddress().empty()) {
+        // use TCP
+        m_ros_clear = std::make_shared<UnicastROSClear>(100, m_hltsv_io_service, HLTSV_NameService);
+    } else {
+
+        // address is format  <Multicast-IP-Adress>/<OutgoingInterface>
+
+        auto mc = dfparams->get_MulticastAddress();
+        auto n = mc.find('/');
+        auto mcast = mc.substr(0, n);
+        auto outgoing = mc.substr(n + 1);
+        m_ros_clear = std::make_shared<MulticastROSClear>(100, m_hltsv_io_service, mcast, outgoing);
+    }
     
     m_timeout = my_conf->get_Timeout();
     

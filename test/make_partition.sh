@@ -164,6 +164,7 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
 # 
   Dataflow@DFParameters
   Dataflow@DFParameters.DefaultDataNetworks = [ ${DATA_NETWORKS} ]
+  Dataflow@DFParameters.MulticastAddress = ""
 
 # The partition itself
 
