@@ -126,7 +126,7 @@ protected:
 
         m_expected_sequence = msg->sequence_no() + 1;
 
-        ERS_DEBUG(1,"Got clear message, seq = " << msg->sequence_no() << " number ofLVL1 IDs: " << msg->num_clears());
+        ERS_LOG("Got clear message, seq = " << msg->sequence_no() << " number ofLVL1 IDs: " << msg->num_clears());
 
         asyncReceive();
     }
