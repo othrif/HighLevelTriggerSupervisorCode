@@ -16,6 +16,10 @@
 // for the io_service
 #include "HLTSVServer.h"
 
+#include <vector>
+#include <thread>
+#include <memory>
+
 // for dynamic loading of L1Source
 namespace daq { 
     namespace dynlibs {
@@ -69,10 +73,15 @@ namespace hltsv {
 
     private:
 
+        void io_thread();
+        void l1_thread();
+
        // for the HLTSVServer
         boost::asio::io_service::work *m_work;
-        boost::asio::io_service m_hltsv_io_service;
-        std::shared_ptr<HLTSVServer> m_myServer;
+        boost::asio::io_service        m_io_service;
+        std::shared_ptr<HLTSVServer>   m_myServer;
+        std::thread                    m_l1_thread;
+        std::vector<std::thread>       m_io_threads;
 
         // for MasterTrigger interface
         std::unique_ptr<MasterTrigger>             m_master_trigger;
@@ -80,6 +89,7 @@ namespace hltsv {
     
         // Event Scheduler
         std::shared_ptr<EventScheduler> m_event_sched;
+
         // L1 Source
         daq::dynlibs::DynamicLibrary    *m_l1source_lib;
         hltsv::L1Source                 *m_l1source;

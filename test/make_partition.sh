@@ -24,7 +24,7 @@ case "$2" in
         NUM_SEGMENTS=2
         DATA_NETWORKS='"10.193.64.0/255.255.254.0", "10.193.128.0/255.255.254.0"'
 
-        LOGROOT="/tmp"
+        LOGROOT="/logs"
 
         HLTSV_HOST=pc-tbed-r3-01.cern.ch
         #MULTICAST="224.100.1.1/10.193.64.186"
@@ -96,7 +96,7 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
   HLTSV@HLTSVApplication
   HLTSV@HLTSVApplication.Program              = hltsv_main@Binary
   HLTSV@HLTSVApplication.RestartableDuringRun = True
-  HLTSV@HLTSVApplication.RunsOn               = ${HLTSV_HOST:-DEFAULT_HOST}@Computer
+  HLTSV@HLTSVApplication.RunsOn               = ${HLTSV_HOST:-${DEFAULT_HOST}}@Computer
   HLTSV@HLTSVApplication.Configuration        = HLTSVConfig@HLTSVConfiguration
 
 # 

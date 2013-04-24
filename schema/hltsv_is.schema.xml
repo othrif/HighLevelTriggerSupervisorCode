@@ -95,7 +95,7 @@
   <attribute name="ReassignedEvents" description="Number of reassigned events." type="u64" init-value="0" is-not-null="yes"/>
   <attribute name="ProcessedEvents" description="Number of processed events" type="u64" init-value="0" is-not-null="yes"/>
   <attribute name="AvailableCores" description="The number of currently available cores on the DCMs." type="u32" init-value="0" is-not-null="yes"/>
-  <attribute name="Rate" description="Average Throughput (Hz)" type="float" init-value="0.0" is-not-null="yes"/>
+  <attribute name="Rate" description="Instantaneous Rate (Hz)" type="float" init-value="0.0" is-not-null="yes"/>
   <method name="reset" description="Reset all counters to default values.">
    <method-implementation language="C++" prototype="void reset()" body="
 initialize();"/>

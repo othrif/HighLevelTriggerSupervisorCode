@@ -51,7 +51,7 @@ namespace hltsv {
 
     void ROSSession::onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> ) noexcept  
     {
-        ERS_LOG("sendError: " << error);
+        ERS_LOG("sendError: " << error << " from " << remoteName());
         // report error
         // ?? close session ? how to handle this ?
     }

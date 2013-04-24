@@ -32,12 +32,12 @@ namespace hltsv {
     bool DCMSession::handle_event(std::shared_ptr<LVL1Result> rois)
     {
         if(!m_in_error) {
-
+            
             rois->set_timestamp();
-
+            
             // Create a ProcessMessage which ontains the ROIs
             ERS_DEBUG(1,"DCMSession::handle_event: #" << rois->l1_id());
-
+            
             if(!rois->reassigned()) {
                 std::unique_ptr<const hltsv::ProcessMessage> roi_msg(new hltsv::ProcessMessage(rois));
                 asyncSend(std::move(roi_msg));
@@ -46,13 +46,15 @@ namespace hltsv {
                 asyncSend(std::move(roi_msg));
             }
 
-            m_events.push_back(rois);
-
-            // this might start the timer for the first time
-            restart_timer();
-
+            getStrand().dispatch([rois,this]() {
+                                     m_events.push_back(rois);
+            
+                                     // this might start the timer for the first time
+                                     restart_timer();
+                                 });
+            
             return true;
-
+            
         } else {
             return false;
         }
@@ -144,7 +146,7 @@ namespace hltsv {
 
     void DCMSession::onReceiveError(const boost::system::error_code& error, std::unique_ptr<daq::asyncmsg::InputMessage> ) noexcept
     {
-      ERS_LOG("DCMSession::onReceiveError, with error: " << error);
+      ERS_LOG("DCMSession::onReceiveError, with error: " << error << " from " << remoteName());
 
       // TODO: report, do we close this connection ?
       m_in_error = true;
@@ -164,7 +166,7 @@ namespace hltsv {
     
     void DCMSession::onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> ) noexcept
     {
-        ERS_LOG("Send error: " << error);
+        ERS_LOG("Send error: " << error << " from " << remoteName());
         m_in_error = true;
 
         // reassign events
@@ -186,7 +188,7 @@ namespace hltsv {
             }
 
             m_timer.expires_from_now(boost::posix_time::milliseconds(std::chrono::duration_cast<std::chrono::milliseconds>(expire_duration).count()));
-            m_timer.async_wait(std::bind(&DCMSession::check_timeouts, this, std::placeholders::_1));
+            m_timer.async_wait(getStrand().wrap(std::bind(&DCMSession::check_timeouts, this, std::placeholders::_1)));
         }
     }
 

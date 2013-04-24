@@ -36,8 +36,6 @@
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
-#include <boost/thread.hpp>
-
 
 #include <algorithm>
 
@@ -53,7 +51,7 @@ namespace hltsv {
       m_running(false),
       m_triggering(false)
   {
-    m_work = new boost::asio::io_service::work(m_hltsv_io_service);
+    m_work = new boost::asio::io_service::work(m_io_service);
   }
 
   Activity::~Activity()
@@ -89,7 +87,7 @@ namespace hltsv {
       m_l1source_lib = new DynamicLibrary(lib_name);
       if(L1Source::creator_t make = m_l1source_lib->function<L1Source::creator_t>("create_source")) {
           // fix me: get data files
-          m_l1source = make(source_type, std::vector<std::string>());
+        m_l1source = make(source_type, std::vector<std::string>());
 	m_l1source->preset();
       } else {
 	// fatal
@@ -120,7 +118,7 @@ namespace hltsv {
     // Initialize ROS clear implementation
     if(dfparams->get_MulticastAddress().empty()) {
         // use TCP
-        m_ros_clear = std::make_shared<UnicastROSClear>(100, m_hltsv_io_service, HLTSV_NameService);
+        m_ros_clear = std::make_shared<UnicastROSClear>(100, m_io_service, HLTSV_NameService);
     } else {
 
         // address is format  <Multicast-IP-Adress>/<OutgoingInterface>
@@ -132,37 +130,32 @@ namespace hltsv {
 
         ERS_LOG("Configuring for multicast: " << mcast << '/' << outgoing);
 
-        m_ros_clear = std::make_shared<MulticastROSClear>(100, m_hltsv_io_service, mcast, outgoing);
+        m_ros_clear = std::make_shared<MulticastROSClear>(100, m_io_service, mcast, outgoing);
     }
     
     m_timeout = my_conf->get_Timeout();
     
     m_network = true;
 
-    // Start ASIO server
-
-    auto func = [&] () {
-      ERS_LOG(" *** Start io_service ***");
-      m_hltsv_io_service.run(); 
-      ERS_LOG(" *** io_service End ***");
-    };
-    boost::thread service_thread(func); // better movable thread (C++11)
-
     ERS_LOG(" *** Start HLTSVServer ***");
     m_event_sched = std::make_shared<EventScheduler>();
-    m_myServer = std::make_shared<HLTSVServer> (m_hltsv_io_service, m_event_sched, m_ros_clear);
+    m_myServer = std::make_shared<HLTSVServer> (m_io_service, m_event_sched, m_ros_clear);
     // the id should be read from OKS
-    std::string app_name = "HLTSV";
-    m_myServer->listen(app_name);
+    m_myServer->listen(getName());
 
     boost::asio::ip::tcp::endpoint my_endpoint = m_myServer->localEndpoint();
     ERS_LOG("Local endpoint: " << my_endpoint);
 
     // Publish port in IS for DCM
-    HLTSV_NameService.publish(app_name, my_endpoint.port());
+    HLTSV_NameService.publish(getName(), my_endpoint.port());
 
     //  HLTSVServer::start() calls Server::asyncAccept() which calls HLTSVServer::onAccept
     m_myServer->start();
+
+    for(unsigned int i = 0; i < my_conf->get_NumberOfAssignThreads(); i++) {
+        m_io_threads.push_back(std::thread(&Activity::io_thread, this));
+    }
+
     return;
   }
 
@@ -181,27 +174,16 @@ namespace hltsv {
     m_running = true;
     m_triggering = true;
 
-    // m_thread_update_rates = new boost::thread(&Activity::update_rates, this);
+    m_l1_thread = std::thread(&Activity::l1_thread, this);
     
-    auto func = [&] () {
-      ERS_LOG(" *** triggering L1Source ***");
-      while(m_triggering) {
-	std::shared_ptr<LVL1Result> result(m_l1source->getResult());
-	m_event_sched->schedule_event(result);
-	ERS_DEBUG(1,"L1ID #" << result->l1_id() << "  has been scheduled");
-      }
-      ERS_LOG(" *** trigger_thread End ***");
-    };
-    boost::thread trigger_thread(func); // better movable thread (C++11)
-
     return; 
   }
-
+    
   void Activity::disable(std::string & )
   {
     return;
   }
-
+    
   void Activity::enable(std::string &)
   {
     return;
@@ -212,6 +194,8 @@ namespace hltsv {
   {
     m_triggering = false;
     m_running = false;
+
+    m_l1_thread.join();
     
     return;
   }
@@ -228,9 +212,14 @@ namespace hltsv {
       m_cmdReceiver->_destroy();
       m_cmdReceiver = 0;
     }
-    
+
     m_network = false;
-    
+    m_io_service.stop();
+
+    for(auto& thr : m_io_threads) {
+        thr.join();
+    }
+
     delete m_l1source;
     m_l1source = 0;
     m_l1source_lib->release();
@@ -243,6 +232,32 @@ namespace hltsv {
   {
       m_publisher->stop_publishing();
       return;// DC::OK;
+  }
+
+  void Activity::l1_thread()
+  {
+      ERS_LOG("Starting l1 thread");
+      while(m_running) {
+          if(m_triggering) {
+              std::shared_ptr<LVL1Result> result(m_l1source->getResult());
+              if(result) {
+                  m_event_sched->schedule_event(result);
+                  ERS_DEBUG(1,"L1ID #" << result->l1_id() << "  has been scheduled");              
+              }
+          } else {
+              usleep(100000);
+          }
+      }
+      ERS_LOG("Finishing l1 thread");
+  }
+
+  void Activity::io_thread()
+  {
+      while(m_network) {
+          ERS_LOG(" *** Start io_service ***");
+          m_io_service.run(); 
+          ERS_LOG(" *** io_service End ***");
+      };
   }
 
   /**

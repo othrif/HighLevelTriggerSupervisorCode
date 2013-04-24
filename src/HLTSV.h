@@ -48,7 +48,7 @@ public:
     unsigned int                  AvailableCores;
 
     /**
-     * Average Throughput (Hz)
+     * Instantaneous Rate (Hz)
      */
     float                         Rate;
 
@@ -66,7 +66,7 @@ public:
 	out << "ReassignedEvents: " << ReassignedEvents << "\t// Number of reassigned events." << std::endl;
 	out << "ProcessedEvents: " << ProcessedEvents << "\t// Number of processed events" << std::endl;
 	out << "AvailableCores: " << AvailableCores << "\t// The number of currently available cores on the DCMs." << std::endl;
-	out << "Rate: " << Rate << "\t// Average Throughput (Hz)";
+	out << "Rate: " << Rate << "\t// Instantaneous Rate (Hz)";
 	return out;
     }
 
