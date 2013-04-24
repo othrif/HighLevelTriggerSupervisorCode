@@ -36,7 +36,7 @@ namespace hltsv {
             rois->set_timestamp();
 
             // Create a ProcessMessage which ontains the ROIs
-            ERS_LOG("DCMSession::handle_event: #" << rois->l1_id());
+            ERS_DEBUG(1,"DCMSession::handle_event: #" << rois->l1_id());
 
             if(!rois->reassigned()) {
                 std::unique_ptr<const hltsv::ProcessMessage> roi_msg(new hltsv::ProcessMessage(rois));
@@ -76,7 +76,7 @@ namespace hltsv {
 
                 if(event->timestamp() + std::chrono::seconds(10) > now) {
                     // reschedule this event
-                    ERS_LOG("Reassigning: " << event->l1_id());
+                    ERS_DEBUG(1,"Reassigning: " << event->l1_id());
                     m_scheduler->reassign_event(event);
                     it = m_events.erase(it);
                     continue;
@@ -127,16 +127,14 @@ namespace hltsv {
           if(ev == m_events.end()) {
               ERS_LOG("Error: invalid event id: " << msg->l1id(i));
           } else {
-              ERS_LOG("Erasing event: " << msg->l1id(i));
+              ERS_DEBUG(1,"Erasing event: " << msg->l1id(i));
               m_events.erase(ev);
           }
       }
 
-      ERS_LOG("msg=" << msg->num_request());
-      
       // Pass to the scheduler the number of requested RoIs
       auto s_this(std::static_pointer_cast<DCMSession>(shared_from_this()));
-      m_scheduler->request_events(s_this, msg->num_request());
+      m_scheduler->request_events(s_this, msg->num_request(), msg->num_l1ids());
 
       restart_timer();
       
@@ -184,7 +182,7 @@ namespace hltsv {
 
             {
                 auto expire_ms = boost::posix_time::milliseconds(std::chrono::duration_cast<std::chrono::milliseconds>(expire_duration).count());
-                ERS_LOG("restarting timer with: " << expire_ms.total_milliseconds() << " ms");
+                ERS_DEBUG(1,"restarting timer with: " << expire_ms.total_milliseconds() << " ms");
             }
 
             m_timer.expires_from_now(boost::posix_time::milliseconds(std::chrono::duration_cast<std::chrono::milliseconds>(expire_duration).count()));

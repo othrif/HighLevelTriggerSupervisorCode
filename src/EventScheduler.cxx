@@ -4,13 +4,14 @@
 
 #include "ers/ers.h"
 #include "LVL1Result.h"
+#include "monsvc/MonitoringService.h"
 
 namespace hltsv {
 
     EventScheduler::EventScheduler() :
-        m_free_cores()
+        m_free_cores(),
+        m_stats(monsvc::MonitoringService::instance().register_object("HLTSV",new HLTSV()))
     {
-        ERS_LOG("EventScheduler::EventScheduler()" << m_free_cores.size());
         m_global_id = 0;
     }
 
@@ -21,18 +22,20 @@ namespace hltsv {
 
         // If there are any events in m_reassigned_events they have
         // to be pushed to the DCMs.
+        push_events();
 
     }
 
     // Add a DCM that has additional 'count' available cores.
-    void EventScheduler::request_events(std::shared_ptr<DCMSession> dcm, unsigned int count)
+    void EventScheduler::request_events(std::shared_ptr<DCMSession> dcm, unsigned int count, unsigned int finished_events)
     {
-        ERS_LOG("EventScheduler::request_events, with count=" << count );
+        ERS_DEBUG(1,"EventScheduler::request_events, with count = " << count );
+        m_stats->ProcessedEvents += finished_events;
 
         while(count-- > 0) {
             m_free_cores.push(dcm);
         }
-        ERS_LOG("EventScheduler::request_events,m_free_cores=" << m_free_cores.size() );
+        m_stats->AvailableCores = m_free_cores.size();
     }
 
 
@@ -40,6 +43,9 @@ namespace hltsv {
     // the re-assigned events.
     void EventScheduler::schedule_event(std::shared_ptr<LVL1Result> rois)
     {
+
+        m_stats->LVL1Events++;
+
         std::weak_ptr<DCMSession> dcm;
         std::shared_ptr<DCMSession> real_dcm;
 
@@ -57,8 +63,11 @@ namespace hltsv {
                 if(!real_dcm->handle_event(rois)) {
                     continue;
                 }
+                m_stats->AssignedEvents++;
             }
         } while(!real_dcm);        
+
+        m_stats->AvailableCores = m_free_cores.size();
     }
 
     void EventScheduler::push_events()
@@ -76,6 +85,7 @@ namespace hltsv {
                     if(!real_dcm->handle_event(revent)) {
                         continue;
                     }
+                    m_stats->ReassignedEvents++;
                 }
             } while(!real_dcm);
         }
@@ -92,6 +102,7 @@ namespace hltsv {
     void EventScheduler::reset()
     {
         m_global_id = 0;
+        m_stats->reset();
     }
 
 }

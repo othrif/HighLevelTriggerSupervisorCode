@@ -75,7 +75,6 @@ namespace hltsv {
 
     void  ProcessMessage::toBuffers(std::vector<boost::asio::const_buffer>& buffers) const 
     {
-      ERS_LOG("ProcessMessage::toBuffers");
       buffers.push_back(boost::asio::buffer(&m_prefix, sizeof(m_prefix)));
       m_rois->insert(buffers);
     }

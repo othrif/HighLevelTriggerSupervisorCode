@@ -27,6 +27,7 @@
 
 #include "monsvc/MonitoringService.h"
 #include "monsvc/FilePublisher.h"
+#include "HLTSV.h"
 
 #include "asyncmsg/NameService.h"
 
@@ -48,7 +49,6 @@ namespace hltsv {
     : daq::rc::Controllable(name), 
       m_l1source_lib(nullptr),
       m_l1source(nullptr),
-      m_time(),
       m_network(false),
       m_running(false),
       m_triggering(false)
@@ -99,11 +99,6 @@ namespace hltsv {
       return;
     }
 
-    // Initialize counters
-    m_stats.LVL1Events = m_stats.AssignedEvents = m_stats.ProcessedEvents = m_stats.Timeouts = 
-      m_stats.ProcessingNodesInitial = m_stats.ProcessingNodesDisabled = m_stats.ProcessingNodesEnabled =
-      m_stats.ProcessingNodesAdded = 0;
-    
     if(source_type == "internal" || source_type == "preloaded") {
 
       // TODO
@@ -113,12 +108,8 @@ namespace hltsv {
     m_publisher.reset(new monsvc::PublishingController(part,getName()));
     
     m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("DFObjects:.*/=>is:(2,DF)"));
-    m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("Histogramming:.*/=>oh:(5,DF,provider_name)"));
+    m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("Histogramming:.*/=>oh:(5,DF,HLTSV)"));
     
-    m_time = monsvc::MonitoringService::instance().register_object("myTime",new TH1F("myTime","myTime", 2000, 0., 20000.));
-       
-    
-
     // Initialize  HLTSV_NameService
     // Declare it in .h?
     std::vector<std::string> data_networks = dfparams->get_DefaultDataNetworks();
@@ -149,9 +140,9 @@ namespace hltsv {
     m_network = true;
 
     // Start ASIO server
-    ERS_LOG(" *** Start io_service ***");
+
     auto func = [&] () {
-      ERS_LOG(" *** Run io_service ***");
+      ERS_LOG(" *** Start io_service ***");
       m_hltsv_io_service.run(); 
       ERS_LOG(" *** io_service End ***");
     };
@@ -165,8 +156,7 @@ namespace hltsv {
     m_myServer->listen(app_name);
 
     boost::asio::ip::tcp::endpoint my_endpoint = m_myServer->localEndpoint();
-    ERS_LOG("Port Used: " << my_endpoint.port() );
-    ERS_LOG("IP Address: " <<my_endpoint.address() );
+    ERS_LOG("Local endpoint: " << my_endpoint);
 
     // Publish port in IS for DCM
     HLTSV_NameService.publish(app_name, my_endpoint.port());
@@ -185,10 +175,6 @@ namespace hltsv {
 
   void Activity::prepareForRun(std::string& )
   {
-    m_stats.LVL1Events = m_stats.AssignedEvents = m_stats.ProcessedEvents = m_stats.Timeouts = 
-      m_stats.ProcessingNodesDisabled = m_stats.ProcessingNodesEnabled =
-      m_stats.ProcessingNodesAdded = 0;
-    
     m_l1source->reset();
 
     m_running = true;
@@ -201,7 +187,7 @@ namespace hltsv {
       while(m_triggering) {
 	std::shared_ptr<LVL1Result> result(m_l1source->getResult());
 	m_event_sched->schedule_event(result);
-	ERS_LOG("L1ID #" << result->l1_id() << "  has been scheduled");
+	ERS_DEBUG(1,"L1ID #" << result->l1_id() << "  has been scheduled");
       }
       ERS_LOG(" *** trigger_thread End ***");
     };
@@ -248,23 +234,7 @@ namespace hltsv {
     m_l1source = 0;
     m_l1source_lib->release();
     delete m_l1source_lib;
-    
-    const std::unique_ptr<TFile> outfile(new TFile("test.root","recreate"));
-    
-    boost::shared_ptr<monsvc::FilePublisher> pub(boost::make_shared<monsvc::FilePublisher>(outfile.get()));
-    monsvc::NameFilter filter;
-    monsvc::PublishingController::publish_now(pub,filter);
 
-    // done at delete ??
-    //
-    // outfile->Write();
-    // outfile->Close();
-
-    // ? who deletes m_time ?
-
-    //delete m_time;
-    //m_time = 0;
-    
     return;
   }
 
@@ -274,27 +244,16 @@ namespace hltsv {
       return;// DC::OK;
   }
 
-#if 0
-  void Activity::update_rates()
-  {
-    while(m_running) {
-      uint64_t oldProcessedEvents = m_stats.ProcessedEvents;
-      sleep(5);
-      m_stats.Rate = (m_stats.ProcessedEvents - oldProcessedEvents)/5.0;
-    }
-  }
-#endif
-  
   /**
    *     MasterTrigger interface
    **/
 
-    MasterTrigger::MasterTrigger(L1Source *l1source, bool& triggering)
-        : m_l1source(l1source),
-          m_triggering(triggering),
-          m_triggerHoldCounter(0)
-    {
-    }
+  MasterTrigger::MasterTrigger(L1Source *l1source, bool& triggering)
+      : m_l1source(l1source),
+        m_triggering(triggering),
+        m_triggerHoldCounter(0)
+  {
+  }
     
   uint32_t MasterTrigger::hold()
   {

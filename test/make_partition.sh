@@ -12,19 +12,22 @@ INCLUDES="-I daq/sw/repository.data.xml -I daq/schema/df.schema.xml -I daq/segme
 PARTITION=$1
 REPOSITORY=$(dirname $(dirname $(pwd)))/installed
 DEFAULT_HOST=$(hostname)
-LOGROOT="/tmp"
+LOGROOT="/logs"
 
 # default TCP multicast
 MULTICAST=""
+MULTICAST="224.100.1.1/10.193.64.186"
 
 case "$2" in
     b4)
-        NUM_SEGMENTS=1
+        NUM_SEGMENTS=2
         DATA_NETWORKS='"10.193.64.0/255.255.254.0", "10.193.128.0/255.255.254.0"'
 
         x=(pc-tbed-r3-0{3..9}.cern.ch@Computer)
-        y=(pc-tbed-r3-{10..20}.cern.ch@Computer)
-        SEGMENTS[1]=$(echo ${x[*]} ${y[*]} | sed 's; ; , ;g')
+        SEGMENTS[1]=$(echo ${x[*]} | sed 's; ; , ;g')
+
+        x=(pc-tbed-r3-{10..20}.cern.ch@Computer)
+        SEGMENTS[2]=$(echo ${x[*]} | sed 's; ; , ;g')
 
         HLTSV_HOST=pc-tbed-r3-01.cern.ch
         ROS_HOST=pc-tbed-r3-02.cern.ch

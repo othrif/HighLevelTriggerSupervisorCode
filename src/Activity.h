@@ -10,9 +10,7 @@
 // Monitoring
 #include "TH1F.h"
 #include "TFile.h"
-#include "HLTSV.h"
 
-#include "monsvc/ptr.h"
 #include "monsvc/PublishingController.h"
 
 // for the io_service
@@ -90,12 +88,8 @@ namespace hltsv {
         std::shared_ptr<ROSClear>       m_ros_clear;
 
         // Monitoring
-        hltsv::HLTSV                    m_stats;
-        monsvc::ptr<TH1F>               m_time;
-
         std::unique_ptr<monsvc::PublishingController> m_publisher;
         std::unique_ptr<TFile>                        m_outfile;
-
     
         // Running flags
         bool                            m_network;

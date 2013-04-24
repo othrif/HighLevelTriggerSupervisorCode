@@ -25,9 +25,6 @@ use ROOT  * DQMCExternal
 
 private
 
-# hack from Andrei for nightly build
-set_prepend LD_LIBRARY_PATH $(bin)
-
 macro_append cppflags "-Wno-deprecated-declarations"
 
 # 
@@ -60,14 +57,16 @@ macro_append daq-hltsv-dal_shlibflags "-ldaq-core-dal -ldaq-df-dal"
 # 
 library hltsv L1Source.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx UnicastROSClear.cxx MulticastROSClear.cxx ROSSession.cxx Messages.cxx HLTSVServer.cxx LVL1Result.cxx
 macro hltsv_shlibflags "-lItemCtrl -lers -ltbb -leformat_write -leformat -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg -ldynlibs"
-macro hltsv_dependencies "daq-hltsv-dal"
+
+# this does not work in a nightly build:
+# macro hltsv_dependencies "daq-hltsv-dal"
 
 #
 # The HLTSV main application
 #
 application hltsv_main  hltsv_main.cxx 
 
-macro hltsv_mainlinkopts "-lhltsv"
+macro hltsv_mainlinkopts "-lhltsv -ldaq-hltsv-dal"
 
 macro hltsv_main_dependencies "daq-hltsv-dal hltsv"
 
@@ -105,7 +104,7 @@ macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1fila
 #
 
 application test_l1source ../test/test_l1source.cxx
-macro test_l1sourcelinkopts "-lhltsv -lers -ldynlibs"
+macro test_l1sourcelinkopts "-lhltsv -ldaq-hltsv-dal -lers -ldynlibs"
 macro test_l1source_dependencies hltsv
 
 #

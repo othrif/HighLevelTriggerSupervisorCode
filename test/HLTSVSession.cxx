@@ -37,9 +37,7 @@ namespace hltsv {
     // grab only the l1id and put it on the list of assigned IDs
     m_assigned_l1ids.push(msg->lvl1_id());
 
-    ERS_LOG("got global ID: " << msg->global_id());
-
-    //ERS_LOG("pushed L1ID " << msg->lvl1_id() << " onto list, now of size " << m_assigned_l1ids.size());
+    ERS_DEBUG(1,"got global ID: " << msg->global_id());
 
     // get ready to recieve another message
     asyncReceive();
@@ -50,11 +48,8 @@ namespace hltsv {
     ERS_LOG("HLTSVSession::onReceiveError with code: " << error);
   }
   
-  void HLTSVSession::onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept
+  void HLTSVSession::onSend(std::unique_ptr<const daq::asyncmsg::OutputMessage> ) noexcept
   {
-
-    ERS_LOG("HLTSVSession::onSend");
-
   }
   
   void HLTSVSession::onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> ) noexcept

@@ -50,6 +50,7 @@
       range CDATA ""
       format (dec|hex|oct) "dec"
       is-multi-value (yes|no) "no"
+      multi-value-implementation (list|vector) "list"
       init-value CDATA ""
       is-not-null (yes|no) "no"
   >
@@ -63,6 +64,7 @@
       is-composite (yes|no) #REQUIRED
       is-exclusive (yes|no) #REQUIRED
       is-dependent (yes|no) #REQUIRED
+      multi-value-implementation (list|vector) "list"
   >
   <!ELEMENT method (method-implementation*)>
   <!ATTLIST method
@@ -79,23 +81,25 @@
 
 <oks-schema>
 
-<info name="" type="" num-of-includes="0" num-of-items="1" oks-format="schema" oks-version="oks-06-03-04 built &quot;Aug 22 2011&quot;" created-by="rhauser" created-on="msu-pc7.cern.ch" creation-time="20110818T115012" last-modified-by="rhauser" last-modified-on="msu-pc7.cern.ch" last-modification-time="20110822T154544"/>
+<info name="" type="" num-of-includes="1" num-of-items="1" oks-format="schema" oks-version="oks-06-06-07 built &quot;Apr 24 2013&quot;" created-by="rhauser" created-on="msu-pc7.cern.ch" creation-time="20110818T115012" last-modified-by="rhauser" last-modified-on="pc-tbed-pub-04.cern.ch" last-modification-time="20130424T083908"/>
 
 <include>
  <file path="is/is.xml"/>
 </include>
 
+
  <class name="HLTSV">
   <superclass name="Info"/>
-  <attribute name="LVL1Events"  description="Number of LVL1 events" type="u64" is-not-null="yes"/>
-  <attribute name="AssignedEvents" description="Number of assigned events" type="u64" is-not-null="yes"/>
-  <attribute name="ProcessedEvents" description="Number of processed events" type="u64" is-not-null="yes"/>
-  <attribute name="Timeouts" description="Number of timeouts events" type="u64" is-not-null="yes"/>
-  <attribute name="ProcessingNodesInitial" description="Initial number of HLT hosts" type="u32" is-not-null="yes"/>
-  <attribute name="ProcessingNodesDisabled" description="Current number of disabled HLT hosts" type="u32" is-not-null="yes"/>
-  <attribute name="ProcessingNodesEnabled" description="Current number of enabled HLT hosts (Not used 2012-03-19)" type="u32" is-not-null="yes"/>
-  <attribute name="ProcessingNodesAdded" description="Number of HLT hosts added during this run" type="u32" is-not-null="yes"/>
-  <attribute name="Rate" type="float" description="Average Throughput (Hz)" is-not-null="yes"/>
+  <attribute name="LVL1Events" description="Number of LVL1 events" type="u64" init-value="0" is-not-null="yes"/>
+  <attribute name="AssignedEvents" description="Number of assigned events" type="u64" init-value="0" is-not-null="yes"/>
+  <attribute name="ReassignedEvents" description="Number of reassigned events." type="u64" init-value="0" is-not-null="yes"/>
+  <attribute name="ProcessedEvents" description="Number of processed events" type="u64" init-value="0" is-not-null="yes"/>
+  <attribute name="AvailableCores" description="The number of currently available cores on the DCMs." type="u32" init-value="0" is-not-null="yes"/>
+  <attribute name="Rate" description="Average Throughput (Hz)" type="float" init-value="0.0" is-not-null="yes"/>
+  <method name="reset" description="Reset all counters to default values.">
+   <method-implementation language="C++" prototype="void reset()" body="
+initialize();"/>
+  </method>
  </class>
 
 </oks-schema>

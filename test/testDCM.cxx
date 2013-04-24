@@ -197,7 +197,7 @@ void DCMActivity::execute(unsigned worker_id)
       break;
     }
 
-    ERS_LOG("Worker #" << worker_id << ": got assigned L1ID " << l1id);
+    ERS_DEBUG(1,"Worker #" << worker_id << ": got assigned L1ID " << l1id);
 
     // sleep for a random time between 5-50ms
     usleep( (45000.0 * rand() / RAND_MAX) + 5000);

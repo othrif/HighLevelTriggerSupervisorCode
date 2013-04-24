@@ -38,7 +38,7 @@ namespace hltsv {
     {
         using namespace daq::asyncmsg;
 
-        ERS_LOG("Flushing " << events->size() << " L1 IDs");
+        ERS_DEBUG(1,"Flushing " << events->size() << " L1 IDs");
 
         for(auto session : m_sessions) {
             std::unique_ptr<const OutputMessage> msg(new ClearMessage(sequence,events));

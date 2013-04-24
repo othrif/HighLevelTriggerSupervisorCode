@@ -6,6 +6,9 @@
 #include "tbb/concurrent_queue.h"
 #include <atomic>
 
+#include "monsvc/ptr.h"
+#include "HLTSV.h"
+
 namespace hltsv {
 
     class DCMSession;
@@ -29,8 +32,8 @@ namespace hltsv {
       
       ~EventScheduler();
       
-      // Add a DCM that has additional 'count' available cores.
-      void request_events(std::shared_ptr<DCMSession> dcm, unsigned int count = 1);
+      // Add a DCM that has additional 'count' available cores. For statistics also report the number of finished events.
+      void request_events(std::shared_ptr<DCMSession> dcm, unsigned int count = 1, unsigned int finished_events = 0);
       
       // Schedule an event to one of the available cores, after handling
       // the re-assigned events.
@@ -46,11 +49,14 @@ namespace hltsv {
       
       // push events in reassign queue to DCMs
       void push_events();
+
+      void update_instantanous_rate();
       
       tbb::concurrent_bounded_queue<std::weak_ptr<DCMSession>>   m_free_cores;
       tbb::concurrent_bounded_queue<std::shared_ptr<LVL1Result>> m_reassigned_events; 
 
       std::atomic<uint64_t> m_global_id;
+      monsvc::ptr<HLTSV>    m_stats;
     };
 }
 
