@@ -211,12 +211,12 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
 
 # event counter
   lvl1-counter@IS_EventsAndRates
-  lvl1-counter@IS_EventsAndRates.EventCounter = "DF.HLTSV.HLTSV.LVL1Events"
+  lvl1-counter@IS_EventsAndRates.EventCounter = "DF.HLTSV.Events.LVL1Events"
   lvl1-counter@IS_EventsAndRates.Rate = ""
 
   lvl2-counter@IS_EventsAndRates
-  lvl2-counter@IS_EventsAndRates.EventCounter = "DF.HLTSV.HLTSV.ProcessedEvents"
-  lvl2-counter@IS_EventsAndRates.Rate = "DF.HLTSV.HLTSV.Rate"
+  lvl2-counter@IS_EventsAndRates.EventCounter = "DF.HLTSV.Events.ProcessedEvents"
+  lvl2-counter@IS_EventsAndRates.Rate = "DF.HLTSV.Events.Rate"
 
   counters@IS_InformationSources
   counters@IS_InformationSources.LVL1 = lvl1-counter@IS_EventsAndRates

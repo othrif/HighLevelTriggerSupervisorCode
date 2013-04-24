@@ -2,9 +2,11 @@
 #ifndef HLTSV_EVENTSCHEDULER_H_
 #define HLTSV_EVENTSCHEDULER_H_
 
-#include <memory>
-#include "tbb/concurrent_queue.h"
 #include <atomic>
+#include <memory>
+#include <thread>
+
+#include "tbb/concurrent_queue.h"
 
 #include "monsvc/ptr.h"
 #include "HLTSV.h"
@@ -50,13 +52,16 @@ namespace hltsv {
       // push events in reassign queue to DCMs
       void push_events();
 
-      void update_instantanous_rate();
+      void update_instantaneous_rate();
       
       tbb::concurrent_bounded_queue<std::weak_ptr<DCMSession>>   m_free_cores;
       tbb::concurrent_bounded_queue<std::shared_ptr<LVL1Result>> m_reassigned_events; 
 
       std::atomic<uint64_t> m_global_id;
       monsvc::ptr<HLTSV>    m_stats;
+
+      bool                  m_update;
+      std::thread           m_rate_thread;
     };
 }
 

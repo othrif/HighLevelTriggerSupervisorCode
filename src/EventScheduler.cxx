@@ -10,9 +10,12 @@ namespace hltsv {
 
     EventScheduler::EventScheduler() :
         m_free_cores(),
-        m_stats(monsvc::MonitoringService::instance().register_object("HLTSV",new HLTSV()))
+        m_stats(monsvc::MonitoringService::instance().register_object("Events",new HLTSV())),
+        m_update(true),
+        m_rate_thread(&EventScheduler::update_instantaneous_rate, this)
     {
         m_global_id = 0;
+        
     }
 
 
@@ -23,6 +26,9 @@ namespace hltsv {
         // If there are any events in m_reassigned_events they have
         // to be pushed to the DCMs.
         push_events();
+
+        m_update = false;
+        m_rate_thread.join();
 
     }
 
@@ -103,6 +109,18 @@ namespace hltsv {
     {
         m_global_id = 0;
         m_stats->reset();
+    }
+
+    void EventScheduler::update_instantaneous_rate()
+    {
+        uint64_t last_count = m_stats->ProcessedEvents;
+
+        while(m_update) {
+            sleep(5);
+            auto rate     = (double)(m_stats->ProcessedEvents - last_count)/5.0;
+            m_stats->Rate = rate;
+            last_count    = m_stats->ProcessedEvents;
+        }
     }
 
 }

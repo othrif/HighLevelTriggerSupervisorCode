@@ -219,7 +219,7 @@ void DCMActivity::execute(unsigned worker_id)
 
     // sleep for a random time between 5-50ms
     // usleep( (45000.0 * rand() / RAND_MAX) + 5000);
-    usleep(5000);
+    usleep(1000);
 
     // finished "processing", send back the L1ID and request a new one.
     l1id_list[0] = l1id;
