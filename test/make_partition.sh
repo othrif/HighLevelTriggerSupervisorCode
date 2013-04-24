@@ -12,25 +12,31 @@ INCLUDES="-I daq/sw/repository.data.xml -I daq/schema/df.schema.xml -I daq/segme
 PARTITION=$1
 REPOSITORY=$(dirname $(dirname $(pwd)))/installed
 DEFAULT_HOST=$(hostname)
-LOGROOT="/logs"
+ROS_HOSTS="${DEFAULT_HOST}"
 
-# default TCP multicast
+LOGROOT="/tmp"
+
+# default is TCP multicast
 MULTICAST=""
-MULTICAST="224.100.1.1/10.193.64.186"
 
 case "$2" in
     b4)
         NUM_SEGMENTS=2
         DATA_NETWORKS='"10.193.64.0/255.255.254.0", "10.193.128.0/255.255.254.0"'
 
-        x=(pc-tbed-r3-0{3..9}.cern.ch@Computer)
+        LOGROOT="/tmp"
+
+        HLTSV_HOST=pc-tbed-r3-01.cern.ch
+        #MULTICAST="224.100.1.1/10.193.64.186"
+
+        ROS_HOSTS="pc-tbed-r3-02.cern.ch pc-tbed-r3-03.cern.ch"
+
+        x=(pc-tbed-r3-0{4..9}.cern.ch@Computer)
         SEGMENTS[1]=$(echo ${x[*]} | sed 's; ; , ;g')
 
         x=(pc-tbed-r3-{10..20}.cern.ch@Computer)
         SEGMENTS[2]=$(echo ${x[*]} | sed 's; ; , ;g')
 
-        HLTSV_HOST=pc-tbed-r3-01.cern.ch
-        ROS_HOST=pc-tbed-r3-02.cern.ch
 
         INCLUDES="${INCLUDES} -I daq/hw/hosts.data.xml"
         ;;
@@ -149,12 +155,23 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
     done)
 
 #
+# ROS segment
+#
+  ROS@Segment
+  ROS@Segment.IsControlledBy = DefRC@RunControlTemplateApplication
+
+
+#
 # application with testROS binary
 # 
-
-  ROS-1@RunControlApplication
-  ROS-1@RunControlApplication.Program = testROS@Binary
-  ROS-1@RunControlApplication.RunsOn = ${ROS_HOST:-DEFAULT_HOST}@Computer
+  
+  $(count=1; for ros in ${ROS_HOSTS:-DEFAULT_HOST}; do
+    echo ROS-${count}@RunControlApplication
+    echo ROS-${count}@RunControlApplication.Program = testROS@Binary
+    echo ROS-${count}@RunControlApplication.RunsOn = ${ros}@Computer
+    echo ROS@Segment.Applications += [ ROS-${count}@RunControlApplication ]
+    count=$(expr ${count} + 1)
+  done)
 
 #
 # Main HLT segment
@@ -163,12 +180,6 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
   HLT@Segment.IsControlledBy = DefRC@RunControlTemplateApplication
   HLT@Segment.Resources += [ HLTSV@HLTSVApplication ]
 
-#
-# ROS segment
-#
-  ROS@Segment
-  ROS@Segment.IsControlledBy = DefRC@RunControlTemplateApplication
-  ROS@Segment.Applications += [ ROS-1@RunControlApplication ]
 
 #
 # Data flow parameters.

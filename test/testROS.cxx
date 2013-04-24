@@ -302,10 +302,10 @@ public:
             m_server.reset(new ClearServer(m_service));
             
             // CLEAR+appname
-            m_server->listen("CLEAR");
+            m_server->listen("CLEAR_" + getName());
             daq::asyncmsg::NameService name_service(IPCPartition(cb->getPartition()->UID()),
                                                     dfparams->get_DefaultDataNetworks());
-            name_service.publish("CLEAR", m_server->localEndpoint().port());
+            name_service.publish("CLEAR_" + getName(), m_server->localEndpoint().port());
             
             m_server->start();
 

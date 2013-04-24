@@ -31,7 +31,6 @@ namespace hltsv {
 
             m_event_ids.swap(*data);
             uint32_t seq = m_sequence++;
-            lock.unlock();
 
             do_flush(seq, data);
         }
