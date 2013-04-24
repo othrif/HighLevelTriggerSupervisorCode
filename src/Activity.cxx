@@ -175,6 +175,7 @@ namespace hltsv {
 
   void Activity::prepareForRun(std::string& )
   {
+    m_event_sched->reset();
     m_l1source->reset();
 
     m_running = true;

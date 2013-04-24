@@ -17,6 +17,8 @@
 
 #include "ipc/core.h"
 #include "ers/ers.h"
+#include "is/infoT.h"
+#include "is/infodictionary.h"
 
 #include "asyncmsg/NameService.h"
 
@@ -24,6 +26,7 @@
 #include "HLTSVSession.h"
 
 #include <stdlib.h>
+#include <atomic>
 
 // Fixme: Let's make this a config. param
 #define NUM_DCM_CORES	8
@@ -41,6 +44,7 @@ public:
   virtual void disconnect(std::string & );
   virtual void stopL2SV(std::string & );
   virtual void prepareForRun(std::string & );
+  virtual void probe(std::string& );
 
   void execute(unsigned worker_id);
 
@@ -63,6 +67,9 @@ private:
   uint32_t                         m_l2_accept;
   uint32_t                         m_event_building;
   uint32_t                         m_event_filter;
+
+  std::unique_ptr<ISInfoDictionary> m_dict;
+  std::atomic<uint64_t>             m_events;
 };
 
 // *******************
@@ -89,6 +96,7 @@ void DCMActivity::configure(std::string & )
   IPCPartition part(partition->UID());
   const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
   m_testns = new daq::asyncmsg::NameService(part, dfparams->get_DefaultDataNetworks());
+  m_dict.reset(new ISInfoDictionary(part));
 }
 
 
@@ -179,6 +187,14 @@ void DCMActivity::prepareForRun(std::string & )
 
 }
 
+void DCMActivity::probe(std::string& )
+{
+    ISInfoUnsignedLong value;
+    value.setValue(m_events);
+    m_dict->checkin( "DF." + getName(), value);
+}
+
+
 // main run loop for the DCM worker cores
 void DCMActivity::execute(unsigned worker_id)
 {
@@ -197,10 +213,13 @@ void DCMActivity::execute(unsigned worker_id)
       break;
     }
 
+    m_events++;
+
     ERS_DEBUG(1,"Worker #" << worker_id << ": got assigned L1ID " << l1id);
 
     // sleep for a random time between 5-50ms
-    usleep( (45000.0 * rand() / RAND_MAX) + 5000);
+    // usleep( (45000.0 * rand() / RAND_MAX) + 5000);
+    usleep(5000);
 
     // finished "processing", send back the L1ID and request a new one.
     l1id_list[0] = l1id;

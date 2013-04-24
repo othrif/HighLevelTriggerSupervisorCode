@@ -13,12 +13,22 @@
 #include "asyncmsg/UDPSession.h"
 
 #include "dal/Partition.h"
+#include "dal/RunControlApplicationBase.h"
 #include "DFdal/DFParameters.h"
 
 #include <memory>
 #include <thread>
 
 #include "ers/ers.h"
+
+#include "is/infoT.h"
+#include "is/infodictionary.h"
+
+
+namespace {
+    uint64_t              num_clears;
+}
+
 
 // The clear message
 // After the common header we have:
@@ -128,6 +138,8 @@ protected:
 
         ERS_DEBUG(1,"Got clear message, seq = " << msg->sequence_no() << " number ofLVL1 IDs: " << msg->num_clears());
 
+        num_clears += msg->num_clears();
+
         asyncReceive();
     }
 
@@ -188,6 +200,8 @@ public:
         m_expected_sequence = msg->sequence_no() + 1;
 
         ERS_DEBUG(1,"Got clear message, seq = " << msg->sequence_no() << " number ofLVL1 IDs: " << msg->num_clears());
+
+        num_clears += msg->num_clears();
 
         asyncReceive();
     }
@@ -279,6 +293,8 @@ public:
 
         const daq::df::DFParameters *dfparams = config->cast<daq::df::DFParameters>(cb->getPartition()->get_DataFlowParameters());
 
+        m_dict.reset(new ISInfoDictionary(IPCPartition(cb->getPartition()->UID())));
+
         if(dfparams->get_MulticastAddress().empty()) {
 
             // TCP version
@@ -310,6 +326,7 @@ public:
         
 
         m_io_thread = std::thread([&]() { m_service.run(); ERS_LOG("io_service finished"); });
+
     }
 
     virtual void unconfigure(std::string &) override
@@ -332,6 +349,13 @@ public:
     {
         m_running = true;
     }
+
+    virtual void probe(std::string& ) override
+    {
+        ISInfoUnsignedLong value;
+        value.setValue(num_clears);
+        m_dict->checkin( "DF." + getName(), value);
+    }
   
 private:
     std::thread                  m_io_thread;
@@ -339,6 +363,7 @@ private:
     boost::asio::io_service      m_service;
     std::shared_ptr<ClearServer> m_server;
     std::shared_ptr<UDPClearSession> m_udp_session;
+    std::unique_ptr<ISInfoDictionary> m_dict;
 };
 
 int main(int argc, char *argv[])
