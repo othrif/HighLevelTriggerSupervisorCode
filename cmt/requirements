@@ -41,7 +41,7 @@ ignore_pattern inst_idl_auto
 macro           generate-config-include-dirs            "${TDAQ_INST_PATH}/share/data/dal ${TDAQ_INST_PATH}/share/data/DFConfiguration"
 document        generate-config DFdal                   -s=../schema/                     \
                                                         namespace="daq::df"               \
-                                                        include="hltsvdal"                \
+                                                        include="DFdal"                \
                                                         hltsv.schema.xml                     
 
 macro           gdir                                    "$(bin)DFdal.tmp"
@@ -136,4 +136,8 @@ apply_pattern   install_db_files name=schema            files="../schema/hltsv.s
 
 apply_pattern   install_data name=isschema              files="../schema/hltsv_is.schema.xml"\
 							target_dir="schema"
+
+apply_pattern   install_headers name=dalheaders         src_dir="$(bin)/DFdal"            \
+                                                        files="*.h"                  \
+                                                        target_dir="../DFdal/"
 

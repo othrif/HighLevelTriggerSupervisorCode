@@ -20,8 +20,8 @@
 #include "MulticastROSClear.h"
 #include "EventScheduler.h"
 
-#include "hltsvdal/HLTSVApplication.h"
-#include "hltsvdal/HLTSVConfiguration.h"
+#include "DFdal/HLTSVApplication.h"
+#include "DFdal/HLTSVConfiguration.h"
 
 #include "RunController/ConfigurationBridge.h"
 
