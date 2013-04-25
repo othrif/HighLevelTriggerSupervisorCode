@@ -38,10 +38,10 @@ ignore_pattern inst_headers_auto
 ignore_pattern inst_headers_bin_auto
 ignore_pattern inst_idl_auto
 
-macro           generate-config-include-dirs            "${TDAQ_INST_PATH}/share/data/dal ${TDAQ_INST_PATH}/share/data/DFConfiguration"
+macro           generate-config-include-dirs            "${TDAQ_INST_PATH}/share/data/dal ${TDAQ_INST_PATH}/share/data/DFConfiguration ${TDAQ_INST_PATH}/share/data/monsvc"
 document        generate-config DFdal                   -s=../schema/                     \
                                                         namespace="daq::df"               \
-                                                        include="DFdal"                \
+                                                        include="DFdal" \
                                                         hltsv.schema.xml                     
 
 macro           gdir                                    "$(bin)DFdal.tmp"
