@@ -97,27 +97,7 @@ void DCMActivity::configure(std::string & )
   IPCPartition part(partition->UID());
   const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
 
-
-  auto networks = dfparams->get_DefaultDataNetworks();
-
-  decltype(networks) network;
-
-  // hack to take advantage of two networks in testbed B4
-  if(networks.size() > 1) {
-
-      // choose randomly one of the networks
-      // overkill, but fun...
-      std::random_device rd;
-      std::default_random_engine engine(rd());
-      std::uniform_int_distribution<size_t> uniform_dist(0, networks.size()-1);
-      size_t index = uniform_dist(engine);
-
-      ERS_LOG("Choosing network: " << networks[index]);
-
-      network.push_back(networks[index]);
-  }
-
-  m_testns = new daq::asyncmsg::NameService(part, network);
+  m_testns = new daq::asyncmsg::NameService(part, dfparams->get_DefaultDataNetworks());
   m_dict.reset(new ISInfoDictionary(part));
 }
 
