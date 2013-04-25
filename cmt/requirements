@@ -59,7 +59,7 @@ library hltsv L1Source.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSCle
 macro hltsv_shlibflags "-lItemCtrl -lers -ltbb -leformat_write -leformat -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg -ldynlibs"
 
 # this does not work in a nightly build:
-# macro hltsv_dependencies "daq-hltsv-dal"
+macro hltsv_dependencies "daq-hltsv-dal"
 
 #
 # The HLTSV main application
