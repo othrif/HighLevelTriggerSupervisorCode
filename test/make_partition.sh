@@ -27,7 +27,7 @@ case "$2" in
         LOGROOT="/logs"
 
         HLTSV_HOST=pc-tbed-r3-01.cern.ch
-        #MULTICAST="224.100.1.1/10.193.64.186"
+        MULTICAST="224.100.1.1/10.193.64.0"
 
         ROS_HOSTS="pc-tbed-r3-02.cern.ch pc-tbed-r3-03.cern.ch"
 
@@ -57,6 +57,7 @@ case "$2" in
         NUM_SEGMENTS=1
         DATA_NETWORKS='"137.138.0.0/255.255.0.0"'
         SEGMENTS[1]="${DEFAULT_HOST}@Computer"
+	#MULTICAST="225.0.1.1/137.138.0.0"
         
         if [ ! -f farm.data.xml ]; then
             pm_farm.py --add=${DEFAULT_HOST} farm.data.xml
@@ -223,5 +224,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   counters@IS_InformationSources.LVL2 = lvl2-counter@IS_EventsAndRates
 
   ${PARTITION}@Partition.IS_InformationSource = counters@IS_InformationSources
+
+#  ${PARTITION}@Partition.Uses += [ ProtoRepo@SW_Repository ]
 
 EOF

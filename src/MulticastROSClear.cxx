@@ -46,8 +46,8 @@ namespace hltsv {
         : ROSClear(threshold),
           m_session(new MCSession(service))
     {
+        m_session->setOutgoingInterface(daq::asyncmsg::NameService::find_interface(outgoing));
         m_session->connect(boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(multicast_address), 9000));
-        m_session->setOutgoingInterface(outgoing);
     }
 
     MulticastROSClear::~MulticastROSClear()

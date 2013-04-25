@@ -100,13 +100,13 @@ namespace hltsv {
 
     void DCMSession::onOpen() noexcept 
     {
-      ERS_LOG("DCMSession::onOpen()");
+      ERS_LOG("DCMSession::onOpen() from " << remoteName()); 
       asyncReceive();
     }
 
     void DCMSession::onOpenError(const boost::system::error_code& error) noexcept
     {
-        ERS_LOG("openError: " << error);
+        ERS_LOG("openError: " << error << " from " << remoteName());
         // TODO: report;  Who closes me ?
         m_in_error = true;
     }

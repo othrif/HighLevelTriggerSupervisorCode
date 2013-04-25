@@ -171,11 +171,11 @@ class UDPClearSession : public daq::asyncmsg::UDPSession {
 public:
 
 
-    UDPClearSession(boost::asio::io_service& service, const std::string& multicast_address)
+    UDPClearSession(boost::asio::io_service& service, const std::string& multicast_address, const std::string& outgoing)
         : daq::asyncmsg::UDPSession(service, 9000),
           m_expected_sequence(0)
     {
-        joinMulticastGroup(multicast_address);
+        joinMulticastGroup(boost::asio::ip::address::from_string(multicast_address), daq::asyncmsg::NameService::find_interface(outgoing));
     }
     
     // we only expect a ClearMessage
@@ -316,10 +316,11 @@ public:
             auto mc = dfparams->get_MulticastAddress();
             auto n = mc.find('/');
             auto mcast = mc.substr(0, n);
+            auto outgoing = mc.substr(n+1);
 
             ERS_LOG("Configuring for multicast: " << mcast);
 
-            m_udp_session = std::make_shared<UDPClearSession>(m_service, mcast);
+            m_udp_session = std::make_shared<UDPClearSession>(m_service, mcast,outgoing);
             m_udp_session->asyncReceive();
 
         }
