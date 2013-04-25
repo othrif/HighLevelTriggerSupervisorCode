@@ -91,6 +91,8 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 #
   HLTSVConfig@HLTSVConfiguration
 
+  HLTSV_Rules@ConfigurationRuleBundle
+
 #
 # HLTSV application
 #
@@ -99,6 +101,8 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   HLTSV@HLTSVApplication.RestartableDuringRun = True
   HLTSV@HLTSVApplication.RunsOn               = ${HLTSV_HOST:-${DEFAULT_HOST}}@Computer
   HLTSV@HLTSVApplication.Configuration        = HLTSVConfig@HLTSVConfiguration
+
+  HLTSV@HLTSVApplication.ConfigurationRules   =  HLTSV_Rules@ConfigurationRuleBundle
 
 # 
 # the testDCM and testROS binary, if not available in release

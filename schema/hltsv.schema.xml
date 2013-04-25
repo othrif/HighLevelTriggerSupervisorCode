@@ -84,11 +84,13 @@
 <include>
  <file path="daq/schema/core.schema.xml"/>
  <file path="daq/schema/df.schema.xml"/>
+ <file path="daq/schema/monsvc_config.schema.xml"/>
 </include>
 
 
  <class name="HLTSVApplication" description="Describes the HLT Supervisor.">
   <superclass name="RunControlApplication"/>
+  <superclass name="PublishingApplication"/>
   <superclass name="Resource"/>
   <relationship name="Configuration" class-type="HLTSVConfiguration" low-cc="one" high-cc="one" is-composite="no" is-exclusive="no" is-dependent="no"/>
  </class>
