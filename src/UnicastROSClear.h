@@ -21,18 +21,6 @@ namespace hltsv {
     private:
 
         virtual void do_flush(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events) override;
-
-        // TODO:
-        //
-        // using asyncmsg::NameService,
-        // lookup all 'CLEAR_*' entries and connect to them. 
-        // Add each session to m_sessions.
-        //
-        // do_flush(data):
-        //        //
-        //   for(each session) {
-        //      uniq_ptr<ClearMessage> msg(new ClearMessage(sequence, data));
-        //      session->send(msg);
     private:
         boost::asio::io_service&                     m_service;
         daq::asyncmsg::NameService                   m_name_service;

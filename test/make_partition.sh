@@ -80,10 +80,10 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 
 
 # hack if binary in release did no build
-#hltsv_main@Binary
-#hltsv_main@Binary.BinaryName = 'hltsv_main'
-#hltsv_main@Binary.BelongsTo  = ProtoRepo@SW_Repository
-#ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
+hltsv_main@Binary
+hltsv_main@Binary.BinaryName = 'hltsv_main'
+hltsv_main@Binary.BelongsTo  = ProtoRepo@SW_Repository
+ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
 
 
 #
@@ -111,11 +111,11 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 #  testDCM@Binary.BinaryName = 'testDCM'
 #  testDCM@Binary.BelongsTo =  ProtoRepo@SW_Repository
 
-#  testROS@Binary
-#  testROS@Binary.BinaryName = 'testROS'
-#  testROS@Binary.BelongsTo =  ProtoRepo@SW_Repository
+  testROS@Binary
+  testROS@Binary.BinaryName = 'testROS'
+  testROS@Binary.BelongsTo =  ProtoRepo@SW_Repository
 
-#  ProtoRepo@SW_Repository.SW_Objects = [ testDCM@Binary , testROS@Binary ]
+  ProtoRepo@SW_Repository.SW_Objects = [ testDCM@Binary , testROS@Binary ]
 
 #
 # Configuration via environment variables for DCM
@@ -155,7 +155,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   $(for i in $(seq 1 ${NUM_SEGMENTS}) ; do 
      echo DCM-Segment-${i}@HLTSegment 
      echo DCM-Segment-${i}@HLTSegment.IsControlledBy = DefRC@RunControlTemplateApplication 
-     echo DCM-Segment-${i}@HLTSegment.TemplateApplications = [ DCM@TemplateApplication ]
+     echo DCM-Segment-${i}@HLTSegment.TemplateApplications = [ DCM@RunControlTemplateApplication ]
      echo DCM-Segment-${i}@HLTSegment.TemplateHosts = [ ${SEGMENTS[${i}]} ]
     done)
 

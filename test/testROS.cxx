@@ -41,7 +41,7 @@ class ClearMessage : public daq::asyncmsg::InputMessage {
 public:
 
 
-    static const uint32_t ID = 0x00DCDF20;
+    static const uint32_t ID = 0x00DCDF10;
 
     ClearMessage(uint32_t size, uint32_t transactionId)
         : daq::asyncmsg::Message(),

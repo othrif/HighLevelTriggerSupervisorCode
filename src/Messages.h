@@ -85,7 +85,7 @@ namespace hltsv {
     class ClearMessage : public daq::asyncmsg::OutputMessage {
     public:
 
-        static const uint32_t ID = 0x00DCDF20;
+        static const uint32_t ID = 0x00DCDF10;
 
         ClearMessage(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events);
         ~ClearMessage();
