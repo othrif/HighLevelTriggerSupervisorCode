@@ -25,8 +25,20 @@ namespace hltsv {
   }
   
   std::unique_ptr<daq::asyncmsg::InputMessage> 
-  HLTSVSession::createMessage(std::uint32_t , std::uint32_t , std::uint32_t size) noexcept
+  HLTSVSession::createMessage(std::uint32_t typeId, std::uint32_t /*transactionId*/, std::uint32_t size) noexcept
   {
+    switch (typeId)
+    {
+      case AssignMessage::ID:
+        return std::unique_ptr<daq::asyncmsg::InputMessage>(new AssignMessage(size));
+        break;
+      case BuildMessage::ID:
+        return std::unique_ptr<daq::asyncmsg::InputMessage>(new BuildMessage(size));
+        break;
+      default:
+        break;
+    }
+    ERS_LOG(" *** HLTSVSession: Warning! Created unknown message type. *** ");
     return std::unique_ptr<daq::asyncmsg::InputMessage>(new AssignMessage(size));
   }
   
