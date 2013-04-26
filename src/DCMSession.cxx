@@ -123,14 +123,16 @@ namespace hltsv {
       std::unique_ptr<UpdateMessage> msg(dynamic_cast<UpdateMessage*>(message.release()));
 
       for(uint32_t i = 0; i < msg->num_l1ids(); i++) {
-          m_clear->add_event(msg->l1id(i));
-
           auto ev = std::find_if(m_events.begin(), m_events.end(), [&](std::shared_ptr<LVL1Result> event) -> bool { return event->l1_id() == msg->l1id(i); });
           if(ev == m_events.end()) {
               ERS_LOG("Error: invalid event id: " << msg->l1id(i));
           } else {
               ERS_DEBUG(1,"Erasing event: " << msg->l1id(i));
+              // remove from this session's list
               m_events.erase(ev);
+
+              // allow HLTSV to clear the event
+              m_clear->add_event(msg->l1id(i));
           }
       }
 
