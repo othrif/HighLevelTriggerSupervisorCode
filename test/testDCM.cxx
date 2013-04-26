@@ -36,6 +36,8 @@
 #define PROCESS_TIME    60
 #define BUILD_TIME      4000
 
+#define DO_FAKE_TIMEOUTS   false
+
 // *******************
 class DCMActivity : public daq::rc::Controllable {
 public:
@@ -242,6 +244,19 @@ void DCMActivity::execute(unsigned worker_id)
     m_events++;
 
     ERS_DEBUG(1,"Worker #" << worker_id << ": got assigned L1ID " << l1id);
+
+    // Temporary hack to test HLTSV timeout handling.
+    // Every 1e6 events, sleep for 15s (unless rejected).
+    // After, DCM will try to clear the stale l1id and request a new work unit
+    if (DO_FAKE_TIMEOUTS) {
+      if (!do_build && (l1id % 1000000 == 0)) {
+        ERS_LOG("faking timeout! L1ID = " << l1id);
+        sleep(15);
+        l1id_list[0] = l1id;
+        m_session->send_update(1, l1id_list);
+        continue;
+      }
+    }
 
     // recieved a new L1ID, 'process' for a random time
     usleep( (PROCESS_TIME * 1000) * rand() / float(RAND_MAX) );
