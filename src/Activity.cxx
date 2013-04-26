@@ -112,7 +112,6 @@ namespace hltsv {
     // Declare it in .h?
     std::vector<std::string> data_networks = dfparams->get_DefaultDataNetworks();
     ERS_LOG("number of Data Networks  found: " << data_networks.size());
-    // data_networks.push_back("137.138.0.0/255.255.0.0"); 
     daq::asyncmsg::NameService HLTSV_NameService(part, data_networks);
 
     // Initialize ROS clear implementation

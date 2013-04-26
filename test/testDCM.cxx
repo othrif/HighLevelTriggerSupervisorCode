@@ -29,8 +29,12 @@
 #include <atomic>
 #include <random>
 
-// Fixme: Let's make this a config. param
+// Fixme: Let's make these config. params
 #define NUM_DCM_CORES	8
+#define REJECT_RATE     0.95
+// max sleep times in ms
+#define PROCESS_TIME    60
+#define BUILD_TIME      4000
 
 // *******************
 class DCMActivity : public daq::rc::Controllable {
@@ -219,13 +223,23 @@ void DCMActivity::execute(unsigned worker_id)
 
     ERS_DEBUG(1,"Worker #" << worker_id << ": got assigned L1ID " << l1id);
 
-    // sleep for a random time between 5-50ms
-    // usleep( (45000.0 * rand() / RAND_MAX) + 5000);
-    usleep(1000);
+    // recieved a new L1ID, 'process' for a random time
+    usleep( (PROCESS_TIME * 1000) * rand() / float(RAND_MAX) );
 
-    // finished "processing", send back the L1ID and request a new one.
+    // finished 'processing', decide whether to reject and send back the L1ID either way
+    bool do_build = (rand() / float(RAND_MAX)) > REJECT_RATE;
+
     l1id_list[0] = l1id;
-    m_session->send_update(1, l1id_list);
+    uint32_t num_cores = do_build ? 0 : 1;
+
+    m_session->send_update(num_cores, l1id_list);
+
+    if (do_build)
+    {
+      // simulate extra processing; sleep some more then request a new work unit
+      usleep( (BUILD_TIME * 1000) * rand() / float(RAND_MAX) );
+      m_session->send_update(1, std::vector<uint32_t>());
+    }
   }
 
   ERS_LOG(" *** Exiting DCMActivity::execute() *** ");
