@@ -19,11 +19,12 @@ namespace hltsv {
     // Session interface
     void ROSSession::onOpen() noexcept  
     {
+        ERS_LOG("opened connection to ROS: " << remoteName() << " addr: " << remoteEndpoint());
     }
 
     void ROSSession::onOpenError(const boost::system::error_code& error) noexcept  
     {
-        ERS_LOG("openError: " << error);
+        ERS_LOG("openError: " << error );
         // report error
     }
     

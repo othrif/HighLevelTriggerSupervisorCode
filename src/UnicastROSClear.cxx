@@ -8,16 +8,10 @@ namespace hltsv {
     UnicastROSClear::UnicastROSClear(size_t threshold, 
                                      boost::asio::io_service& service, 
                                      daq::asyncmsg::NameService& name_service)
-        : ROSClear(threshold)
+        : ROSClear(threshold),
+          m_service(service),
+          m_name_service(name_service)
     {
-        m_endpoints = name_service.lookup("CLEAR");
-
-        // ERS_ASSERT(m_endpoints.size() != 0)  ? or just warning ?
-
-        for(size_t i = 0; i < m_endpoints.size(); i++) {
-            m_sessions.push_back(std::make_shared<ROSSession>(service));
-        }
-        
     }
 
     UnicastROSClear::~UnicastROSClear()
@@ -28,8 +22,19 @@ namespace hltsv {
 
     void UnicastROSClear::connect()
     {
-        for(size_t i = 0; i < m_endpoints.size(); i++) {
-            m_sessions[i]->asyncOpen("HLTSV", m_endpoints[i]);
+        auto endpoints = m_name_service.lookup("CLEAR");
+
+        ERS_LOG("Found " << endpoints.size() << " ROSes");
+
+        // ERS_ASSERT(m_endpoints.size() != 0)  ? or just warning ?
+
+        for(size_t i = 0; i < endpoints.size(); i++) {
+            m_sessions.push_back(std::make_shared<ROSSession>(m_service));
+        }
+
+        for(size_t i = 0; i < endpoints.size(); i++) {
+            ERS_LOG("Connection ROSSession to " << endpoints[i]);
+            m_sessions[i]->asyncOpen("HLTSV", endpoints[i]);
         }
 
     }

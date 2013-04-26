@@ -34,7 +34,8 @@ namespace hltsv {
         //      uniq_ptr<ClearMessage> msg(new ClearMessage(sequence, data));
         //      session->send(msg);
     private:
-        std::vector<boost::asio::ip::tcp::endpoint>  m_endpoints;
+        boost::asio::io_service&                     m_service;
+        daq::asyncmsg::NameService                   m_name_service;
         std::vector<std::shared_ptr<ROSSession>>     m_sessions;
     };
 
