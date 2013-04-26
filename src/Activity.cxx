@@ -9,6 +9,7 @@
 #include "config/Configuration.h"
 
 #include "dal/Partition.h"
+#include "dal/MasterTrigger.h"
 
 #include "DFdal/DFParameters.h"
 #include "DFdal/DataFile.h"
@@ -49,7 +50,9 @@ namespace hltsv {
       m_l1source(nullptr),
       m_network(false),
       m_running(false),
-      m_triggering(false)
+      m_triggering(false),
+      m_triggerHoldCounter(0),
+      m_masterTrigger(false)
   {
     m_work = new boost::asio::io_service::work(m_io_service);
   }
@@ -69,9 +72,10 @@ namespace hltsv {
     const daq::df::HLTSVConfiguration *my_conf = self->get_Configuration();
 
     const daq::core::Partition *partition = daq::rc::ConfigurationBridge::instance()->getPartition();
-    IPCPartition               part(partition->UID());
+    const IPCPartition          part(partition->UID());
 
     const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
+
 
     // Load L1 Source
     std::vector<std::string> file_names;
@@ -97,12 +101,27 @@ namespace hltsv {
       return;
     }
 
-    if(source_type == "internal" || source_type == "preloaded") {
 
-      // TODO
-      // m_cmdReceiver = new daq::rc::CommandedTrigger(p,getName(), this);
+    // Conditions for which the HLTSV should be Master Trigger
+    const daq::core::MasterTrigger* masterholder = partition->get_MasterTrigger();
+    if(source_type == "internal" || source_type == "preloaded") {
+      // Check if OKS is set correctly
+      if(masterholder->UID() == self->UID()) {
+	// HLTSV is master trigger
+	m_masterTrigger = true;
+	m_cmdReceiver.reset(new daq::rc::CommandedTrigger(part, getName(), this));
+      } else {
+	// fatal
+	ERS_LOG("HLTSV is not the master trigger, the master trigger is: " << masterholder->UID());
+      }   
+    } else {
+      if(masterholder->UID() == self->UID()) {
+	// warning
+	ERS_LOG("HLTSV is set as the master trigger, but the source type is: " << source_type);
+      }
     }
-        
+
+
     m_publisher.reset(new monsvc::PublishingController(part,getName()));
     
     m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("DFObjects:.*/=>is:(2,DF)"));
@@ -112,6 +131,7 @@ namespace hltsv {
     // Declare it in .h?
     std::vector<std::string> data_networks = dfparams->get_DefaultDataNetworks();
     ERS_LOG("number of Data Networks  found: " << data_networks.size());
+    ERS_LOG("First Data Network : " << data_networks[0]);
     daq::asyncmsg::NameService HLTSV_NameService(part, data_networks);
 
     // Initialize ROS clear implementation
@@ -160,9 +180,11 @@ namespace hltsv {
 
   void Activity::connect(std::string& )
   {
-      m_ros_clear->connect();
-      m_publisher->start_publishing();
-      return;
+    // ROS_Clear with TCP will establish the connection
+    m_ros_clear->connect();
+    
+    m_publisher->start_publishing();
+    return;
   }
 
   void Activity::prepareForRun(std::string& )
@@ -259,60 +281,54 @@ namespace hltsv {
       };
   }
 
+
   /**
    *     MasterTrigger interface
    **/
-
-  MasterTrigger::MasterTrigger(L1Source *l1source, bool& triggering)
-      : m_l1source(l1source),
-        m_triggering(triggering),
-        m_triggerHoldCounter(0)
-  {
-  }
     
-  uint32_t MasterTrigger::hold()
+  uint32_t Activity::hold()
   {
     m_triggerHoldCounter += 1;
-    m_triggering = false;
+    if(m_masterTrigger)  m_triggering = false;
     return 0;
   }
   
-  void MasterTrigger::resume()
+  void Activity::resume()
   {
     if (m_triggerHoldCounter > 0) {
       m_triggerHoldCounter -= 1;
     }
     
-    if (m_triggerHoldCounter == 0) {
+    if (m_triggerHoldCounter == 0 && m_masterTrigger) {
       m_triggering = true;
     } 
   }
   
-  void MasterTrigger::setL1Prescales(uint32_t )
+  void Activity::setL1Prescales(uint32_t )
   {
   }
   
-  void MasterTrigger::setHLTPrescales(uint32_t , uint32_t lb)
+  void Activity::setHLTPrescales(uint32_t , uint32_t lb)
   {
     m_l1source->setHLTCounter(lb);
   }
   
-  void MasterTrigger::setLumiBlock(uint32_t lb, uint32_t )
+  void Activity::setLumiBlock(uint32_t lb, uint32_t )
   {
     m_l1source->setLB(lb);
   }
   
-  void MasterTrigger::setPrescales(uint32_t  l1p, uint32_t hltp, uint32_t lb)
+  void Activity::setPrescales(uint32_t l1p, uint32_t hltp, uint32_t lb)
   {
     setL1Prescales(l1p);
     setHLTPrescales(hltp, lb);
   }
   
-  void MasterTrigger::setBunchGroup(uint32_t)
+  void Activity::setBunchGroup(uint32_t)
   {
   }
   
-  void MasterTrigger::setConditionsUpdate(uint32_t, uint32_t)
+  void Activity::setConditionsUpdate(uint32_t, uint32_t)
   {
   }
   
