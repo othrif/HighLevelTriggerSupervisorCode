@@ -80,10 +80,10 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 
 
 # hack if binary in release did no build
-hltsv_main@Binary
-hltsv_main@Binary.BinaryName = 'hltsv_main'
-hltsv_main@Binary.BelongsTo  = ProtoRepo@SW_Repository
-ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
+#hltsv_main@Binary
+#hltsv_main@Binary.BinaryName = 'hltsv_main'
+#hltsv_main@Binary.BelongsTo  = ProtoRepo@SW_Repository
+#ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
 
 
 #
@@ -111,11 +111,11 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
 #  testDCM@Binary.BinaryName = 'testDCM'
 #  testDCM@Binary.BelongsTo =  ProtoRepo@SW_Repository
 
-  testROS@Binary
-  testROS@Binary.BinaryName = 'testROS'
-  testROS@Binary.BelongsTo =  ProtoRepo@SW_Repository
+#  testROS@Binary
+#  testROS@Binary.BinaryName = 'testROS'
+#  testROS@Binary.BelongsTo =  ProtoRepo@SW_Repository
 
-  ProtoRepo@SW_Repository.SW_Objects = [ testDCM@Binary , testROS@Binary ]
+#  ProtoRepo@SW_Repository.SW_Objects = [ testDCM@Binary , testROS@Binary ]
 
 #
 # Configuration via environment variables for DCM
