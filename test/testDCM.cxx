@@ -158,7 +158,7 @@ void DCMActivity::stopL2SV(std::string & )
 {
   // stop the run loop and wake any threads waiting on HLTSV
   m_running = false;
-  m_session->abort_queue();
+  m_session->abort_assignment_queue();
 
   // join to the work threads and delete them
   for (auto & worker : m_work_threads)
@@ -207,16 +207,36 @@ void DCMActivity::execute(unsigned worker_id)
   ERS_LOG(" *** Worker #" << worker_id << ": Entering DCMActivty::execute() *** ");
 
   unsigned l1id;
+  bool do_build;
   std::vector<uint32_t> l1id_list;  // needed for handing off to HLTSVSession
   l1id_list.push_back(0);
   while (m_running)
   {
-    try {
-      l1id = m_session->get_next_assignment();
+    // first check if there is anything waiting to be built
+    if (m_session->check_force_builds(l1id))
+    {
+      // got a reassigned l1id, force to build stage
+      do_build = true;
     }
-    catch (tbb::user_abort &e) {
-      // queue was aborted by StopL2SV. we're done here!
-      break;
+    else
+    {
+      // else, randomly decide whether we'll build
+      do_build = (rand() / float(RAND_MAX)) > REJECT_RATE;
+
+      // block until a new L1ID is available.
+      try {
+        l1id = m_session->get_next_assignment();
+      }
+      catch (tbb::user_abort &e) {
+        if (m_running) {
+          // queue was interrupted, probably a new force build came in
+          continue;
+        }
+        else {
+          // queue was aborted by StopL2SV. we're done here!
+          break;
+        }
+      }
     }
 
     m_events++;
@@ -226,12 +246,10 @@ void DCMActivity::execute(unsigned worker_id)
     // recieved a new L1ID, 'process' for a random time
     usleep( (PROCESS_TIME * 1000) * rand() / float(RAND_MAX) );
 
-    // finished 'processing', decide whether to reject and send back the L1ID either way
-    bool do_build = (rand() / float(RAND_MAX)) > REJECT_RATE;
-
+    // finished 'processing', send back the L1ID immediately
+    // number of cores depends on whether we're going to build stage
     l1id_list[0] = l1id;
     uint32_t num_cores = do_build ? 0 : 1;
-
     m_session->send_update(num_cores, l1id_list);
 
     if (do_build)

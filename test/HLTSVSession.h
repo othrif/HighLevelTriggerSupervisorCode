@@ -28,10 +28,12 @@ namespace hltsv {
     
     void     send_update(uint32_t req_RoIs, const std::vector<uint32_t>& l1ids);
     uint32_t get_next_assignment();
-    void     abort_queue();
+    bool     check_force_builds(uint32_t &l1id);
+    void     abort_assignment_queue();
     
   private:
     tbb::concurrent_bounded_queue<uint32_t> m_assigned_l1ids;
+    tbb::concurrent_bounded_queue<uint32_t> m_force_l1ids;
   };
   
 }

@@ -46,6 +46,16 @@ namespace hltsv {
     size_t                      m_data_size;
     std::unique_ptr<uint32_t[]> m_data;
   };
+
+  // BuildMessage is the same as AssignMessage, but denotes a "force accept"
+  class BuildMessage : public AssignMessage {
+  public:
+
+    static const uint32_t ID = 0x00DCDF0F;
+    explicit BuildMessage(size_t size);
+    
+    virtual uint32_t typeId() const override;
+  };
 }
 
 #endif // DCMMESSAGES_H_

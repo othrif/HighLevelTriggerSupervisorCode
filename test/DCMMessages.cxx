@@ -71,4 +71,15 @@ namespace hltsv {
     {
       return m_lvl1_id;
     }
+
+    BuildMessage::BuildMessage(size_t size)
+      : AssignMessage(size)
+    {
+    }
+
+    uint32_t BuildMessage::typeId() const
+    {
+      return ID;
+    }
 } 
+

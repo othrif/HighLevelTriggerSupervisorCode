@@ -32,12 +32,35 @@ namespace hltsv {
   
   void HLTSVSession::onReceive(std::unique_ptr<daq::asyncmsg::InputMessage> message)
   {
-    std::unique_ptr<AssignMessage> msg(dynamic_cast<AssignMessage*>(message.release()));
+    bool build_only = false;
+    switch (message->typeId())
+    {
+      default:
+          ERS_LOG(" *** Warning: received unknown message ID: " << message->typeId() << " *** ");
+          break;
 
-    // grab only the l1id and put it on the list of assigned IDs
-    m_assigned_l1ids.push(msg->lvl1_id());
+      case BuildMessage::ID:
+          // force build, fall through to AssignMessage case
+          build_only = true;
+          ERS_DEBUG(1, "Received force-accept assignment.");
 
-    ERS_DEBUG(1,"got global ID: " << msg->global_id());
+      case AssignMessage::ID:
+          std::unique_ptr<AssignMessage> msg(dynamic_cast<AssignMessage*>(message.release()));
+          ERS_DEBUG(1,"got global ID: " << msg->global_id());
+
+          // grab only the l1id and put it on the list of assigned/build IDs
+          
+          if (build_only) {
+            m_force_l1ids.push(msg->lvl1_id());
+            // wake threads sleeping on m_assigned_l1ids, so they can service
+            // the force build
+            abort_assignment_queue();
+          }
+          else {
+            m_assigned_l1ids.push(msg->lvl1_id());
+          }
+          break;
+    }
 
     // get ready to recieve another message
     asyncReceive();
@@ -71,8 +94,13 @@ namespace hltsv {
     m_assigned_l1ids.pop(l1id);
     return l1id;
   }
+
+  bool HLTSVSession::check_force_builds(uint32_t &l1id)
+  {
+    return m_force_l1ids.try_pop(l1id);
+  }
   
-  void HLTSVSession::abort_queue()
+  void HLTSVSession::abort_assignment_queue()
   {
     // wake up any threads waiting for a new assignment
     m_assigned_l1ids.abort();
