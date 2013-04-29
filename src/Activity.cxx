@@ -104,21 +104,26 @@ namespace hltsv {
 
     // Conditions for which the HLTSV should be Master Trigger
     const daq::core::MasterTrigger* masterholder = partition->get_MasterTrigger();
-    if(source_type == "internal" || source_type == "preloaded") {
-      // Check if OKS is set correctly
-      if(masterholder->UID() == self->UID()) {
-	// HLTSV is master trigger
-	m_masterTrigger = true;
-	m_cmdReceiver.reset(new daq::rc::CommandedTrigger(part, getName(), this));
+    if (masterholder) {
+      if(source_type == "internal" || source_type == "preloaded") {
+	// Check if OKS is set correctly
+	if(masterholder->UID() == self->UID()) {
+	  // HLTSV is master trigger
+	  m_masterTrigger = true;
+	  m_cmdReceiver.reset(new daq::rc::CommandedTrigger(part, getName(), this));
+	} else {
+	  // fatal
+	  ERS_LOG("HLTSV is not the master trigger, the master trigger is: " << masterholder->UID());
+	}   
       } else {
-	// fatal
-	ERS_LOG("HLTSV is not the master trigger, the master trigger is: " << masterholder->UID());
-      }   
-    } else {
-      if(masterholder->UID() == self->UID()) {
-	// warning
-	ERS_LOG("HLTSV is set as the master trigger, but the source type is: " << source_type);
+	if(masterholder->UID() == self->UID()) {
+	  // warning?
+	  ERS_LOG("HLTSV is set as the master trigger, but the source type is: " << source_type);
+	}
       }
+    } else {
+      // warning?
+      ERS_LOG("Master Trigger not defined in the partition");
     }
 
 
@@ -189,7 +194,6 @@ namespace hltsv {
 
   void Activity::prepareForRun(std::string& )
   {
-    m_event_sched->reset();
     m_l1source->reset();
 
     m_running = true;
@@ -210,7 +214,7 @@ namespace hltsv {
     return;
   }
   
-  //DC::StatusWord Activity::act_stopL2SV()
+
   void Activity::stopL2SV(std::string &)
   {
     m_triggering = false;
@@ -226,13 +230,9 @@ namespace hltsv {
     m_ros_clear->flush();
   }
 
-  //DC::StatusWord Activity::act_unconfig()
+
   void Activity::unconfigure(std::string &)
   {
-    if(m_cmdReceiver) {
-      m_cmdReceiver->_destroy();
-      m_cmdReceiver = 0;
-    }
 
     m_network = false;
     m_io_service.stop();
