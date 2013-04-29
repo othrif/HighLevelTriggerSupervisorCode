@@ -141,3 +141,4 @@ apply_pattern   install_headers name=dalheaders         src_dir="$(bin)/DFdal"  
                                                         files="*.h"                  \
                                                         target_dir="../DFdal/"
 
+macro sw.repository.is-info-file.share/data/hltsv/schema/hltsv_is.schema.xml:name "HLTSV IS xml description"
