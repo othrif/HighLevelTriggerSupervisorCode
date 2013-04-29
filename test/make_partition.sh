@@ -21,6 +21,31 @@ MULTICAST=""
 
 case "$2" in
     b4)
+        NUM_SEGMENTS=4
+        DATA_NETWORKS='"10.193.64.0/255.255.254.0", "10.193.128.0/255.255.254.0"'
+
+        LOGROOT="/logs"
+
+        HLTSV_HOST=pc-tbed-r3-01.cern.ch
+        MULTICAST="224.100.1.1/10.193.64.0"
+
+        ROS_HOSTS="pc-tbed-r3-02.cern.ch pc-tbed-r3-03.cern.ch"
+
+        x=(pc-tbed-r3-0{4..9}.cern.ch@Computer)
+        SEGMENTS[1]=$(echo ${x[*]} | sed 's; ; , ;g')
+
+        x=(pc-tbed-r3-{10..20}.cern.ch@Computer)
+        SEGMENTS[2]=$(echo ${x[*]} | sed 's; ; , ;g')
+
+        x=(pc-tbed-r3-{21..30}.cern.ch@Computer)
+        SEGMENTS[3]=$(echo ${x[*]} | sed 's; ; , ;g')
+
+        x=(pc-tbed-r3-{31..40}.cern.ch@Computer)
+        SEGMENTS[4]=$(echo ${x[*]} | sed 's; ; , ;g')
+
+        INCLUDES="${INCLUDES} -I daq/hw/hosts.data.xml"
+        ;;
+    b4-slc5)
         NUM_SEGMENTS=2
         DATA_NETWORKS='"10.193.64.0/255.255.254.0", "10.193.128.0/255.255.254.0"'
 
@@ -37,9 +62,27 @@ case "$2" in
         x=(pc-tbed-r3-{10..20}.cern.ch@Computer)
         SEGMENTS[2]=$(echo ${x[*]} | sed 's; ; , ;g')
 
-
         INCLUDES="${INCLUDES} -I daq/hw/hosts.data.xml"
         ;;
+    b4-slc6)
+        NUM_SEGMENTS=2
+        DATA_NETWORKS='"10.193.64.0/255.255.254.0", "10.193.128.0/255.255.254.0"'
+
+        LOGROOT="/logs"
+
+        HLTSV_HOST=pc-tbed-r3-21.cern.ch
+        MULTICAST="224.100.1.1/10.193.64.0"
+
+        ROS_HOSTS="pc-tbed-r3-22.cern.ch pc-tbed-r3-23.cern.ch"
+
+        x=(pc-tbed-r3-{24..32}.cern.ch@Computer)
+        SEGMENTS[1]=$(echo ${x[*]} | sed 's; ; , ;g')
+
+        x=(pc-tbed-r3-{33..40}.cern.ch@Computer)
+        SEGMENTS[2]=$(echo ${x[*]} | sed 's; ; , ;g')
+
+        INCLUDES="${INCLUDES} -I daq/hw/hosts.data.xml"
+        ;;        
     pre)
         NUM_SEGMENTS=1
         DATA_NETWORKS=
@@ -55,7 +98,7 @@ case "$2" in
         ;;
     *)
         NUM_SEGMENTS=1
-        DATA_NETWORKS='"137.138.0.0/255.255.0.0"'
+        DATA_NETWORKS='"137.138.0.0/255.255.0.0", "188.184.2.64/255.255.255.192"'
         SEGMENTS[1]="${DEFAULT_HOST}@Computer"
 	#MULTICAST="225.0.1.1/137.138.0.0"
         
@@ -198,7 +241,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 
   ${PARTITION}@Partition
   ${PARTITION}@Partition.OnlineInfrastructure = setup@OnlineSegment 
-  ${PARTITION}@Partition.DefaultTags = [ x86_64-slc5-gcc47-opt@Tag ,  x86_64-slc5-gcc47-dbg@Tag , x86_64-slc6-gcc47-opt@Tag , x86_64-slc6-gcc47-dbg@Tag ]
+  ${PARTITION}@Partition.DefaultTags = [ x86_64-slc6-gcc47-opt@Tag , x86_64-slc6-gcc47-dbg@Tag , x86_64-slc5-gcc47-opt@Tag ,  x86_64-slc5-gcc47-dbg@Tag ]
   ${PARTITION}@Partition.DataFlowParameters = Dataflow@DFParameters
   ${PARTITION}@Partition.Parameters = [ CommonParameters@VariableSet ]
   ${PARTITION}@Partition.DefaultHost = ${DEFAULT_HOST}@Computer
