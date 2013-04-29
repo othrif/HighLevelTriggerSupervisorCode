@@ -134,7 +134,9 @@ protected:
             ERS_LOG("Unexpected sequence no, got: " << msg->sequence_no() << " expected: " << m_expected_sequence);
         }
 
-        m_expected_sequence = msg->sequence_no() + 1;
+        if(msg->sequence_no() >= m_expected_sequence) {
+            m_expected_sequence = msg->sequence_no() + 1;
+        }
 
         ERS_DEBUG(1,"Got clear message, seq = " << msg->sequence_no() << " number ofLVL1 IDs: " << msg->num_clears());
 
