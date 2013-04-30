@@ -98,7 +98,6 @@ namespace hltsv {
     // hold trigger flag
     bool                            m_masterTrigger;
     
-    unsigned int                    m_timeout;
   };
 }
 

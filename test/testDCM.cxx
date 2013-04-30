@@ -13,8 +13,6 @@
 #include "RunController/Controllable.h"
 #include "RunController/ItemCtrl.h"
 
-#include "queues/ProtectedQueue.h"
-
 #include "ipc/core.h"
 #include "ers/ers.h"
 #include "is/infoT.h"
@@ -36,7 +34,7 @@
 #define PROCESS_TIME    60
 #define BUILD_TIME      4000
 
-#define DO_FAKE_TIMEOUTS   false
+#define DO_FAKE_TIMEOUTS   true
 
 // *******************
 class DCMActivity : public daq::rc::Controllable {
@@ -66,7 +64,6 @@ private:
   std::vector<std::unique_ptr<boost::thread>> m_work_threads;
 
   bool m_running;
-  ProtectedQueue<dcmessages::LVL1Result*> m_queue;
   tbb::atomic<uint32_t>            m_outstanding;
   uint32_t                         m_cores;
   
@@ -141,7 +138,7 @@ void DCMActivity::connect(std::string &)
   // create the session to talk to the HLTSV    
   m_session = std::make_shared<hltsv::HLTSVSession>(m_dcm_io_service);
   ERS_LOG(" *** created HLTSVSession *** ");
-  m_session->asyncOpen("HLTSV", hltsv_eps[0]);
+  m_session->asyncOpen(getName(), hltsv_eps[0]);
 }
 
 void DCMActivity::disconnect(std::string & )
@@ -208,37 +205,28 @@ void DCMActivity::execute(unsigned worker_id)
 {
   ERS_LOG(" *** Worker #" << worker_id << ": Entering DCMActivty::execute() *** ");
 
-  unsigned l1id;
+  unsigned int l1id;
   bool do_build;
-  std::vector<uint32_t> l1id_list;  // needed for handing off to HLTSVSession
-  l1id_list.push_back(0);
+  std::vector<uint32_t> l1id_list(1);  // needed for handing off to HLTSVSession
+
   while (m_running)
   {
-    // first check if there is anything waiting to be built
-    if (m_session->check_force_builds(l1id))
-    {
-      // got a reassigned l1id, force to build stage
-      do_build = true;
-    }
-    else
-    {
-      // else, randomly decide whether we'll build
-      do_build = (rand() / float(RAND_MAX)) > REJECT_RATE;
-
-      // block until a new L1ID is available.
-      try {
-        l1id = m_session->get_next_assignment();
-      }
-      catch (tbb::user_abort &e) {
+    // block until a new L1ID is available.
+    try {
+        std::tie<bool, unsigned int>(do_build, l1id) = m_session->get_next_assignment();
+        
+        if(!do_build) {
+            // else, randomly decide whether we'll build
+            do_build = (rand() / float(RAND_MAX)) > REJECT_RATE;
+        }
+    } catch (tbb::user_abort &e) {
         if (m_running) {
-          // queue was interrupted, probably a new force build came in
-          continue;
+            // queue was interrupted, probably a new force build came in
+            continue;
+        } else {
+            // queue was aborted by StopL2SV. we're done here!
+            break;
         }
-        else {
-          // queue was aborted by StopL2SV. we're done here!
-          break;
-        }
-      }
     }
 
     m_events++;

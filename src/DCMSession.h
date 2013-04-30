@@ -37,7 +37,8 @@ namespace hltsv {
     public:
         DCMSession(boost::asio::io_service& service,
                    std::shared_ptr<EventScheduler> scheduler,
-                   std::shared_ptr<ROSClear> clear);
+                   std::shared_ptr<ROSClear> clear,
+                   unsigned int timeout_in_ms);
 
         ~DCMSession();
 
@@ -71,6 +72,8 @@ namespace hltsv {
         bool                                   m_in_error;
         boost::asio::deadline_timer            m_timer;
         bool                                   m_start_timer;
+        unsigned int                           m_timeout_in_ms;
+        std::shared_ptr<LVL1Result>            m_timer_cache;
     };
 
 }

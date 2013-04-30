@@ -59,18 +59,8 @@ namespace hltsv {
       case AssignMessage::ID:
           std::unique_ptr<AssignMessage> msg(dynamic_cast<AssignMessage*>(message.release()));
           ERS_DEBUG(1,"got global ID: " << msg->global_id());
-
           // grab only the l1id and put it on the list of assigned/build IDs
-          
-          if (build_only) {
-            m_force_l1ids.push(msg->lvl1_id());
-            // wake threads sleeping on m_assigned_l1ids, so they can service
-            // the force build
-            abort_assignment_queue();
-          }
-          else {
-            m_assigned_l1ids.push(msg->lvl1_id());
-          }
+          m_assigned_l1ids.push(std::make_tuple(build_only, msg->lvl1_id()));
           break;
     }
 
@@ -100,22 +90,18 @@ namespace hltsv {
     asyncSend(std::move(update_msg));
   }
 
-  uint32_t HLTSVSession::get_next_assignment()
+  std::tuple<bool,uint32_t> HLTSVSession::get_next_assignment()
   {
-    uint32_t l1id;
+    std::tuple<bool,uint32_t> l1id;
     m_assigned_l1ids.pop(l1id);
     return l1id;
   }
 
-  bool HLTSVSession::check_force_builds(uint32_t &l1id)
-  {
-    return m_force_l1ids.try_pop(l1id);
-  }
-  
   void HLTSVSession::abort_assignment_queue()
   {
     // wake up any threads waiting for a new assignment
     m_assigned_l1ids.abort();
   }
+
 }
 

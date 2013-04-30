@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <list>
+#include <tuple>
 
 #include "asyncmsg/Session.h"
 #include "tbb/concurrent_queue.h"
@@ -27,13 +28,11 @@ namespace hltsv {
     virtual void onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept override;
     
     void     send_update(uint32_t req_RoIs, const std::vector<uint32_t>& l1ids);
-    uint32_t get_next_assignment();
-    bool     check_force_builds(uint32_t &l1id);
-    void     abort_assignment_queue();
-    
+    std::tuple<bool,uint32_t> get_next_assignment();
+    void abort_assignment_queue();
+
   private:
-    tbb::concurrent_bounded_queue<uint32_t> m_assigned_l1ids;
-    tbb::concurrent_bounded_queue<uint32_t> m_force_l1ids;
+    tbb::concurrent_bounded_queue<std::tuple<bool,uint32_t>> m_assigned_l1ids;
   };
   
 }

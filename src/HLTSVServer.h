@@ -17,7 +17,8 @@ namespace hltsv {
     public:
         HLTSVServer(boost::asio::io_service& service,
                     std::shared_ptr<EventScheduler> scheduler,
-                    std::shared_ptr<ROSClear> clear);
+                    std::shared_ptr<ROSClear> clear,
+                    unsigned int timeout_in_ms);
         ~HLTSVServer();
 
         void start();
@@ -33,6 +34,7 @@ namespace hltsv {
         boost::asio::io_service&        m_service;
         std::shared_ptr<EventScheduler> m_scheduler;
         std::shared_ptr<ROSClear>       m_ros_clear;
+        unsigned int                    m_timeout_in_ms;
 
         std::vector<std::shared_ptr<DCMSession>> m_sessions;
     };

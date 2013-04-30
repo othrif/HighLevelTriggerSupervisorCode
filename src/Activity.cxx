@@ -157,13 +157,11 @@ namespace hltsv {
         m_ros_clear = std::make_shared<MulticastROSClear>(100, m_io_service, mcast, outgoing);
     }
     
-    m_timeout = my_conf->get_Timeout();
-    
     m_network = true;
 
     ERS_LOG(" *** Start HLTSVServer ***");
     m_event_sched = std::make_shared<EventScheduler>();
-    m_myServer = std::make_shared<HLTSVServer> (m_io_service, m_event_sched, m_ros_clear);
+    m_myServer = std::make_shared<HLTSVServer> (m_io_service, m_event_sched, m_ros_clear, my_conf->get_Timeout());
     // the id should be read from OKS
     m_myServer->listen(getName());
 

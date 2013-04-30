@@ -9,11 +9,13 @@ namespace hltsv {
     
     HLTSVServer::HLTSVServer(boost::asio::io_service& service,
                              std::shared_ptr<EventScheduler> scheduler,
-                             std::shared_ptr<ROSClear> clear)
+                             std::shared_ptr<ROSClear> clear,
+                             unsigned int timeout_in_ms)
         : daq::asyncmsg::Server(service),
           m_service(service),
           m_scheduler(scheduler),
-          m_ros_clear(clear)
+          m_ros_clear(clear),
+          m_timeout_in_ms(timeout_in_ms)
     {
     }
 
@@ -25,7 +27,8 @@ namespace hltsv {
     {
         auto session = std::make_shared<DCMSession>(m_service,
                                                     m_scheduler,
-                                                    m_ros_clear);
+                                                    m_ros_clear,
+                                                    m_timeout_in_ms);
         asyncAccept(session);
     }
 
@@ -44,7 +47,8 @@ namespace hltsv {
         // start the next accept
         auto new_session = std::make_shared<DCMSession>(m_service,
                                                         m_scheduler,
-                                                        m_ros_clear);
+                                                        m_ros_clear,
+                                                        m_timeout_in_ms);
         asyncAccept(new_session);
     }
 
