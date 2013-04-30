@@ -8,7 +8,7 @@ ROS_HOST=$(hostname)
 # and add it to your partition
 
 if [ $# -lt 1 ]; then
-     echo "Usage: $0 <partition_name>"
+     echo "Usage: $0 <partition_name> [ <ros_host> ]"
      exit 1
 fi     
 
