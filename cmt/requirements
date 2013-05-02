@@ -111,7 +111,7 @@ macro test_l1source_dependencies hltsv
 # Emulator for DCM
 #
 application testDCM ../test/testDCM.cxx ../test/HLTSVSession.cxx ../test/DCMMessages.cxx
-macro testDCMlinkopts "-lers -leformat -lac -ldcmessages -lmsginput -lmsgconf -lmsg -ldaq-df-dal -lasyncmsg -ltbb"
+macro testDCMlinkopts "-lers -leformat -lac -ldcmessages -lmsginput -lmsgconf -lmsg -ldaq-hltsv-dal -lmonsvc-dal -ldaq-df-dal -lasyncmsg -ltbb"
 
 #
 # Emulator for ROS

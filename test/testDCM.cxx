@@ -1,6 +1,7 @@
 #include "config/Configuration.h"
 #include "dal/Partition.h"
 #include "DFdal/DFParameters.h"
+#include "DFdal/HLTSV_DCMTest.h"
 
 #include "msg/Port.h"
 #include "msgconf/MessageConfiguration.h"
@@ -26,15 +27,6 @@
 #include <stdlib.h>
 #include <atomic>
 #include <random>
-
-// Fixme: Let's make these config. params
-#define NUM_DCM_CORES	8
-#define REJECT_RATE     0.95
-// max sleep times in ms
-#define PROCESS_TIME    60
-#define BUILD_TIME      4000
-
-#define DO_FAKE_TIMEOUTS   true
 
 // *******************
 class DCMActivity : public daq::rc::Controllable {
@@ -71,6 +63,7 @@ private:
   uint32_t                         m_l2_accept;
   uint32_t                         m_event_building;
   uint32_t                         m_event_filter;
+  uint32_t                         m_fake_timeout;
 
   std::unique_ptr<ISInfoDictionary> m_dict;
   std::atomic<uint64_t>             m_events;
@@ -82,7 +75,12 @@ private:
 
 DCMActivity::DCMActivity(std::string &name)
     : daq::rc::Controllable(name),
-      m_running(false)
+      m_running(false),
+      m_cores(8),
+      m_l2_processing(40),
+      m_l2_accept(5),
+      m_event_building(40),
+      m_fake_timeout(0)
 {
 }
 
@@ -98,9 +96,19 @@ void DCMActivity::configure(std::string & )
 
   const daq::core::Partition *partition = daq::rc::ConfigurationBridge::instance()->getPartition();
   IPCPartition part(partition->UID());
-  const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
 
+  const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
   m_testns = new daq::asyncmsg::NameService(part, dfparams->get_DefaultDataNetworks());
+
+  const daq::df::HLTSV_DCMTest* self = conf->cast<daq::df::HLTSV_DCMTest>(daq::rc::ConfigurationBridge::instance()->getApplication());
+
+  m_cores = self->get_NumberOfCores();
+  m_l2_processing = self->get_L2ProcessingTime();
+  m_l2_accept      = self->get_L2Acceptance();
+  m_event_building = self->get_EventBuildingTime();
+  m_event_filter   = self->get_EFProcessingTime();
+  m_fake_timeout   = self->get_FakeTimeout();
+
   m_dict.reset(new ISInfoDictionary(part));
 }
 
@@ -174,13 +182,13 @@ void DCMActivity::prepareForRun(std::string & )
 
   // Announce initial state to HLTSV (assumes connection opened succesfully!)
   std::vector<uint32_t> l1ids;
-  m_session->send_update(NUM_DCM_CORES, l1ids);
+  m_session->send_update(m_cores, l1ids);
 
   // listen for first update from HLTSV
   m_session->asyncReceive();
 
   // spin off worker threads to run execute()
-  for (unsigned worker_id = 0; worker_id < NUM_DCM_CORES; ++worker_id)
+  for (unsigned worker_id = 0; worker_id < m_cores; ++worker_id)
   {
     std::unique_ptr<boost::thread> worker(new boost::thread(
 		std::bind(&DCMActivity::execute, this, worker_id)
@@ -217,7 +225,7 @@ void DCMActivity::execute(unsigned worker_id)
         
         if(!do_build) {
             // else, randomly decide whether we'll build
-            do_build = (rand() / float(RAND_MAX)) > REJECT_RATE;
+            do_build = (rand() % 100) <  m_l2_accept;
         }
     } catch (tbb::user_abort &e) {
         if (m_running) {
@@ -236,8 +244,8 @@ void DCMActivity::execute(unsigned worker_id)
     // Temporary hack to test HLTSV timeout handling.
     // Every 1e6 events, sleep for 15s (unless rejected).
     // After, DCM will try to clear the stale l1id and request a new work unit
-    if (DO_FAKE_TIMEOUTS) {
-      if (!do_build && (l1id % 1000000 == 0)) {
+    if (m_fake_timeout > 0) {
+      if (!do_build && (l1id % m_fake_timeout == 0)) {
         ERS_LOG("faking timeout! L1ID = " << l1id);
         sleep(15);
         l1id_list[0] = l1id;
@@ -247,7 +255,7 @@ void DCMActivity::execute(unsigned worker_id)
     }
 
     // recieved a new L1ID, 'process' for a random time
-    usleep( (PROCESS_TIME * 1000) * rand() / float(RAND_MAX) );
+    usleep( (m_l2_processing * 1000) * rand() / float(RAND_MAX) );
 
     // finished 'processing', send back the L1ID immediately
     // number of cores depends on whether we're going to build stage
@@ -258,8 +266,12 @@ void DCMActivity::execute(unsigned worker_id)
     if (do_build)
     {
       // simulate extra processing; sleep some more then request a new work unit
-      usleep( (BUILD_TIME * 1000) * rand() / float(RAND_MAX) );
+      usleep( (m_event_building * 1000) * rand() / float(RAND_MAX) );
+
+      // TODO: sleep m_event_filter time
+
       m_session->send_update(1, std::vector<uint32_t>());
+
     }
   }
 
