@@ -123,10 +123,10 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 
 
 # hack if binary in release did no build
-hltsv_main@Binary
-hltsv_main@Binary.BinaryName = 'hltsv_main'
-hltsv_main@Binary.BelongsTo  = ProtoRepo@SW_Repository
-ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
+#hltsv_main@Binary
+#hltsv_main@Binary.BinaryName = 'hltsv_main'
+#hltsv_main@Binary.BelongsTo  = ProtoRepo@SW_Repository
+#ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
 
 
 #
