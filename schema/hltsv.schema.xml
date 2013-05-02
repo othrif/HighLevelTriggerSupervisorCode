@@ -105,10 +105,12 @@
 
  <class name="HLTSV_DCMTest" description="A DCM dummy for the supervisor">
   <superclass name="RunControlTemplateApplication"/>
+  <attribute name="NumberOfCores" description="Virtual number of cores." type="u32" init-value="8" is-not-null="yes"/>
   <attribute name="L2ProcessingTime" description="Processing time for L2 in milliseconds." type="u32" init-value="50" is-not-null="yes"/>
   <attribute name="EventBuildingTime" description="Processing time for L2 in milliseconds." type="u32" init-value="50" is-not-null="yes"/>
   <attribute name="EFProcessingTime" description="Processing time for EF in milliseconds." type="u32" init-value="5000" is-not-null="yes"/>
   <attribute name="L2Acceptance" description="L2 acceptance in percent" type="u32" init-value="5" is-not-null="yes"/>
+  <attribute name="FakeTimeout" description="Number of events after which to fake a timeout, 0 == disabled" type="u32" init-value="0" is-not-null="yes"/>
  </class>
  
 
