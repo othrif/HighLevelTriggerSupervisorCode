@@ -99,6 +99,7 @@
   <attribute name="L1Source" type="enum" range="internal,preloaded,filar,assembler" init-value="internal" is-not-null="yes"/>
   <attribute name="Timeout" description="Timeout for HLT processing in milliseconds." type="u32" init-value="10000" is-not-null="yes"/>
   <attribute name="NumberOfAssignThreads" description="Number of assignment threads." type="u32" init-value="8" is-not-null="yes"/>
+  <attribute name="ClearGrouping" description="Number of L1 events grouping factor for clears" type="u32" init-value="100" is-not-null="yes"/>
   <attribute name="EventDelay" description="Event delay in microseconds." type="u32" init-value="0" is-not-null="yes"/>
  </class>
 

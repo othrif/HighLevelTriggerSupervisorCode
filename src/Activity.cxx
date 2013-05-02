@@ -142,7 +142,7 @@ namespace hltsv {
     // Initialize ROS clear implementation
     if(dfparams->get_MulticastAddress().empty()) {
         // use TCP
-        m_ros_clear = std::make_shared<UnicastROSClear>(100, m_io_service, HLTSV_NameService);
+        m_ros_clear = std::make_shared<UnicastROSClear>(my_conf->get_ClearGrouping(), m_io_service, HLTSV_NameService);
     } else {
 
         // address is format  <Multicast-IP-Adress>/<OutgoingInterface>
@@ -154,7 +154,7 @@ namespace hltsv {
 
         ERS_LOG("Configuring for multicast: " << mcast << '/' << outgoing);
 
-        m_ros_clear = std::make_shared<MulticastROSClear>(100, m_io_service, mcast, outgoing);
+        m_ros_clear = std::make_shared<MulticastROSClear>(my_conf->get_ClearGrouping(), m_io_service, mcast, outgoing);
     }
     
     m_network = true;
