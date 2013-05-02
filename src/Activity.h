@@ -64,6 +64,9 @@ namespace hltsv {
 
     void io_thread();
     void l1_thread();
+
+    // To delay events in SV
+    unsigned int                   m_event_delay;
     
     // for the HLTSVServer
     boost::asio::io_service::work *m_work;

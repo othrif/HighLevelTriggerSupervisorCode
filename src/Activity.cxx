@@ -76,6 +76,7 @@ namespace hltsv {
 
     const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
 
+    m_event_delay = my_conf->get_EventDelay();
 
     // Load L1 Source
     std::vector<std::string> file_names;
@@ -258,6 +259,11 @@ namespace hltsv {
       ERS_LOG("Starting l1 thread");
       while(m_running) {
           if(m_triggering) {
+
+              if(m_event_delay > 0) {
+                  usleep(m_event_delay);
+              }
+
               std::shared_ptr<LVL1Result> result(m_l1source->getResult());
               if(result) {
                   m_event_sched->schedule_event(result);
