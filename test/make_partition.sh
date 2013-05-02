@@ -186,11 +186,16 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
 # 
 # template application with testDCM binary
 #
-  DCM@RunControlTemplateApplication
-  DCM@RunControlTemplateApplication.Program = testDCM@Binary
-  DCM@RunControlTemplateApplication.Instances = 0
-  DCM@RunControlTemplateApplication.ProcessEnvironment = [ DCMVariables@VariableSet ]
-  DCM@RunControlTemplateApplication.RestartableDuringRun = True
+  DCM@HLTSV_DCMTest
+  DCM@HLTSV_DCMTest.Program = testDCM@Binary
+  DCM@HLTSV_DCMTest.Instances = 0
+  DCM@HLTSV_DCMTest.ProcessEnvironment = [ DCMVariables@VariableSet ]
+  DCM@HLTSV_DCMTest.RestartableDuringRun = True
+
+  DCM@HLTSV_DCMTest.L2ProcessingTime = 40
+  DCM@HLTSV_DCMTest.L2Acceptance = 5
+  DCM@HLTSV_DCMTest.EventBuildingTime = 40
+  DCM@HLTSV_DCMTest.EFProcessingTime = 4000
 
 #
 # DCM segments x ${NUM_SEGMENTS}
@@ -198,7 +203,7 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
   $(for i in $(seq 1 ${NUM_SEGMENTS}) ; do 
      echo DCM-Segment-${i}@HLTSegment 
      echo DCM-Segment-${i}@HLTSegment.IsControlledBy = DefRC@RunControlTemplateApplication 
-     echo DCM-Segment-${i}@HLTSegment.TemplateApplications = [ DCM@RunControlTemplateApplication ]
+     echo DCM-Segment-${i}@HLTSegment.TemplateApplications = [ DCM@HLTSV_DCMTest ]
      echo DCM-Segment-${i}@HLTSegment.TemplateHosts = [ ${SEGMENTS[${i}]} ]
     done)
 
