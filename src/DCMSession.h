@@ -7,7 +7,7 @@
 
 #include "asyncmsg/Session.h"
 
-#include "boost/asio/deadline_timer.hpp"
+#include "boost/asio/steady_timer.hpp"
 
 namespace hltsv {
 
@@ -70,7 +70,7 @@ namespace hltsv {
         std::shared_ptr<ROSClear>              m_clear;
         std::list<std::shared_ptr<LVL1Result>> m_events;
         bool                                   m_in_error;
-        boost::asio::deadline_timer            m_timer;
+        boost::asio::steady_timer              m_timer;
         bool                                   m_start_timer;
         unsigned int                           m_timeout_in_ms;
         std::shared_ptr<LVL1Result>            m_timer_cache;
