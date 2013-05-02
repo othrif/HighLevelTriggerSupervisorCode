@@ -160,36 +160,12 @@ ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
 
 #  ProtoRepo@SW_Repository.SW_Objects = [ testDCM@Binary , testROS@Binary ]
 
-#
-# Configuration via environment variables for DCM
-#
-
-  DCM_L2_PROCESSING@Variable
-  DCM_L2_PROCESSING@Variable.Name  = 'DCM_L2_PROCESSING'
-  DCM_L2_PROCESSING@Variable.Value = 40
-
-  DCM_L2_ACCEPT@Variable
-  DCM_L2_ACCEPT@Variable.Name  = 'DCM_L2_ACCEPT'
-  DCM_L2_ACCEPT@Variable.Value = 5
-
-  DCM_EVENT_BUILDING@Variable
-  DCM_EVENT_BUILDING@Variable.Name  = 'DCM_EVENT_BUILDING'
-  DCM_EVENT_BUILDING@Variable.Value = 40
-
-  DCM_EVENT_FILTER@Variable
-  DCM_EVENT_FILTER@Variable.Name  = 'DCM_EVENT_FILTER'
-  DCM_EVENT_FILTER@Variable.Value = 2
-
-  DCMVariables@VariableSet  
-  DCMVariables@VariableSet.Contains = [ DCM_L2_PROCESSING@Variable , DCM_L2_ACCEPT@Variable , DCM_EVENT_BUILDING@Variable , DCM_EVENT_FILTER@Variable ]  
-
 # 
 # template application with testDCM binary
 #
   DCM@HLTSV_DCMTest
   DCM@HLTSV_DCMTest.Program = testDCM@Binary
   DCM@HLTSV_DCMTest.Instances = 0
-  DCM@HLTSV_DCMTest.ProcessEnvironment = [ DCMVariables@VariableSet ]
   DCM@HLTSV_DCMTest.RestartableDuringRun = True
 
   DCM@HLTSV_DCMTest.L2ProcessingTime = 40
