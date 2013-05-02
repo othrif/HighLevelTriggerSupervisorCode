@@ -40,13 +40,9 @@ namespace hltsv {
     {
         auto data = std::make_shared<std::vector<uint32_t>>();
 
-        uint32_t seq;
-
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            m_event_ids.swap(*data);
-            seq = m_sequence++;
-        }
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_event_ids.swap(*data);
+        uint32_t seq = m_sequence++;
 
         do_flush(seq, data);
     }
