@@ -1,0 +1,92 @@
+#!/usr/bin/env tdaq_python
+# -*- python -*-
+
+import sys
+import time
+
+from Tkinter import *
+
+from ispy import IPCPartition, Summer
+from ispy.Viewer import Viewer
+
+# defaults
+# update interval (in seconds)
+update = 5
+
+# parse command line
+if len(sys.argv) < 2:
+    print "usage: ispy.py <partition> [ <update_in_seconds> ]"
+    sys.exit(1)
+    
+part_name = sys.argv[1]
+
+if len(sys.argv) > 2:
+    update = int(sys.argv[2])
+
+# initialize partition
+p = IPCPartition(part_name)
+
+if not p.isValid():
+    print "Partition",part_name,"is not valid"
+    sys.exit(1)
+
+df = Viewer(p, [
+    # ROS
+    [
+    Summer('ROS', p, [ 'DF' ], 'ROS.ROS-.*.TriggerIn0',
+           [ 'numberOfLevel1', 'clearRequestsLost', 'clearRequestsQueued'],
+           ),
+    Summer('testROS', p, [ 'DF' ], 'ROS-.*',
+           [],
+	   ['value'], 
+           )
+    ],
+
+    # HLTSV
+    [
+    Summer('HLTSV', p, [ 'DF.*' ], 'HLTSV.Events',
+           [ 'LVL1Events', 'AssignedEvents',
+             'ReassignedEvents', 'ProcessedEvents', 
+             'AvailableCores', 'Rate']),
+    ],
+
+    [
+    # DCM and PU
+    Summer('testDCM', p,  [ 'DF.*' ], 'DCM:.*',
+           ['value'],
+           ),
+    ],
+
+    # SFO
+    [
+    Summer('SFO',  p, [ 'DF.*' ], 'SFO-[0-9]+',
+           [ 'CurrentEventReceivedRate', 'CurrentDataReceivedRate', 'CurrentEventSavedRate', 'CurrentDataSavedRate', 'EventsReceived', 'EventsSaved' ]),
+    ],
+    ],
+    update)
+
+#df.watch('L2SV.IntervalEventRate', lambda x,*other : x < 10000.)
+#df.watch('DFM.input queue', lambda x,*other : x > 900)
+#df.watch('DFM.Rate of built events', lambda  x,*other : x == 0)
+#df.watch('L2PU.NumLVL2Accepts', lambda  x,*other : x == 0)
+#df.watch('PT.EF Accepts', lambda  x,*other : x == 0)
+#df.watch('SFI.ActualEoERate', lambda  x,*other : x == 0)
+#df.watch('EFD.RateIn', lambda  x,*other : x == 0)
+#df.watch('SFO.CurrentEventReceivedRate', lambda  x,*other : x == 0)
+
+class CheckIncrease:
+
+   def __init__(self):
+       self.last = 0
+
+   def check_value(self, value, *other):
+       old = self.last
+       self.last = value
+       return  value > old
+
+
+check_reassigned = CheckIncrease()
+            
+df.watch('Events.ReassignedEvents', check_reassigned.check_value)
+
+df.run()
