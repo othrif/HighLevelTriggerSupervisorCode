@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <thread>
+#include <atomic>
 
 #include "ers/ers.h"
 
@@ -26,7 +27,7 @@
 
 
 namespace {
-    uint64_t              num_clears;
+    std::atomic<uint64_t>  num_clears;
 }
 
 
@@ -48,8 +49,6 @@ public:
           m_message(size/sizeof(uint32_t)),
           m_transactionId(transactionId)
     {
-        // minimum is sequence number
-        ERS_ASSERT_MSG(size >= 2 * sizeof(uint32_t), "ClearMessage too short, minimum is 4 bytes");
         ERS_ASSERT_MSG(size % sizeof(uint32_t) == 0, "ClearMessage not a multiple of 4 bytes");
     }
 
@@ -131,7 +130,7 @@ protected:
         std::unique_ptr<ClearMessage> msg(dynamic_cast<ClearMessage*>(message.release()));
 
         if(m_expected_sequence != msg->sequence_no()) {
-            ERS_LOG("Unexpected sequence no, got: " << msg->sequence_no() << " expected: " << m_expected_sequence);
+            ERS_LOG("Unexpected sequence no, got: " << msg->sequence_no() << " expected: " << m_expected_sequence << " clears: " << msg->num_clears());
         }
 
         if(msg->sequence_no() >= m_expected_sequence) {
@@ -350,6 +349,7 @@ public:
 
     virtual void prepareForRun(std::string& ) override
     {
+        num_clears = 0;
         m_running = true;
     }
 

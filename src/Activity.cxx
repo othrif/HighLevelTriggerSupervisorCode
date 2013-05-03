@@ -55,6 +55,7 @@ namespace hltsv {
       m_masterTrigger(false)
   {
     m_work = new boost::asio::io_service::work(m_io_service);
+    m_ros_work = new boost::asio::io_service::work(m_ros_io_service);
   }
 
   Activity::~Activity()
@@ -143,7 +144,7 @@ namespace hltsv {
     // Initialize ROS clear implementation
     if(dfparams->get_MulticastAddress().empty()) {
         // use TCP
-        m_ros_clear = std::make_shared<UnicastROSClear>(my_conf->get_ClearGrouping(), m_io_service, HLTSV_NameService);
+        m_ros_clear = std::make_shared<UnicastROSClear>(my_conf->get_ClearGrouping(), m_ros_io_service, HLTSV_NameService);
     } else {
 
         // address is format  <Multicast-IP-Adress>/<OutgoingInterface>
@@ -155,7 +156,7 @@ namespace hltsv {
 
         ERS_LOG("Configuring for multicast: " << mcast << '/' << outgoing);
 
-        m_ros_clear = std::make_shared<MulticastROSClear>(my_conf->get_ClearGrouping(), m_io_service, mcast, outgoing);
+        m_ros_clear = std::make_shared<MulticastROSClear>(my_conf->get_ClearGrouping(), m_ros_io_service, mcast, outgoing);
     }
     
     m_network = true;
@@ -176,8 +177,10 @@ namespace hltsv {
     m_myServer->start();
 
     for(unsigned int i = 0; i < my_conf->get_NumberOfAssignThreads(); i++) {
-        m_io_threads.push_back(std::thread(&Activity::io_thread, this));
+        m_io_threads.push_back(std::thread(&Activity::io_thread, this, std::ref(m_io_service)));
     }
+
+    m_io_threads.push_back(std::thread(&Activity::io_thread, this, std::ref(m_ros_io_service)));
 
     return;
   }
@@ -235,10 +238,14 @@ namespace hltsv {
 
     m_network = false;
     m_io_service.stop();
+    m_ros_io_service.stop();
 
     for(auto& thr : m_io_threads) {
         thr.join();
     }
+
+    m_io_service.reset();
+    m_ros_io_service.reset();
 
     delete m_l1source;
     m_l1source = 0;
@@ -276,11 +283,11 @@ namespace hltsv {
       ERS_LOG("Finishing l1 thread");
   }
 
-  void Activity::io_thread()
+  void Activity::io_thread(boost::asio::io_service& service)
   {
       while(m_network) {
           ERS_LOG(" *** Start io_service ***");
-          m_io_service.run(); 
+          service.run(); 
           ERS_LOG(" *** io_service End ***");
       };
   }

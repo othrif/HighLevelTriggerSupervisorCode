@@ -62,7 +62,7 @@ namespace hltsv {
 
   private:
 
-    void io_thread();
+    void io_thread(boost::asio::io_service& service);
     void l1_thread();
 
     // To delay events in SV
@@ -70,7 +70,10 @@ namespace hltsv {
     
     // for the HLTSVServer
     boost::asio::io_service::work *m_work;
+    boost::asio::io_service::work *m_ros_work;
+
     boost::asio::io_service        m_io_service;
+    boost::asio::io_service        m_ros_io_service;
     std::shared_ptr<HLTSVServer>   m_myServer;
     std::thread                    m_l1_thread;
     std::vector<std::thread>       m_io_threads;
