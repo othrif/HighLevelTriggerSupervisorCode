@@ -50,7 +50,7 @@ library         daq-hltsv-dal                              "$(gdir)/*.cpp"
 
 macro daq-hltsv-dal_dependencies "DFdal"
 
-macro_append daq-hltsv-dal_shlibflags "-ldaq-core-dal -ldaq-df-dal"
+macro_append daq-hltsv-dal_shlibflags "-lmonsvc-dal -ldaq-core-dal -ldaq-df-dal"
 
 #
 # Main HLTSV library
