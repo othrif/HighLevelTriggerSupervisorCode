@@ -69,8 +69,8 @@ namespace hltsv {
     unsigned int                   m_event_delay;
     
     // for the HLTSVServer
-    boost::asio::io_service::work *m_work;
-    boost::asio::io_service::work *m_ros_work;
+    std::unique_ptr<boost::asio::io_service::work> m_work;
+    std::unique_ptr<boost::asio::io_service::work> m_ros_work;
 
     boost::asio::io_service        m_io_service;
     boost::asio::io_service        m_ros_io_service;

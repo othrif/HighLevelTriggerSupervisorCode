@@ -30,6 +30,8 @@ namespace hltsv {
         m_update = false;
         m_rate_thread.join();
 
+        ERS_LOG("Removing monitored object: " << monsvc::MonitoringService::instance().remove_object(std::string("Events")));
+
     }
 
     // Add a DCM that has additional 'count' available cores.

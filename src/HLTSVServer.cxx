@@ -21,6 +21,7 @@ namespace hltsv {
 
     HLTSVServer::~HLTSVServer()
     {
+        stop();
     }
 
     void HLTSVServer::start()
@@ -34,6 +35,11 @@ namespace hltsv {
 
     void HLTSVServer::stop()
     {
+        close();
+        for(auto session : m_sessions) {
+            session->close();
+        }
+        m_sessions.clear();
     }
 
     void HLTSVServer::onAccept(std::shared_ptr<daq::asyncmsg::Session> session) noexcept 

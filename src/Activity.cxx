@@ -54,8 +54,6 @@ namespace hltsv {
       m_triggerHoldCounter(0),
       m_masterTrigger(false)
   {
-    m_work = new boost::asio::io_service::work(m_io_service);
-    m_ros_work = new boost::asio::io_service::work(m_ros_io_service);
   }
 
   Activity::~Activity()
@@ -64,6 +62,9 @@ namespace hltsv {
   
   void Activity::configure(std::string &)
   {
+
+    m_work.reset(new boost::asio::io_service::work(m_io_service));
+    m_ros_work.reset(new boost::asio::io_service::work(m_ros_io_service));
 
     ERS_LOG(" *** ENTER IN Activity::configure() ***");
 
@@ -237,20 +238,30 @@ namespace hltsv {
   {
 
     m_network = false;
-    m_io_service.stop();
-    m_ros_io_service.stop();
+
+    m_myServer->stop();
+
+    m_work.reset();
+    m_ros_work.reset();
+
+    m_myServer.reset();
+    m_event_sched.reset();
+    m_ros_clear.reset();
+
+    // m_io_service.stop();
+    // m_ros_io_service.stop();
 
     for(auto& thr : m_io_threads) {
         thr.join();
     }
 
-    m_io_service.reset();
-    m_ros_io_service.reset();
-
     delete m_l1source;
     m_l1source = 0;
     m_l1source_lib->release();
     delete m_l1source_lib;
+
+    m_io_service.reset();
+    m_ros_io_service.reset();
 
     return;
   }

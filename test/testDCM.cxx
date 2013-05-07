@@ -317,6 +317,9 @@ int main(int argc, char *argv[])
   
   daq::rc::ItemCtrl control(new DCMActivity(name), interactive, parent);
 
+  std::random_device rd;
+  srand(rd());
+
   control.run();
 
 }

@@ -8,6 +8,7 @@ namespace hltsv {
     ROSClear::ROSClear(size_t threshold)
         : m_threshold(threshold)
     {
+        m_event_ids.reserve(m_threshold);
     }
 
     ROSClear::~ROSClear()
@@ -27,9 +28,15 @@ namespace hltsv {
 
         if(m_event_ids.size() >= m_threshold) {
 
+            // create empty vector inside shared_ptr
             auto data = std::make_shared<std::vector<uint32_t>>();
 
+            // swap event vector with local data
             m_event_ids.swap(*data);
+
+            // reserve  in advance
+            m_event_ids.reserve(m_threshold);
+
             uint32_t seq = m_sequence++;
 
             do_flush(seq, data);
