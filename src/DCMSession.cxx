@@ -6,6 +6,7 @@
 #include "LVL1Result.h"
 
 #include "ers/ers.h"
+#include "TH1F.h"
 
 #include <functional>
 
@@ -14,13 +15,15 @@ namespace hltsv {
     DCMSession::DCMSession(boost::asio::io_service& service,
                            std::shared_ptr<EventScheduler> scheduler,
                            std::shared_ptr<ROSClear> clear,
-                           unsigned int timeout_in_ms)
+                           unsigned int timeout_in_ms,
+                           monsvc::ptr<TH1F> time_histo)
         : daq::asyncmsg::Session(service),
           m_scheduler(scheduler),
           m_clear(clear),
           m_in_error(false),
           m_timer(service),
-          m_timeout_in_ms(timeout_in_ms)
+          m_timeout_in_ms(timeout_in_ms),
+          m_time_histo(time_histo)
     {
     }
 
@@ -126,11 +129,17 @@ namespace hltsv {
     {
       std::unique_ptr<UpdateMessage> msg(dynamic_cast<UpdateMessage*>(message.release()));
 
+      auto now = LVL1Result::clock::now();
+
       for(uint32_t i = 0; i < msg->num_l1ids(); i++) {
           auto ev = std::find_if(m_events.begin(), m_events.end(), [&](std::shared_ptr<LVL1Result> event) -> bool { return event->l1_id() == msg->l1id(i); });
           if(ev == m_events.end()) {
               ERS_LOG("Error: invalid event id: " << msg->l1id(i));
           } else {
+
+              auto processing_time = now - (*ev)->timestamp();
+              m_time_histo->Fill(std::chrono::duration_cast<std::chrono::milliseconds>(processing_time).count());
+
               ERS_DEBUG(1,"Erasing event: " << msg->l1id(i));
               // remove from this session's list
               m_events.erase(ev);
@@ -197,6 +206,5 @@ namespace hltsv {
             }
         }
     }
-
 }
 

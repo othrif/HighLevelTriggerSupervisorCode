@@ -6,10 +6,14 @@
 #include <list>
 
 #include "asyncmsg/Session.h"
+#include "monsvc/ptr.h"
 
 #include "boost/asio/steady_timer.hpp"
 
+class TH1F;
+
 namespace hltsv {
+
 
     // The ROIs received from RoIBuilder
     class LVL1Result;
@@ -38,7 +42,8 @@ namespace hltsv {
         DCMSession(boost::asio::io_service& service,
                    std::shared_ptr<EventScheduler> scheduler,
                    std::shared_ptr<ROSClear> clear,
-                   unsigned int timeout_in_ms);
+                   unsigned int timeout_in_ms,
+                   monsvc::ptr<TH1F> time_histo);
 
         ~DCMSession();
 
@@ -74,6 +79,7 @@ namespace hltsv {
         bool                                   m_start_timer;
         unsigned int                           m_timeout_in_ms;
         std::shared_ptr<LVL1Result>            m_timer_cache;
+        monsvc::ptr<TH1F>                      m_time_histo;
     };
 
 }

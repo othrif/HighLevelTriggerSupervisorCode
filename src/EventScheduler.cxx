@@ -10,7 +10,7 @@ namespace hltsv {
 
     EventScheduler::EventScheduler() :
         m_free_cores(),
-        m_stats(monsvc::MonitoringService::instance().register_object("Events",new HLTSV())),
+        m_stats(monsvc::MonitoringService::instance().register_object("Events",new HLTSV(), true)),
         m_update(true),
         m_rate_thread(&EventScheduler::update_instantaneous_rate, this)
     {
@@ -21,16 +21,13 @@ namespace hltsv {
 
     EventScheduler::~EventScheduler()
     {
-        // this should only be called when no more events are coming.
-
-        // If there are any events in m_reassigned_events they have
-        // to be pushed to the DCMs.
-        push_events();
+        m_free_cores.abort();
+        m_reassigned_events.abort();
 
         m_update = false;
         m_rate_thread.join();
 
-        ERS_LOG("Removing monitored object: " << monsvc::MonitoringService::instance().remove_object(std::string("Events")));
+        monsvc::MonitoringService::instance().remove_object(std::string("Events"));
 
     }
 

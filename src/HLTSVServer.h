@@ -3,9 +3,12 @@
 #define HLTSV_HLTSVSERVER_H_
 
 #include "asyncmsg/Server.h"
+#include "monsvc/ptr.h"
 
 #include <memory>
 #include <vector>
+
+class TH1F;
 
 namespace hltsv {
 
@@ -37,6 +40,8 @@ namespace hltsv {
         unsigned int                    m_timeout_in_ms;
 
         std::vector<std::shared_ptr<DCMSession>> m_sessions;
+
+        monsvc::ptr<TH1F>               m_time_histo;
     };
 
 }

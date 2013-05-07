@@ -3,7 +3,9 @@
 #include "DCMSession.h"
 
 #include "ers/ers.h"
+#include "monsvc/MonitoringService.h"
 
+#include "TH1F.h"
 
 namespace hltsv {
     
@@ -15,21 +17,28 @@ namespace hltsv {
           m_service(service),
           m_scheduler(scheduler),
           m_ros_clear(clear),
-          m_timeout_in_ms(timeout_in_ms)
+          m_timeout_in_ms(timeout_in_ms),
+          m_time_histo(monsvc::MonitoringService::instance().register_object("ProcessingTime", 
+                                                                             new TH1F("Event Processing Time", "Event Processing Time", 1000, 0., 1000.),
+                                                                             true))
     {
     }
 
     HLTSVServer::~HLTSVServer()
     {
         stop();
+        monsvc::MonitoringService::instance().remove_object(std::string("ProcessingTime"));
     }
 
     void HLTSVServer::start()
     {
+        m_time_histo->Reset();
+
         auto session = std::make_shared<DCMSession>(m_service,
                                                     m_scheduler,
                                                     m_ros_clear,
-                                                    m_timeout_in_ms);
+                                                    m_timeout_in_ms,
+                                                    m_time_histo);
         asyncAccept(session);
     }
 
@@ -54,7 +63,8 @@ namespace hltsv {
         auto new_session = std::make_shared<DCMSession>(m_service,
                                                         m_scheduler,
                                                         m_ros_clear,
-                                                        m_timeout_in_ms);
+                                                        m_timeout_in_ms,
+                                                        m_time_histo);
         asyncAccept(new_session);
     }
 
@@ -63,6 +73,5 @@ namespace hltsv {
     {
         ERS_LOG("onAcceptError: " << error);
     }
-        
 }
 

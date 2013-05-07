@@ -46,11 +46,12 @@ namespace hltsv {
 
      // Reset the global event ID to 0
       void reset();
-      
-    private: // implementation
-      
+
       // push events in reassign queue to DCMs
       void push_events();
+
+      
+    private: // implementation
 
       void update_instantaneous_rate();
       

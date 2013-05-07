@@ -133,7 +133,7 @@ namespace hltsv {
     m_publisher.reset(new monsvc::PublishingController(part,getName()));
     
     m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("DFObjects:.*/=>is:(2,DF)"));
-    m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("Histogramming:.*/=>oh:(5,DF,HLTSV)"));
+    m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("Histogramming:.*/=>oh:(5,Histogramming,HLTSV)"));
     
     // Initialize  HLTSV_NameService
     // Declare it in .h?
@@ -220,8 +220,12 @@ namespace hltsv {
 
   void Activity::stopL2SV(std::string &)
   {
+
+    m_event_sched->push_events();
+
     m_triggering = false;
     m_running = false;
+
 
     m_l1_thread.join();
     
@@ -244,9 +248,9 @@ namespace hltsv {
     m_work.reset();
     m_ros_work.reset();
 
-    m_myServer.reset();
     m_event_sched.reset();
     m_ros_clear.reset();
+    m_myServer.reset();
 
     // m_io_service.stop();
     // m_ros_io_service.stop();
