@@ -147,6 +147,10 @@ void DCMActivity::connect(std::string &)
   m_session = std::make_shared<hltsv::HLTSVSession>(m_dcm_io_service);
   ERS_LOG(" *** created HLTSVSession *** ");
   m_session->asyncOpen(getName(), hltsv_eps[0]);
+
+  while(m_session->state() != daq::asyncmsg::Session::State::OPEN) {
+      usleep(10000);
+  }
 }
 
 void DCMActivity::disconnect(std::string & )
@@ -255,7 +259,7 @@ void DCMActivity::execute(unsigned worker_id)
     }
 
     // recieved a new L1ID, 'process' for a random time
-    usleep( (m_l2_processing * 1000) * rand() / float(RAND_MAX) );
+    usleep(m_l2_processing * (rand() % 1000));
 
     // finished 'processing', send back the L1ID immediately
     // number of cores depends on whether we're going to build stage
@@ -266,9 +270,11 @@ void DCMActivity::execute(unsigned worker_id)
     if (do_build)
     {
       // simulate extra processing; sleep some more then request a new work unit
-      usleep( (m_event_building * 1000) * rand() / float(RAND_MAX) );
+        usleep( m_event_building * (rand() % 1000));
 
       // TODO: sleep m_event_filter time
+
+        usleep (m_event_filter * (rand() % 1000));
 
       m_session->send_update(1, std::vector<uint32_t>());
 
