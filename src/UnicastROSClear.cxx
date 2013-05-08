@@ -37,6 +37,12 @@ namespace hltsv {
             m_sessions[i]->asyncOpen("HLTSV", endpoints[i]);
         }
 
+        for(auto& session : m_sessions) {
+            while(session->state() != daq::asyncmsg::Session::State::OPEN) {
+                usleep(10000);
+            }
+        }
+
     }
 
     void UnicastROSClear::do_flush(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events)
