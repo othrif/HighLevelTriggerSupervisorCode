@@ -1,6 +1,5 @@
 
 #include "ROSClear.h"
-#include "Messages.h"
 #include "asyncmsg/NameService.h"
 
 namespace hltsv {

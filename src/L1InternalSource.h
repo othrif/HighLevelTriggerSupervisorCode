@@ -7,7 +7,7 @@
 namespace hltsv {
 
     /**
-     * The L1InternalSource class encapsulates the version of the
+     * \brief The L1InternalSource class encapsulates the version of the
      * L1Source class which provides a LVL1Result object internally
      * from configuration parameters.
      *

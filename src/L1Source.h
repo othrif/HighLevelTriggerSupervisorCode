@@ -14,7 +14,7 @@ namespace hltsv {
     static const size_t MAXLVL1RODS = 12;
 
     /**
-     * Abstract base class for interface to specfic sources
+     * \brief Abstract base class for interface to specfic sources
      * of LVL1Result objects.
      *
      */
@@ -49,7 +49,8 @@ namespace hltsv {
         
         /** Executed in Configure */
         virtual void                    preset();
-        
+
+        /**  Called from the MasterTrigger interface. */
         virtual void                    setLB(uint32_t);
         virtual void                    setHLTCounter(uint16_t);
         

@@ -34,34 +34,63 @@ namespace hltsv {
       
       ~EventScheduler();
       
-      // Add a DCM that has additional 'count' available cores. For statistics also report the number of finished events.
+      /**
+       * \brief Add a DCM that has additional 'count' available cores. 
+       *
+       * For statistics also report the number of finished events.
+       */
       void request_events(std::shared_ptr<DCMSession> dcm, unsigned int count = 1, unsigned int finished_events = 0);
       
-      // Schedule an event to one of the available cores, after handling
-      // the re-assigned events.
+      /** 
+       * \brief Schedule an event to one of the available cores, after handling the re-assigned events.
+       *
+       * This method is called by the input thread reading from the RoIB.
+       */
       void schedule_event(std::shared_ptr<LVL1Result> rois);
       
-      // Re-assign an event if there was a problem with the DCM.
+      /** 
+       * \brief Re-assign an event if there was a problem with the DCM.
+       *
+       * This method is called from the DCMSession if there was a problem with the connection or a timeout.
+       */
       void reassign_event(std::shared_ptr<LVL1Result> rois);
 
-     // Reset the global event ID to 0
+      /** 
+       * \brief Reset the scheduler to the default state.
+       *
+       * Resets the global event ID to 0 and deletes all state about available DCMS.
+       * This is called before a new run.
+       */
       void reset();
 
-      // push events in reassign queue to DCMs
+      /** 
+       * \brief Push all events in reassign queue to DCMs.
+       *
+       * This is called at the end of a run.
+       */
       void push_events();
 
-      
     private: // implementation
 
+      // Internal routine to update the instantaneous rate.
       void update_instantaneous_rate();
       
+      // The list of available DCM cores.
       tbb::concurrent_bounded_queue<std::weak_ptr<DCMSession>>   m_free_cores;
+        
+      // The list of re-assigned events.
       tbb::concurrent_bounded_queue<std::shared_ptr<LVL1Result>> m_reassigned_events; 
 
+      // The global event ID.
       std::atomic<uint64_t> m_global_id;
+
+      // The HLTSV statistics and counters.
       monsvc::ptr<HLTSV>    m_stats;
 
+      // A flag to stop the rate update thread.
       bool                  m_update;
+
+      // The rate update thread.
       std::thread           m_rate_thread;
     };
 }

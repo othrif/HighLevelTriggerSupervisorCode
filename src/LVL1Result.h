@@ -11,7 +11,7 @@
 
 namespace hltsv {
 
-    /** The ROIs received from RoIBuilder.
+    /** \brief The ROIs received from RoIBuilder.
      * 
      * Internally the ROIs are kept as a vector of
      * raw pointers to 4byte words. Memory management is
@@ -24,6 +24,7 @@ namespace hltsv {
     class LVL1Result {
     public:
 
+        // A clock definition that is used for timestamps.
         typedef std::chrono::high_resolution_clock  clock;
         typedef std::chrono::high_resolution_clock::time_point time_point;
         typedef std::chrono::high_resolution_clock::time_point::duration duration;
@@ -55,16 +56,28 @@ namespace hltsv {
         LVL1Result(const LVL1Result& ) = delete;
         LVL1Result& operator=(const LVL1Result& ) = delete;
 
+        /// The LVL1 ID of this event.
         uint32_t l1_id() const;
+
+        /// Has this event been re-assigned ?
         bool     reassigned() const;
+
+        /// Set the reassigned flag.
         void     set_reassigned();
 
+        /// The current timestamp of this event.
         time_point timestamp() const;
+
+        /// Set the timestamp of the event.
         void       set_timestamp(time_point ts = clock::now());
 
+        /// The global event ID for this event.
         uint64_t   global_id() const;
+
+        /// Set the global event ID for this event.
         void       set_global_id(uint64_t global_id);
 
+        /// Insert the internal structure into a asyncmsg message.
         template<class ConstBufferSequence>
         void insert(ConstBufferSequence& buffers) const
         {

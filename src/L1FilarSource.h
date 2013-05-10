@@ -13,9 +13,9 @@ namespace hltsv {
     const int FILAR_BUFFER_COUNT = 0x10;
 
     /**
-     * The L1FilarSource class encapsulates the version of the
+     * \brief The L1FilarSource class encapsulates the version of the
      * L1Source class which provides a LVL1Result object 
-     * from a buffer retunred by an filar device
+     * from a buffer returned by an filar device.
      *
      */
 

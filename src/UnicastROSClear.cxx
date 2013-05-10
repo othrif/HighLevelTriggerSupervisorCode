@@ -1,6 +1,6 @@
 
 #include "UnicastROSClear.h"
-#include "Messages.h"
+#include "ClearMessage.h"
 #include "asyncmsg/NameService.h"
 
 namespace hltsv {

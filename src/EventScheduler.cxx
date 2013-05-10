@@ -108,6 +108,8 @@ namespace hltsv {
     {
         m_global_id = 0;
         m_stats->reset();
+        m_free_cores.clear();
+        m_reassigned_events.clear();
     }
 
     void EventScheduler::update_instantaneous_rate()

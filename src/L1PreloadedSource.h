@@ -13,7 +13,7 @@
 namespace hltsv {
 
     /**
-     * The L1PreloadedSource class encapsulates the version of the
+     * \brief The L1PreloadedSource class encapsulates the version of the
      * L1Source class which provides a LVL1Result object from data
      * preloaded from a byte stream formatted file as indicated in
      * the configuration object.

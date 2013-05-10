@@ -1,6 +1,7 @@
 
 #include "DCMSession.h"
-#include "Messages.h"
+#include "UpdateMessage.h"
+#include "ProcessMessage.h"
 #include "EventScheduler.h"
 #include "ROSClear.h"
 #include "LVL1Result.h"

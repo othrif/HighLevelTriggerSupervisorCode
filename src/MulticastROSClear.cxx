@@ -1,6 +1,6 @@
 
 #include "MulticastROSClear.h"
-#include "Messages.h"
+#include "ClearMessage.h"
 #include "ers/ers.h"
 
 namespace hltsv {

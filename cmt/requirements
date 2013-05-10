@@ -55,7 +55,7 @@ macro_append daq-hltsv-dal_shlibflags "-lmonsvc-dal -ldaq-core-dal -ldaq-df-dal"
 #
 # Main HLTSV library
 # 
-library hltsv L1Source.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx UnicastROSClear.cxx MulticastROSClear.cxx ROSSession.cxx Messages.cxx HLTSVServer.cxx LVL1Result.cxx
+library hltsv L1Source.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx UnicastROSClear.cxx MulticastROSClear.cxx ROSSession.cxx HLTSVServer.cxx LVL1Result.cxx UpdateMessage.cxx ProcessMessage.cxx ClearMessage.cxx
 macro hltsv_shlibflags "-lItemCtrl -lers -ltbb -leformat_write -leformat -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg -ldynlibs"
 
 # this does not work in a nightly build:

@@ -25,15 +25,13 @@ namespace hltsv {
     class EventScheduler;
 
     /**
-     * The Session object representing a single DCM. 
+     * \brief The Session object representing a single DCM. 
      *
-     * It will inherit from the message passing session object.
-     * The assumption is that there is one such object per DCM
-     * and implement the base class' methods to react to incoming
+     * It inherits from the message passing session object.
+     * There is one such object per DCM and
+     * it implements the base class' methods to react to incoming
      * messages and errors.
      *
-     * The additional interface is the one that the scheduler needs.
-     * 
      */
 
     class DCMSession : public daq::asyncmsg::Session 
@@ -55,7 +53,6 @@ namespace hltsv {
         bool handle_event(std::shared_ptr<LVL1Result> rois);
 
         // Session interface
-
         virtual void onOpen() noexcept override;
         virtual void onOpenError(const boost::system::error_code& error) noexcept override;
 
@@ -68,17 +65,34 @@ namespace hltsv {
         virtual void onSendError(const boost::system::error_code& error, std::unique_ptr<const daq::asyncmsg::OutputMessage> message) noexcept override;
 
     private:
+        // Potentially restart the timer for this sessions if necessary.
         void restart_timer();
+
+        // The actual check for timeouts in the list of handled events
         void check_timeouts(const boost::system::error_code& error);
 
+        // The scheduler, necessary to re-assign events
         std::shared_ptr<EventScheduler>        m_scheduler;
+
+        // The ROSClear interface to add processed events to.
         std::shared_ptr<ROSClear>              m_clear;
+
+        // The list of currently handled events.
         std::list<std::shared_ptr<LVL1Result>> m_events;
+
+        // Is this session in an error state ?
         bool                                   m_in_error;
+
+        // The deadline timer for the next timeout.
         boost::asio::steady_timer              m_timer;
-        bool                                   m_start_timer;
+
+        // The timeout of an event in milliseconds
         unsigned int                           m_timeout_in_ms;
+
+        // The cached value to the event that the timeout timer is using.
         std::shared_ptr<LVL1Result>            m_timer_cache;
+
+        // A shared reference to the 'ProcessingTime' histogram.
         monsvc::ptr<TH1F>                      m_time_histo;
     };
 
