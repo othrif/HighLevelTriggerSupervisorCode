@@ -8,8 +8,7 @@
 #include <vector>
 #include <map>
 #include <stdint.h>
-
-#include "boost/thread/mutex.hpp"
+#include <mutex>
 
 namespace hltsv {
 
@@ -46,7 +45,7 @@ namespace hltsv {
         unsigned int  m_firstid;
         bool          m_modid;
         
-        boost::mutex  m_mutex; 
+        std::mutex    m_mutex; 
 
         std::vector<std::string> m_file_names;
     };

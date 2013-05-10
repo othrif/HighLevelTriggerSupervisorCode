@@ -94,7 +94,7 @@ namespace hltsv {
             // Rewrite LB and HLT counter in CTP fragment
             const eformat::ROBFragment<const uint32_t*> rob_frag(const_cast<uint32_t*>(robs[i]));
             
-            boost::mutex::scoped_lock lock(m_mutex);
+            std::lock_guard<std::mutex> lock(m_mutex);
 
             if ( rob_frag.source_id()==0x00770001 ) {    // CTP fragment
                 if ( CTPfragment::ctpFormatVersion(&rob_frag) == 0 ) {
@@ -337,13 +337,13 @@ namespace hltsv {
 
     void L1PreloadedSource::setLB(uint32_t lb)
     {
-        boost::mutex::scoped_lock lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
         m_lb = lb;
     }
 
     void L1PreloadedSource::setHLTCounter(uint16_t counter)
     {
-        boost::mutex::scoped_lock lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
         m_hltCounter = counter;
     }
 
