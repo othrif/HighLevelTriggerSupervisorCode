@@ -200,7 +200,6 @@ namespace hltsv {
 
                 auto expire_duration = (m_events.front()->timestamp() + std::chrono::milliseconds(m_timeout_in_ms)) - LVL1Result::clock::now();
 
-                // m_timer.expires_from_now(boost::posix_time::milliseconds(std::chrono::duration_cast<std::chrono::milliseconds>(expire_duration).count()));
                 m_timer.expires_from_now(expire_duration);
                 m_timer.async_wait(getStrand().wrap(std::bind(&DCMSession::check_timeouts, this, std::placeholders::_1)));
             }
