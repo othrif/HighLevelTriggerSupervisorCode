@@ -9,7 +9,7 @@ namespace hltsv {
     class ROSSession;
 
     /**
-     * Unicast implementation of ROSClear, using TCP.
+     * \brief Unicast implementation of ROSClear, using TCP.
      */
     class UnicastROSClear : public ROSClear {
     public:
@@ -19,6 +19,7 @@ namespace hltsv {
         virtual void connect() override;
 
     private:
+        /// The implementation of the flush operation.
 
         virtual void do_flush(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events) override;
     private:

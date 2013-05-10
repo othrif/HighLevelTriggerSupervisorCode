@@ -18,9 +18,8 @@ namespace hltsv {
      * The ROSClear interface.
      * This is all the rest of the HLTSV sees.
      *
-     * The instances of ROSClear should not be
-     * created before the remote side is ready, i.e.
-     * not before the connect() transition.
+     * The connect() method should be called at the
+     * appropriate time to setup the connections.
      */
     class ROSClear {
     public:

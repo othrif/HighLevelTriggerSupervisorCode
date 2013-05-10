@@ -7,10 +7,11 @@
 
 namespace hltsv {
 
+    // Forward declaration for multicast session (only defined internally).
     class MCSession;
 
     /**
-     * Multicast implementation of ROSClear.
+     * \brief Multicast implementation of ROSClear.
      */
     class MulticastROSClear : public ROSClear {
     public:
@@ -19,8 +20,10 @@ namespace hltsv {
 
     private:
 
+        /// The implementation of the flush operation.
         virtual void do_flush(uint32_t sequence, std::shared_ptr<std::vector<uint32_t>> events) override;
 
+        /// The multicast session.
         std::shared_ptr<MCSession> m_session;
     };
 

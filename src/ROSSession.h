@@ -9,9 +9,12 @@
 
 namespace hltsv {
 
-
-    class ROSSession : public daq::asyncmsg::Session 
-    {
+    /**
+     * \brief The connection to the ROS in case TCP is used for the clear messages.
+     * 
+     * Note that only the send operation is being used.
+     */
+    class ROSSession : public daq::asyncmsg::Session   {
     public:
         ROSSession(boost::asio::io_service& service);
         ~ROSSession();
