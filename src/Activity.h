@@ -9,7 +9,6 @@
 
 // Monitoring
 #include "TH1F.h"
-#include "TFile.h"
 
 #include "monsvc/PublishingController.h"
 
@@ -90,7 +89,6 @@ namespace hltsv {
     
     // Monitoring
     std::unique_ptr<monsvc::PublishingController> m_publisher;
-    std::unique_ptr<TFile>                        m_outfile;
     
     // Running flags
     bool                            m_network;

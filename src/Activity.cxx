@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 #include "dynlibs/DynamicLibrary.h"
-#include "clocks/Clock.h"
 
 #include "config/Configuration.h"
 
@@ -32,11 +31,7 @@
 
 #include "asyncmsg/NameService.h"
 
-#include "TFile.h"
 #include <is/info.h>
-#include <boost/function.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
 
 #include <algorithm>
 
