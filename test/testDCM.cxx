@@ -217,6 +217,13 @@ void DCMActivity::execute(unsigned worker_id)
 {
   ERS_LOG(" *** Worker #" << worker_id << ": Entering DCMActivty::execute() *** ");
 
+  std::random_device rd;
+  std::mt19937 engine(rd());
+
+  std::normal_distribution<> l2_distribution(m_l2_processing, 1);
+  std::normal_distribution<> eb_distribution(m_event_building, 1);
+  std::normal_distribution<> ef_distribution(m_event_filter, 1);
+
   unsigned int l1id;
   bool do_build;
   std::vector<uint32_t> l1id_list(1);  // needed for handing off to HLTSVSession
@@ -259,7 +266,8 @@ void DCMActivity::execute(unsigned worker_id)
     }
 
     // recieved a new L1ID, 'process' for a random time
-    usleep(m_l2_processing * (rand() % 1000));
+
+    usleep(l2_distribution(engine) * 1000);
 
     // finished 'processing', send back the L1ID immediately
     // number of cores depends on whether we're going to build stage
@@ -270,11 +278,10 @@ void DCMActivity::execute(unsigned worker_id)
     if (do_build)
     {
       // simulate extra processing; sleep some more then request a new work unit
-        usleep( m_event_building * (rand() % 1000));
+      usleep(eb_distribution(engine) * 1000);
 
-      // TODO: sleep m_event_filter time
-
-        usleep (m_event_filter * (rand() % 1000));
+      // EF
+      usleep( ef_distribution(engine) * 1000);
 
       m_session->send_update(1, std::vector<uint32_t>());
 
