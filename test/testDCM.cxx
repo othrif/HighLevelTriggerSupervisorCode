@@ -232,7 +232,7 @@ void DCMActivity::execute(unsigned worker_id)
   {
     // block until a new L1ID is available.
     try {
-        std::tie<bool, unsigned int>(do_build, l1id) = m_session->get_next_assignment();
+        std::tie(do_build, l1id) = m_session->get_next_assignment();
         
         if(!do_build) {
             // else, randomly decide whether we'll build
