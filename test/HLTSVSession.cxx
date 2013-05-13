@@ -27,6 +27,8 @@ namespace hltsv {
   std::unique_ptr<daq::asyncmsg::InputMessage> 
   HLTSVSession::createMessage(std::uint32_t typeId, std::uint32_t /*transactionId*/, std::uint32_t size) noexcept
   {
+    ERS_LOG("size = " << size);
+
     switch (typeId)
     {
       case AssignMessage::ID:

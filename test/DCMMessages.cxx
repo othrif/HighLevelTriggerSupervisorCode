@@ -35,7 +35,7 @@ namespace hltsv {
 
     AssignMessage::AssignMessage(size_t size)
         : m_data_size(size - 3*sizeof(uint32_t)),
-          m_data(new uint32_t[m_data_size/sizeof(uint32_t) + 1])
+          m_data(m_data_size/sizeof(uint32_t))
     {
     }
 
@@ -59,7 +59,7 @@ namespace hltsv {
     {
       buffers.push_back(boost::asio::buffer(&m_global_id, sizeof(uint64_t)));
       buffers.push_back(boost::asio::buffer(&m_lvl1_id, sizeof(uint32_t)));
-      buffers.push_back(boost::asio::buffer(m_data.get(), m_data_size));
+      buffers.push_back(boost::asio::buffer(m_data));
     }
 
     uint64_t AssignMessage::global_id() const

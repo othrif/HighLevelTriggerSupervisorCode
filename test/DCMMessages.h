@@ -44,7 +44,7 @@ namespace hltsv {
     uint64_t                    m_global_id;
     uint32_t                    m_lvl1_id;
     size_t                      m_data_size;
-    std::unique_ptr<uint32_t[]> m_data;
+    std::vector<uint32_t>       m_data;
   };
 
   // BuildMessage is the same as AssignMessage, but denotes a "force accept"

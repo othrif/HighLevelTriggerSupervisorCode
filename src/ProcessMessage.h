@@ -27,10 +27,6 @@ namespace hltsv {
         virtual uint32_t transactionId() const override;
         virtual void     toBuffers(std::vector<boost::asio::const_buffer>&) const override;
     private:
-        struct prefix {
-            uint64_t global_id;
-            uint32_t l1_id;
-        } m_prefix;
         std::shared_ptr<LVL1Result> m_rois;
     };
 
