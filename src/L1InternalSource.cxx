@@ -28,17 +28,21 @@ namespace hltsv {
         const uint32_t bc_id	   = 0x1;
         const uint32_t lvl1_type = 0xff;
   
-        uint32_t event_type = 0x0; // params->getLumiBlock(); ?????
+        const uint32_t event_type = 0x0; // params->getLumiBlock(); ?????
 
-        uint32_t *dummy_data = new uint32_t[250];
+        static const uint32_t dummy_data[250] = { 0 };
 
         eformat::helper::SourceIdentifier src(eformat::TDAQ_CTP, 1);
 
         eformat::write::ROBFragment rob(src.code(), run_no, m_l1id, bc_id,
-                                        lvl1_type, event_type, 240, dummy_data, 
+                                        lvl1_type, event_type, 
+                                        sizeof(dummy_data)/sizeof(dummy_data[0]), dummy_data, 
                                         eformat::STATUS_FRONT);
 
-        LVL1Result* l1Result = new LVL1Result(m_l1id, dummy_data, rob.size_word());
+        auto fragment = new uint32_t[rob.size_word()];
+        eformat::write::copy(*rob.bind(), fragment, rob.size_word());
+
+        LVL1Result* l1Result = new LVL1Result(m_l1id, fragment, rob.size_word());
         m_l1id += 1;
 
         return l1Result;
