@@ -114,6 +114,16 @@ protected:
         ERS_LOG("Open error..." << error);
     }
 
+    void onClose() noexcept override
+    {
+        ERS_LOG("Session is closed");
+    }
+
+    void onCloseError(const boost::system::error_code& error) noexcept override
+    {
+        ERS_LOG("Close error..." << error);
+    }
+
     // we only expect a ClearMessage
     std::unique_ptr<daq::asyncmsg::InputMessage> 
     createMessage(std::uint32_t typeId,
@@ -265,7 +275,7 @@ public:
     void stop()
     {
         if(m_session) {
-            m_session->close();
+            m_session->asyncClose();
             m_session.reset();
         }
     }

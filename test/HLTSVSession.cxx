@@ -24,6 +24,16 @@ namespace hltsv {
     ERS_LOG(" *** Error opening connection to HLTSV! *** " << error);
   }
   
+  void HLTSVSession::onClose() noexcept
+  {
+    ERS_LOG(" *** DISCONNECTED FROM HLTSV ***");
+  }
+
+  void HLTSVSession::onCloseError(const boost::system::error_code& error) noexcept
+  {
+    ERS_LOG(" *** Error closing connection to HLTSV! *** " << error);
+  }
+
   std::unique_ptr<daq::asyncmsg::InputMessage> 
   HLTSVSession::createMessage(std::uint32_t typeId, std::uint32_t /*transactionId*/, std::uint32_t size) noexcept
   {

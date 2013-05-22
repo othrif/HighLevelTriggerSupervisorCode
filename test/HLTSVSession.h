@@ -20,6 +20,10 @@ namespace hltsv {
     // Session interface
     virtual void onOpen() noexcept override;
     virtual void onOpenError(const boost::system::error_code& error) noexcept override;
+
+    virtual void onClose() noexcept override;
+    virtual void onCloseError(const boost::system::error_code& error) noexcept override;
+
     virtual std::unique_ptr<daq::asyncmsg::InputMessage> createMessage(std::uint32_t typeId, std::uint32_t transactionId, std::uint32_t size) noexcept override;
     
     virtual void onReceive(std::unique_ptr<daq::asyncmsg::InputMessage> message) override;

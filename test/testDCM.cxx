@@ -157,9 +157,12 @@ void DCMActivity::disconnect(std::string & )
 {
   ERS_LOG("DCMActivity::disconnect(): close HLTSV connection");
   // disconnect from HLTSV
-  m_session->close();
-  ERS_LOG("DCMActivity::disconnect(): join to service thread");
+  m_session->asyncClose();
+  while(m_session->state() != daq::asyncmsg::Session::State::CLOSED) {
+      usleep(10000);
+  }
 
+  ERS_LOG("DCMActivity::disconnect(): join to service thread");
   // allow io_service to finish what it's doing by explictly destroying the work object
   m_work.reset();
   m_service_thread.join();

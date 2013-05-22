@@ -46,7 +46,7 @@ namespace hltsv {
     {
         close();
         for(auto session : m_sessions) {
-            session->close();
+            session->asyncClose();
         }
         m_sessions.clear();
     }

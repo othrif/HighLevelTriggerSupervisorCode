@@ -26,7 +26,18 @@ namespace hltsv {
         ERS_LOG("openError: " << error );
         // report error
     }
-    
+
+    void ROSSession::onClose() noexcept
+    {
+        ERS_LOG("closed connection to ROS: " << remoteName() << " addr: " << remoteEndpoint());
+    }
+
+    void ROSSession::onCloseError(const boost::system::error_code& error) noexcept
+    {
+        ERS_LOG("closeError: " << error );
+        // report error
+    }
+
     std::unique_ptr<daq::asyncmsg::InputMessage> 
     ROSSession::createMessage(std::uint32_t , std::uint32_t , std::uint32_t ) noexcept  
     {

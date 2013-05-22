@@ -115,7 +115,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 # repository 
 #
   ProtoRepo@SW_Repository
-  ProtoRepo@SW_Repository.Tags = [ x86_64-slc5-gcc47-opt@Tag ,  x86_64-slc5-gcc47-dbg@Tag  ]
+  ProtoRepo@SW_Repository.Tags = [ x86_64-slc6-gcc47-opt@Tag ,  x86_64-slc6-gcc47-dbg@Tag , x86_64-slc5-gcc47-opt@Tag ,  x86_64-slc5-gcc47-dbg@Tag  ]
   ProtoRepo@SW_Repository.Name = "HLTSVTestProto"
   ProtoRepo@SW_Repository.InstallationPath = "$REPOSITORY"
   ProtoRepo@SW_Repository.Uses = [ Online@SW_Repository ]

@@ -119,6 +119,18 @@ namespace hltsv {
         m_in_error = true;
     }
 
+    void DCMSession::onClose() noexcept
+    {
+        ERS_LOG("DCMSession::onClose() from " << remoteName());
+    }
+
+    void DCMSession::onCloseError(const boost::system::error_code& error) noexcept
+    {
+        ERS_LOG("closeError: " << error << " from " << remoteName());
+        // TODO: report;  Who closes me ?
+        m_in_error = true;
+    }
+
     std::unique_ptr<daq::asyncmsg::InputMessage> 
     DCMSession::createMessage(std::uint32_t typeId, std::uint32_t /* transactionId */, std::uint32_t size) noexcept
     {
