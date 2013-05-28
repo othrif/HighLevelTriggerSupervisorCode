@@ -8,11 +8,21 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-INCLUDES="-I daq/sw/repository.data.xml -I daq/schema/df.schema.xml -I daq/segments/setup.data.xml -I daq/sw/common-templates.data.xml -I daq/schema/hltsv.schema.xml"
+# Choose between dummy DCM and real one here:
+
+DCM_APPLICATION="DCM@HLTSV_DCMTest"
+#DCM_APPLICATION="dcm@DcmApplication"
+
+# 
+# Default parameters
+# 
+INCLUDES="-I daq/sw/repository.data.xml -I daq/schema/df.schema.xml -I daq/segments/setup.data.xml -I daq/sw/common-templates.data.xml -I daq/schema/hltsv.schema.xml -I daq/schema/dcm.schema.xml"
 PARTITION=$1
 REPOSITORY=$(dirname $(dirname $(pwd)))/installed
 DEFAULT_HOST=$(hostname)
 ROS_HOSTS="${DEFAULT_HOST}"
+
+
 
 LOGROOT="/tmp"
 
@@ -174,12 +184,34 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   DCM@HLTSV_DCMTest.EFProcessingTime = 4000
 
 #
+# Real DCM Application
+# 
+
+
+  dcmRules@ConfigurationRuleBundle
+  dcmL1Source@DcmHltsvL1Source
+  dcmDatacollector@DcmRosDataCollector
+  dcmOutput@DcmFileOutput  
+  dcmProcessor@DcmDummyProcessor
+
+  dcm@DcmApplication
+  dcm@DcmApplication.Program            = dcm_main@Binary
+  dcm@DcmApplication.ConfigurationRules = dcmRules@ConfigurationRuleBundle
+  dcm@DcmApplication.Instances          = 1
+
+  dcm@DcmApplication.l1Source           = dcmL1Source@DcmHltsvL1Source
+  dcm@DcmApplication.dataCollector      = dcmDatacollector@DcmRosDataCollector
+  dcm@DcmApplication.processor          = dcmProcessor@DcmDummyProcessor
+  dcm@DcmApplication.output             = dcmOutput@DcmFileOutput
+
+
+#
 # DCM segments x ${NUM_SEGMENTS}
 # 
   $(for i in $(seq 1 ${NUM_SEGMENTS}) ; do 
      echo DCM-Segment-${i}@HLTSegment 
      echo DCM-Segment-${i}@HLTSegment.IsControlledBy = DefRC@RunControlTemplateApplication 
-     echo DCM-Segment-${i}@HLTSegment.TemplateApplications = [ DCM@HLTSV_DCMTest ]
+     echo DCM-Segment-${i}@HLTSegment.TemplateApplications = [ ${DCM_APPLICATION} ]
      echo DCM-Segment-${i}@HLTSegment.TemplateHosts = [ ${SEGMENTS[${i}]} ]
     done)
 
