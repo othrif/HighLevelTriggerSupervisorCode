@@ -119,9 +119,13 @@ case "$3" in
     dcm)
         DCM_APPLICATION="dcm@DcmApplication"
         ;;
-    dummy|*)
+    dummy)
         ;;
-   
+    *)
+        echo "Invalid DCM application: $3"
+        echo "Value can by dummy or dcm"
+        exit 1
+        ;;
 esac
 
 
