@@ -166,7 +166,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   HLTSV_OH@OHPublishingParameters
   HLTSV_OH@OHPublishingParameters.OHServer = "${TDAQ_OH_SERVER=Histogramming}"
   HLTSV_OH@OHPublishingParameters.ROOTProvider = "HLTSV"
-  HLTSV_IS@ISPublishingParameters.PublishInterval = 20
+  HLTSV_OH@OHPublishingParameters.PublishInterval = 20
 
   HLTSV_OHRule@ConfigurationRule
   HLTSV_OHRule@ConfigurationRule.Parameters = HLTSV_OH@OHPublishingParameters
