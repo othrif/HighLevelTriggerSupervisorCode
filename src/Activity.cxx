@@ -126,9 +126,10 @@ namespace hltsv {
 
 
     m_publisher.reset(new monsvc::PublishingController(part,getName()));
+    m_publisher->add_configuration_rules(*conf);
     
-    m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("DFObjects:.*/=>is:(2,DF)"));
-    m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("Histogramming:.*/=>oh:(5,Histogramming,HLTSV)"));
+    // m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("DFObjects:.*/=>is:(2,DF)"));
+    // m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("Histogramming:.*/=>oh:(5,Histogramming,HLTSV)"));
     
     // Initialize  HLTSV_NameService
     // Declare it in .h?

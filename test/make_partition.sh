@@ -119,7 +119,7 @@ case "$3" in
     dcm)
         DCM_APPLICATION="dcm@DcmApplication"
         ;;
-    dummy)
+    dummy|"")
         ;;
     *)
         echo "Invalid DCM application: $3"
@@ -154,7 +154,25 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 #
   HLTSVConfig@HLTSVConfiguration
 
+# monsvc for HLTSV
+
+  HLTSV_IS@ISPublishingParameters
+  HLTSV_IS@ISPublishingParameters.ISServer = "${TDAQ_IS_SERVER=DF}"
+  HLTSV_IS@ISPublishingParameters.PublishInterval = 2
+
+  HLTSV_ISRule@ConfigurationRule
+  HLTSV_ISRule@ConfigurationRule.Parameters = HLTSV_IS@ISPublishingParameters
+
+  HLTSV_OH@OHPublishingParameters
+  HLTSV_OH@OHPublishingParameters.OHServer = "${TDAQ_OH_SERVER=Histogramming}"
+  HLTSV_OH@OHPublishingParameters.ROOTProvider = "HLTSV"
+  HLTSV_IS@ISPublishingParameters.PublishInterval = 20
+
+  HLTSV_OHRule@ConfigurationRule
+  HLTSV_OHRule@ConfigurationRule.Parameters = HLTSV_OH@OHPublishingParameters
+
   HLTSV_Rules@ConfigurationRuleBundle
+  HLTSV_Rules@ConfigurationRuleBundle.Rules = [ HLTSV_ISRule@ConfigurationRule , HLTSV_OHRule@ConfigurationRule ]
 
 #
 # HLTSV application
@@ -196,7 +214,6 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 #
 # Real DCM Application
 # 
-
 
   dcmPublish@ISPublishingParameters
   dcmPublish@ISPublishingParameters.PublishInterval = 7
