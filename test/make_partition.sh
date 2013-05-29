@@ -3,15 +3,13 @@
 #
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 partition_name [ testbed ]"
+    echo "usage: $0 partition_name [ testbed ] [ dummy|dcm] "
     echo "  where testbed is one of local|b4|pre|p1"
     exit 1
 fi
 
-# Choose between dummy DCM and real one here:
-
+# default DCM is local dummy
 DCM_APPLICATION="DCM@HLTSV_DCMTest"
-#DCM_APPLICATION="dcm@DcmApplication"
 
 # 
 # Default parameters
@@ -21,8 +19,6 @@ PARTITION=$1
 REPOSITORY=$(dirname $(dirname $(pwd)))/installed
 DEFAULT_HOST=$(hostname)
 ROS_HOSTS="${DEFAULT_HOST}"
-
-
 
 LOGROOT="/tmp"
 
@@ -119,6 +115,16 @@ case "$2" in
         ;;
 esac
 
+case "$3" in
+    dcm)
+        DCM_APPLICATION="dcm@DcmApplication"
+        ;;
+    dummy|*)
+        ;;
+   
+esac
+
+
 pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 
 #
@@ -188,11 +194,21 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 # 
 
 
+  dcmPublish@ISPublishingParameters
+  dcmPublish@ISPublishingParameters.PublishInterval = 7
+  dcmPublish@ISPublishingParameters.ISServer = "${TDAQ_IS_SERVER=DF}"
+
+  dcmRule@ConfigurationRule
+  dcmRule@ConfigurationRule.Parameters = dcmPublish@ISPublishingParameters
+
   dcmRules@ConfigurationRuleBundle
+  dcmRules@ConfigurationRuleBundle.Rules = [ dcmRule@ConfigurationRule ] 
+
   dcmL1Source@DcmHltsvL1Source
   dcmDatacollector@DcmRosDataCollector
   dcmOutput@DcmFileOutput  
   dcmProcessor@DcmDummyProcessor
+
 
   dcm@DcmApplication
   dcm@DcmApplication.Program            = dcm_main@Binary
