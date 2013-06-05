@@ -2,10 +2,12 @@
 //  $Id: L1FilarSource.cxx 47284 2008-03-14 13:36:20Z jls $
 //
 
-#include "ers/ers.h"
-#include "eformat/Issue.h"
 #include "eformat/write/ROBFragment.h"
 #include "eformat/util.h"
+
+#include "ers/ers.h"
+#include "LVL1Result.h"
+#include "eformat/Issue.h"
 
 #include "rcc_error/rcc_error.h"
 #include "ROSfilar/filar.h"
@@ -15,8 +17,6 @@
 
 #include "ttcpr/CMemory.h"
 #include "ttcpr/RingBuffer.h"
-
-#include "LVL1Result.h"
 
 extern "C" hltsv::L1Source *create_source(const std::string& source, const std::vector<std::string>& /* unused */)
 {
@@ -31,7 +31,6 @@ namespace hltsv {
     L1FilarSource::L1FilarSource(const std::string& source_type) :
         m_cmem(0),
         m_rb(0),
-        m_result(0),
         m_chan(0)
     {
         // buffer pool
@@ -44,25 +43,59 @@ namespace hltsv {
 
         // get channel number
         std::string channel = source_type;
-        if (channel.length() > 5) {
-            channel.erase(channel.begin(), channel.end()-1);
-            m_chan = atoi(channel.c_str());
-        }
+	m_chan_mask=1;
+        if (channel.length() > 5)
+            {
+                channel.erase(channel.begin(), channel.end()-1);
+		// a bit of a kluge -> the last character is hex
+		switch ((channel.c_str())[0]) {
+		case 'A': m_chan_mask=10;
+		  break;
+		case 'B': m_chan_mask=11;
+		  break;
+		case 'C': m_chan_mask=12;
+		  break;
+		case 'D': m_chan_mask=13;
+		  break;
+		case 'E': m_chan_mask=14;
+		  break;
+		case 'F': m_chan_mask=15;
+		  break;
+		default:
+		  m_chan_mask = atoi(channel.c_str());
+		}
+            }
 
         // Open Filar device
         unsigned int code = FILAR_Open();
         if (code) {
             throw hltsv::FilarFailed(ERS_HERE,"open");
         }
+	bool chanset=false;
+	// clear the m_result, m_size and m_active arrays
+	for (int i_chan=0;i_chan<FILAR_MAX_LINKS;i_chan++){
+	  m_active[i_chan]=( (m_chan_mask&((int)1<<i_chan)) != 0 );
+	  m_result[i_chan]=0;
+	  m_size[i_chan]=0;
+	  if( !chanset && m_active[i_chan] ) {
+	    chanset=true;
+	    m_chan=i_chan;
+	  }
+	}
     }
 
     L1FilarSource::~L1FilarSource()
     {
+      unsigned int code;
         // Close Filar device
-        unsigned int code = FILAR_Reset(m_chan);
-        if (code) {
-            throw hltsv::FilarFailed(ERS_HERE,"reset");
-        }
+      for (int i_chan=0;i_chan<FILAR_MAX_LINKS;i_chan++) {
+	if( m_active[i_chan] ){
+	  code = FILAR_Reset(i_chan);
+	  if (code) {
+	    throw hltsv::FilarFailed(ERS_HERE,"reset");
+	  }
+	}
+      }
 
         code = FILAR_Close();
         if (code) {
@@ -85,31 +118,29 @@ namespace hltsv {
         if (code) {
             throw hltsv::FilarDevException(ERS_HERE, code);
         }
+	code = FILAR_PagesOut(m_chan, &fout);
+	if (code) {
+	  throw hltsv::FilarDevException(ERS_HERE, code);
+	}
 
-        code = FILAR_PagesOut(m_chan, &fout);
-        if (code) {
-            throw hltsv::FilarDevException(ERS_HERE, code);
-        }
+        if (fout.fragstat[0])
+            {
+                ERS_DEBUG(1, " Error processing L1ID " << std::hex << m_result[5]);
 
-        if (fout.fragstat[0]) {
-            ERS_DEBUG(1, " Error processing L1ID " << std::hex << m_result[5]);
-            
-            // initialize next io
-            m_result = reinterpret_cast<unsigned int*>(m_rb->reqVaddr());
-            memset(m_result, 0, m_rb->elemSize());
-            
-            FILAR_in_t fin;
-            fin.nvalid = 1;      
-            fin.channel = m_chan;
-            fin.pciaddr[0] = reinterpret_cast<unsigned int>(m_rb->relPaddr());
-            unsigned int code = FILAR_PagesIn(&fin);
-            if (code) {
-                throw hltsv::FilarDevException(ERS_HERE, code);
+                // initialize next io
+                m_result[m_chan] = reinterpret_cast<unsigned int*>(m_rb->reqVaddr());
+                memset(m_result[m_chan], 0, m_rb->elemSize());
+                FILAR_in_t fin;
+                fin.nvalid = 1;      
+                fin.channel = m_chan;
+                fin.pciaddr[0] = reinterpret_cast<unsigned int>(m_rb->relPaddr());
+                unsigned int code = FILAR_PagesIn(&fin);
+                if (code) {
+                    throw hltsv::FilarDevException(ERS_HERE, code);
+                }
             }
-            return false;
-        }
 
-        m_size = fout.fragsize[0];
+        m_size[m_chan] = fout.fragsize[0];
         return (fout.nvalid != 0);
     }
 
@@ -122,12 +153,12 @@ namespace hltsv {
         LVL1Result* l1Result = 0;
 
         try {
-
-            // locate the ROD fragments
+	  //            l1Result = new LVL1Result( m_result[m_chan], m_size[m_chan] );
+                        // locate the ROD fragments
             const uint32_t* rod[MAXLVL1RODS];
             uint32_t        rodsize[MAXLVL1RODS];
 
-            uint32_t num_frags = eformat::find_rods(m_result, m_size, rod, rodsize, MAXLVL1RODS);
+            uint32_t num_frags = eformat::find_rods(m_result[m_chan], m_size[m_chan], rod, rodsize, MAXLVL1RODS);
             uint32_t size_word = 0;
 
             // create the ROB fragments out of ROD fragments
@@ -153,15 +184,16 @@ namespace hltsv {
 
             l1Result = new LVL1Result( 0, event, size_word);
             
+
             ERS_DEBUG(3, "Created LVL1Result with l1id: " << l1Result->l1ID()
-                      << " and size " << m_size );
+                      << " and size " << m_size[m_chan] );
         } catch (eformat::Issue &e) {
             ers::error(e); 
         }
         
         // initialize next io
-        m_result = reinterpret_cast<unsigned int*>(m_rb->reqVaddr());
-        memset(m_result, 0, m_rb->elemSize());
+        m_result[m_chan] = reinterpret_cast<unsigned int*>(m_rb->reqVaddr());
+        memset(m_result[m_chan], 0, m_rb->elemSize());
 
         fin.nvalid = 1;      
         fin.channel = m_chan;
@@ -170,6 +202,12 @@ namespace hltsv {
         if (code) {
             throw hltsv::FilarDevException(ERS_HERE, code);
         }
+	// move on to the next active channel
+	for (int i=0;i<FILAR_MAX_LINKS;i++) {
+	  m_chan++;
+	  m_chan=m_chan%FILAR_MAX_LINKS;
+	  if( m_active[m_chan] ) break;
+	}
         
         return l1Result;
     }
@@ -178,29 +216,30 @@ namespace hltsv {
     L1FilarSource::reset()
     {
         FILAR_in_t fin;
-
-        // reset device
-        unsigned int code = FILAR_Reset(m_chan);
-        if (code) {
+	for (int c=0;c<FILAR_MAX_LINKS;c++) if(m_active[c]){
+	  // reset device
+	  unsigned int code = FILAR_Reset(c);
+	  if (code) {
             throw hltsv::FilarDevException(ERS_HERE, code);
-        }
+	  }
 
-        code = FILAR_LinkReset(m_chan);
-        if (code) {
+	  code = FILAR_LinkReset(c);
+	  if (code) {
             throw hltsv::FilarDevException(ERS_HERE, code);
-        }
+	  }
 
-        // store user buffer address
-        m_result = reinterpret_cast<unsigned int*>(m_rb->reqVaddr());
-        memset(m_result, 0, m_rb->elemSize());
-
-        fin.nvalid = 1;      
-        fin.channel = m_chan;
-        fin.pciaddr[0] = reinterpret_cast<unsigned int>(m_rb->relPaddr());
-        code = FILAR_PagesIn(&fin);
-        if (code) {
+	  // store user buffer address
+	  m_result[c] = reinterpret_cast<unsigned int*>(m_rb->reqVaddr());
+	  memset(m_result[c], 0, m_rb->elemSize());
+	  
+	  fin.nvalid = 1;      
+	  fin.channel = c;
+	  fin.pciaddr[0] = reinterpret_cast<unsigned int>(m_rb->relPaddr());
+	  code = FILAR_PagesIn(&fin);
+	  if (code) {
             throw hltsv::FilarDevException(ERS_HERE,  code);
-        }
+	  }
+	}
     }
 
     void
@@ -209,11 +248,9 @@ namespace hltsv {
         FILAR_config_t fconfig;
  
         // reset device
-        for(int c = 0; c < MAXROLS; c++) {
-            fconfig.enable[c] = 0; 
-        }
+        for(int c = 0; c < MAXROLS; c++)
+	  fconfig.enable[c] = m_active[c]?1:0; 
 
-        fconfig.enable[m_chan] = 1;
         fconfig.psize = 4;
         fconfig.bswap = 0;
         fconfig.wswap = 0;

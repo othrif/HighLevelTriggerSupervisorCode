@@ -85,8 +85,11 @@ namespace hltsv {
 
     std::string source_type = self->get_L1Source();
     std::string lib_name("libsvl1");
-    lib_name += source_type;
-
+    if( source_type.compare(0,5,"filar")==0 ) 
+      lib_name += "filar";
+    else
+      lib_name += source_type;
+    
     try {
       m_l1source_lib = new DynamicLibrary(lib_name);
       if(L1Source::creator_t make = m_l1source_lib->function<L1Source::creator_t>("create_source")) {
