@@ -62,30 +62,28 @@ namespace hltsv {
   void Activity::configure(std::string &)
   {
 
+    ERS_LOG(" *** Start of Activity::configure() ***");
+
     m_work.reset(new boost::asio::io_service::work(m_io_service));
     m_ros_work.reset(new boost::asio::io_service::work(m_ros_io_service));
-
-    ERS_LOG(" *** Start of Activity::configure() ***");
 
     Configuration* conf = daq::rc::ConfigurationBridge::instance()->getConfiguration();
 
     const daq::df::HLTSVApplication *self = conf->cast<daq::df::HLTSVApplication>(daq::rc::ConfigurationBridge::instance()->getApplication());
-    const daq::df::HLTSVConfiguration *my_conf = self->get_Configuration();
 
     const daq::core::Partition *partition = daq::rc::ConfigurationBridge::instance()->getPartition();
     const IPCPartition          part(partition->UID());
 
     const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
 
-    m_event_delay = my_conf->get_EventDelay();
-
+    m_event_delay = self->get_EventDelay();
     // Load L1 Source
     std::vector<std::string> file_names;
 
     const std::vector<const daq::df::DataFile*>& dataFiles = dfparams->get_UsesDataFiles();
     std::transform(dataFiles.begin(), dataFiles.end(), file_names.begin(), [](const daq::df::DataFile* df) { return df->get_FileName(); });
 
-    std::string source_type = my_conf->get_L1Source();
+    std::string source_type = self->get_L1Source();
     std::string lib_name("libsvl1");
     lib_name += source_type;
 
@@ -160,7 +158,7 @@ namespace hltsv {
     // Initialize ROS clear implementation
     if(dfparams->get_MulticastAddress().empty()) {
         // use TCP
-        m_ros_clear = std::make_shared<UnicastROSClear>(my_conf->get_ClearGrouping(), m_ros_io_service, HLTSV_NameService);
+        m_ros_clear = std::make_shared<UnicastROSClear>(self->get_ClearGrouping(), m_ros_io_service, HLTSV_NameService);
     } else {
 
         // address is format  <Multicast-IP-Adress>/<OutgoingInterface>
@@ -172,14 +170,14 @@ namespace hltsv {
 
         ERS_LOG("Configuring for multicast: " << mcast << '/' << outgoing);
 
-        m_ros_clear = std::make_shared<MulticastROSClear>(my_conf->get_ClearGrouping(), m_ros_io_service, mcast, outgoing);
+        m_ros_clear = std::make_shared<MulticastROSClear>(self->get_ClearGrouping(), m_ros_io_service, mcast, outgoing);
     }
     
     m_network = true;
 
     ERS_LOG(" *** Start HLTSVServer ***");
     m_event_sched = std::make_shared<EventScheduler>();
-    m_myServer = std::make_shared<HLTSVServer> (m_io_service, m_event_sched, m_ros_clear, my_conf->get_Timeout());
+    m_myServer = std::make_shared<HLTSVServer> (m_io_service, m_event_sched, m_ros_clear, self->get_Timeout());
     // the id should be read from OKS
     m_myServer->listen(getName());
 
@@ -192,7 +190,7 @@ namespace hltsv {
     //  HLTSVServer::start() calls Server::asyncAccept() which calls HLTSVServer::onAccept
     m_myServer->start();
 
-    for(unsigned int i = 0; i < my_conf->get_NumberOfAssignThreads(); i++) {
+    for(unsigned int i = 0; i < self->get_NumberOfAssignThreads(); i++) {
         m_io_threads.push_back(std::thread(&Activity::io_thread, this, std::ref(m_io_service)));
     }
 
