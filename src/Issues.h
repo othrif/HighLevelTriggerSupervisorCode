@@ -93,4 +93,12 @@ ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
                         ERS_EMPTY,
 			((const char*) what )) //attribute of this class
 
+ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
+			MasterTriggerIssue, // issue class name
+			hltsv::Issue, //base class name
+			" Master Trigger Issue: "<<
+			what << "\".", //message
+                        ERS_EMPTY,
+			((const char*) what )) //attribute of this class
+
 #endif //__HLTSV_ISSUES_H__

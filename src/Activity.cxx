@@ -27,7 +27,11 @@
 
 #include "monsvc/MonitoringService.h"
 #include "monsvc/FilePublisher.h"
+
 #include "HLTSV.h"
+
+#include "Issues.h"
+#include "ers/ers.h"
 
 #include "asyncmsg/NameService.h"
 
@@ -61,7 +65,7 @@ namespace hltsv {
     m_work.reset(new boost::asio::io_service::work(m_io_service));
     m_ros_work.reset(new boost::asio::io_service::work(m_ros_io_service));
 
-    ERS_LOG(" *** ENTER IN Activity::configure() ***");
+    ERS_LOG(" *** Start of Activity::configure() ***");
 
     Configuration* conf = daq::rc::ConfigurationBridge::instance()->getConfiguration();
 
@@ -101,27 +105,42 @@ namespace hltsv {
 
 
     // Conditions for which the HLTSV should be Master Trigger
-    const daq::core::MasterTrigger* masterholder = partition->get_MasterTrigger();
+    const daq::core::MasterTrigger* masterholder = 0;
+    masterholder = partition->get_MasterTrigger();
+    const daq::core::RunControlApplicationBase * master = 0;
+    const daq::df::HLTSVApplication * hltsvApp = 0;
     if (masterholder) {
+      master = masterholder->get_Controller();
+      hltsvApp = conf->cast<daq::df::HLTSVApplication>(master);
       if(source_type == "internal" || source_type == "preloaded") {
 	// Check if OKS is set correctly
-	if(masterholder->UID() == self->UID()) {
+	if(hltsvApp) {
 	  // HLTSV is master trigger
 	  m_masterTrigger = true;
 	  m_cmdReceiver.reset(new daq::rc::CommandedTrigger(part, getName(), this));
 	} else {
-	  // fatal
-	  ERS_LOG("HLTSV is not the master trigger, the master trigger is: " << masterholder->UID());
+	  std::stringstream issue_txt;
+	  issue_txt << "HLTSV is not the master trigger, even if it is set to " 
+		    << source_type << " mode. The master trigger is: " 
+		    << masterholder->UID();
+	  std::string tmp = issue_txt.str();
+	  hltsv::MasterTriggerIssue fatal_i(ERS_HERE, tmp.c_str());
+	  ers::fatal(fatal_i);
 	}   
       } else {
-	if(masterholder->UID() == self->UID()) {
-	  // warning?
-	  ERS_LOG("HLTSV is set as the master trigger, but the source type is: " << source_type);
+	if(hltsvApp) {
+	  std::stringstream issue_txt;
+	  issue_txt << "HLTSV is set as the master trigger, but the source type is: " 
+		    <<  source_type;
+	  std::string tmp = issue_txt.str();
+	  hltsv::MasterTriggerIssue warn_i(ERS_HERE, tmp.c_str());
+	  ers::warning(warn_i);
 	}
       }
     } else {
-      // warning?
-      ERS_LOG("Master Trigger not defined in the partition");
+      std::string issue_txt = "Master Trigger not defined in the partition";
+      hltsv::MasterTriggerIssue warn2_i(ERS_HERE, issue_txt.c_str());
+      ers::warning(warn2_i);
     }
 
 
@@ -328,6 +347,9 @@ namespace hltsv {
   
   void Activity::setL1Prescales(uint32_t )
   {
+    std::string issue_txt = "HLTSV cannot set L1 Prescale";
+    hltsv::MasterTriggerIssue warn(ERS_HERE, issue_txt.c_str());
+    ers::warning(warn);
   }
   
   void Activity::setHLTPrescales(uint32_t , uint32_t lb)
@@ -348,10 +370,18 @@ namespace hltsv {
   
   void Activity::setBunchGroup(uint32_t)
   {
+    std::string issue_txt = "HLTSV cannot set Bunch Group";
+    hltsv::MasterTriggerIssue warn(ERS_HERE, issue_txt.c_str());
+    ers::warning(warn);
+
   }
   
   void Activity::setConditionsUpdate(uint32_t, uint32_t)
   {
+    std::string issue_txt = "HLTSV cannot set Conditions Update";
+    hltsv::MasterTriggerIssue warn(ERS_HERE, issue_txt.c_str());
+    ers::warning(warn);
+
   }
   
 }
