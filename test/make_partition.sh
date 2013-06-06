@@ -148,12 +148,6 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 #hltsv_main@Binary.BelongsTo  = ProtoRepo@SW_Repository
 #ProtoRepo@SW_Repository.SW_Objects += [ hltsv_main@Binary ]
 
-
-#
-# HLTSV configuration: use defaults for everything
-#
-  HLTSVConfig@HLTSVConfiguration
-
 # monsvc for HLTSV
 
   HLTSV_IS@ISPublishingParameters
@@ -181,8 +175,6 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   HLTSV@HLTSVApplication.Program              = hltsv_main@Binary
   HLTSV@HLTSVApplication.RestartableDuringRun = True
   HLTSV@HLTSVApplication.RunsOn               = ${HLTSV_HOST:-${DEFAULT_HOST}}@Computer
-  HLTSV@HLTSVApplication.Configuration        = HLTSVConfig@HLTSVConfiguration
-
   HLTSV@HLTSVApplication.ConfigurationRules   =  HLTSV_Rules@ConfigurationRuleBundle
 
 # 
