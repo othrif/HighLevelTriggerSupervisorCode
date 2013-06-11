@@ -21,7 +21,6 @@
 #include "EventScheduler.h"
 
 #include "DFdal/HLTSVApplication.h"
-#include "DFdal/HLTSVConfiguration.h"
 
 #include "RunController/ConfigurationBridge.h"
 
