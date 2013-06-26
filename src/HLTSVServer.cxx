@@ -9,12 +9,13 @@
 
 namespace hltsv {
     
-    HLTSVServer::HLTSVServer(boost::asio::io_service& service,
+    HLTSVServer::HLTSVServer(std::vector<boost::asio::io_service>& services,
                              std::shared_ptr<EventScheduler> scheduler,
                              std::shared_ptr<ROSClear> clear,
                              unsigned int timeout_in_ms)
-        : daq::asyncmsg::Server(service),
-          m_service(service),
+        : daq::asyncmsg::Server(services[0]),
+          m_services(services),
+          m_next_service(0),
           m_scheduler(scheduler),
           m_ros_clear(clear),
           m_timeout_in_ms(timeout_in_ms),
@@ -34,11 +35,14 @@ namespace hltsv {
     {
         m_time_histo->Reset();
 
-        auto session = std::make_shared<DCMSession>(m_service,
+        auto session = std::make_shared<DCMSession>(m_services[m_next_service],
                                                     m_scheduler,
                                                     m_ros_clear,
                                                     m_timeout_in_ms,
                                                     m_time_histo);
+
+        m_next_service = (m_next_service + 1) % m_services.size();
+
         asyncAccept(session);
     }
 
@@ -60,11 +64,14 @@ namespace hltsv {
         m_sessions.push_back(dcm);
             
         // start the next accept
-        auto new_session = std::make_shared<DCMSession>(m_service,
+        auto new_session = std::make_shared<DCMSession>(m_services[m_next_service],
                                                         m_scheduler,
                                                         m_ros_clear,
                                                         m_timeout_in_ms,
                                                         m_time_histo);
+
+        m_next_service = (m_next_service + 1) % m_services.size();
+
         asyncAccept(new_session);
     }
 
