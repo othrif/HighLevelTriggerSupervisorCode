@@ -58,9 +58,6 @@ namespace hltsv {
   void Activity::configure(std::string &)
   {
 
-    m_work.reset(new boost::asio::io_service::work(m_io_service));
-    m_ros_work.reset(new boost::asio::io_service::work(m_ros_io_service));
-
     ERS_LOG(" *** ENTER IN Activity::configure() ***");
 
     Configuration* conf = daq::rc::ConfigurationBridge::instance()->getConfiguration();
@@ -124,15 +121,19 @@ namespace hltsv {
       ERS_LOG("Master Trigger not defined in the partition");
     }
 
-
     m_publisher.reset(new monsvc::PublishingController(part,getName()));
     m_publisher->add_configuration_rules(*conf);
-    
-    // m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("DFObjects:.*/=>is:(2,DF)"));
-    // m_publisher->add_configuration_rule(*monsvc::ConfigurationRule::from("Histogramming:.*/=>oh:(5,Histogramming,HLTSV)"));
-    
+
+    m_io_services.reset(new std::vector<boost::asio::io_service>(my_conf->get_NumberOfAssignThreads()));
+
+    m_work.reset(new std::vector<boost::asio::io_service::work>());
+    for(auto& svc : *m_io_services) {
+        (*m_work).emplace_back(svc);
+    }
+
+    m_ros_work.reset(new boost::asio::io_service::work(m_ros_io_service));
+
     // Initialize  HLTSV_NameService
-    // Declare it in .h?
     std::vector<std::string> data_networks = dfparams->get_DefaultDataNetworks();
     ERS_LOG("number of Data Networks  found: " << data_networks.size());
     ERS_LOG("First Data Network : " << data_networks[0]);
@@ -160,7 +161,7 @@ namespace hltsv {
 
     ERS_LOG(" *** Start HLTSVServer ***");
     m_event_sched = std::make_shared<EventScheduler>();
-    m_myServer = std::make_shared<HLTSVServer> (m_io_service, m_event_sched, m_ros_clear, my_conf->get_Timeout());
+    m_myServer = std::make_shared<HLTSVServer> (*m_io_services, m_event_sched, m_ros_clear, my_conf->get_Timeout());
     // the id should be read from OKS
     m_myServer->listen(getName());
 
@@ -174,7 +175,7 @@ namespace hltsv {
     m_myServer->start();
 
     for(unsigned int i = 0; i < my_conf->get_NumberOfAssignThreads(); i++) {
-        m_io_threads.push_back(std::thread(&Activity::io_thread, this, std::ref(m_io_service)));
+        m_io_threads.push_back(std::thread(&Activity::io_thread, this, std::ref((*m_io_services)[i])));
     }
 
     m_io_threads.push_back(std::thread(&Activity::io_thread, this, std::ref(m_ros_io_service)));
@@ -260,7 +261,9 @@ namespace hltsv {
     m_l1source_lib->release();
     delete m_l1source_lib;
 
-    m_io_service.reset();
+    for(auto& svc : *m_io_services) {
+        svc.reset();
+    }
     m_ros_io_service.reset();
 
     return;

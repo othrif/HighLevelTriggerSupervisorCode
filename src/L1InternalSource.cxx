@@ -30,13 +30,14 @@ namespace hltsv {
   
         const uint32_t event_type = 0x0; // params->getLumiBlock(); ?????
 
-        static const uint32_t dummy_data[250] = { 0 };
+        static const size_t dummy_size = getenv("TDAQ_HLTSV_CTPSIZE") ? strtoul(getenv("TDAQ_HLTSV_CTPSIZE"),0,0) : 250;
+        static const uint32_t *dummy_data = new uint32_t[dummy_size];
 
         eformat::helper::SourceIdentifier src(eformat::TDAQ_CTP, 1);
 
         eformat::write::ROBFragment rob(src.code(), run_no, m_l1id, bc_id,
                                         lvl1_type, event_type, 
-                                        sizeof(dummy_data)/sizeof(dummy_data[0]), dummy_data, 
+                                        dummy_size, dummy_data, 
                                         eformat::STATUS_FRONT);
 
         auto fragment = new uint32_t[rob.size_word()];

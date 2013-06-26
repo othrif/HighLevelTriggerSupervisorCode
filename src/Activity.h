@@ -77,11 +77,11 @@ namespace hltsv {
     unsigned int                   m_event_delay;
     
     // To keep the io_service running.
-    std::unique_ptr<boost::asio::io_service::work> m_work;
+    std::unique_ptr<std::vector<boost::asio::io_service::work>> m_work;
     std::unique_ptr<boost::asio::io_service::work> m_ros_work;
 
     // io_service for DCM communication.
-    boost::asio::io_service        m_io_service;
+    std::unique_ptr<std::vector<boost::asio::io_service>> m_io_services;
 
     // io_service for ROS communication
     boost::asio::io_service        m_ros_io_service;

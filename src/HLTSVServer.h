@@ -25,7 +25,7 @@ namespace hltsv {
 
     class HLTSVServer : public daq::asyncmsg::Server {
     public:
-        HLTSVServer(boost::asio::io_service& service,
+        HLTSVServer(std::vector<boost::asio::io_service>& services,
                     std::shared_ptr<EventScheduler> scheduler,
                     std::shared_ptr<ROSClear> clear,
                     unsigned int timeout_in_ms);
@@ -42,7 +42,8 @@ namespace hltsv {
 
     private:
         // Values that are forwarded to all DCMSessions.
-        boost::asio::io_service&        m_service;
+        std::vector<boost::asio::io_service>& m_services;
+        size_t                          m_next_service;
         std::shared_ptr<EventScheduler> m_scheduler;
         std::shared_ptr<ROSClear>       m_ros_clear;
         unsigned int                    m_timeout_in_ms;

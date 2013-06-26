@@ -12,6 +12,8 @@
 #include "ROSSession.h"
 #include "asyncmsg/NameService.h"
 
+#include "tbb/spin_mutex.h"
+
 namespace hltsv {
 
     /**
@@ -58,7 +60,7 @@ namespace hltsv {
     private:
         size_t                m_threshold;
         uint32_t              m_sequence;
-        std::mutex            m_mutex;
+        tbb::spin_mutex       m_mutex;
         std::vector<uint32_t> m_event_ids;
     };
 

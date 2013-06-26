@@ -22,7 +22,7 @@ namespace hltsv {
     // reached, send ROS clear message to ROS.
     void ROSClear::add_event(uint32_t l1_event_id)
     {
-        std::unique_lock<std::mutex> lock(m_mutex);
+        tbb::spin_mutex::scoped_lock lock(m_mutex);
         m_event_ids.push_back(l1_event_id);
 
         if(m_event_ids.size() >= m_threshold) {
@@ -46,7 +46,7 @@ namespace hltsv {
     {
         auto data = std::make_shared<std::vector<uint32_t>>();
 
-        std::unique_lock<std::mutex> lock(m_mutex);
+        tbb::spin_mutex::scoped_lock lock(m_mutex);
         m_event_ids.swap(*data);
         uint32_t seq = m_sequence++;
 
