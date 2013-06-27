@@ -44,6 +44,23 @@ namespace hltsv {
         m_global_id = global_id;
     }
 
+    size_t LVL1Result::event_data_size() const
+    {
+        size_t result = 0;
+        for(auto len : m_lengths) {
+            result += len * sizeof(uint32_t);
+        }
+        return result;
+    }
+
+    void LVL1Result::copy(uint32_t *target) const
+    {
+        for(size_t i = 0; i < m_data.size(); i++) {
+            memcpy(target, m_data[i], m_lengths[i] * sizeof(uint32_t));
+            target += m_lengths[i];
+        }
+    }
+
 
 }
 

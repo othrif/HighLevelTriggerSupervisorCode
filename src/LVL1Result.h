@@ -77,6 +77,13 @@ namespace hltsv {
         /// Set the global event ID for this event.
         void       set_global_id(uint64_t global_id);
 
+        /// Total size of event data (not including message prefix with global ID and L1ID)
+        size_t     event_data_size() const;
+
+        /// Copy all event data into a sequential buffer. The buffer should have
+        /// at least event_data_size() bytes capacity.
+        void       copy(uint32_t *target) const;
+
         /// Insert the internal structure into a asyncmsg message.
         template<class ConstBufferSequence>
         void insert(ConstBufferSequence& buffers) const

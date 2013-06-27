@@ -89,11 +89,11 @@ macro svl1preloaded_shlibflags "-lers -leformat_write -leformat -lCTPfragment -l
 library svl1filar L1FilarSource.cxx
 macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lttcpr"
 
-macro constituents "hltsv hltsv_main svl1internal svl1preloaded svl1filar test_l1source testDCM testROS" \
-       x86_64      "hltsv hltsv_main svl1internal svl1preloaded test_l1source testDCM testROS"
+macro constituents "hltsv hltsv_main svl1internal svl1preloaded test_l1source testDCM testROS" \
+      i686 "hltsv hltsv_main svl1internal svl1preloaded svl1filar test_l1source testDCM testROS"
 
-macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1filar.so libdaq-hltsv-dal.so" \
-      x86_64     "libhltsv.so libsvl1internal.so libsvl1preloaded.so libdaq-hltsv-dal.so"
+macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libdaq-hltsv-dal.so" \
+      i686 "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1filar.so libdaq-hltsv-dal.so" 
 
 #
 # Test applications

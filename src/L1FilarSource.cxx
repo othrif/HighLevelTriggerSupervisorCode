@@ -2,6 +2,8 @@
 //  $Id: L1FilarSource.cxx 47284 2008-03-14 13:36:20Z jls $
 //
 
+#include <vector>
+
 #include "eformat/write/ROBFragment.h"
 #include "eformat/util.h"
 
@@ -13,14 +15,59 @@
 #include "ROSfilar/filar.h"
 
 #include "Issues.h"
-#include "L1FilarSource.h"
 
 #include "ttcpr/CMemory.h"
 #include "ttcpr/RingBuffer.h"
 
-extern "C" hltsv::L1Source *create_source(const std::string& source, const std::vector<std::string>& /* unused */)
+#include "L1Source.h"
+
+#include "DFdal/RoIBPluginFilar.h"
+
+namespace hltsv {
+
+    const int FILAR_POOL_SIZE = 0x10000;
+    const int FILAR_BUFFER_COUNT = 0x10;
+  // one filar or one tilar gives 4 links max
+    const int FILAR_MAX_LINKS = 4;
+
+    /**
+     * The L1FilarSource class encapsulates the version of the
+     * L1Source class which provides a LVL1Result object 
+     * from a buffer returned by an filar device.
+     */
+
+    class L1FilarSource : public L1Source {
+    public:
+        L1FilarSource(const std::vector<uint32_t>& channels);
+        ~L1FilarSource();
+    
+        virtual LVL1Result* getResult() override;
+        virtual void        reset(uint32_t run_number) override;
+        virtual void        preset() override;
+
+    private:
+
+      bool resultAvailable();
+      
+      CMemory*      m_cmem;
+      RingBuffer*   m_rb;
+      
+      int           m_size[FILAR_MAX_LINKS];
+      unsigned int* m_result[FILAR_MAX_LINKS];
+      std::string   m_nodeid;
+      unsigned int  m_chan;
+      bool          m_active[FILAR_MAX_LINKS];
+
+    };
+}
+
+extern "C" hltsv::L1Source *create_source(Configuration *config, const daq::df::RoIBPlugin *roib, const std::vector<std::string>& /* unused */)
 {
-    return new hltsv::L1FilarSource(source);
+    const daq::df::RoIBPluginFilar *my_config = config->cast<daq::df::RoIBPluginFilar>(roib);
+    if(my_config == nullptr) {
+        throw hltsv::ConfigFailed(ERS_HERE, "Invalid type for configuration to L1FilarSource");
+    }
+    return new hltsv::L1FilarSource(my_config->get_Links());
 }
 
 namespace hltsv {
@@ -28,11 +75,23 @@ namespace hltsv {
     const unsigned int L1HEADER = 0xb0f00000;
     const unsigned int L1TRAILER = 0xe0f00000;
 
-    L1FilarSource::L1FilarSource(const std::string& source_type) :
-        m_cmem(0),
-        m_rb(0),
-        m_chan(0)
+    L1FilarSource::L1FilarSource(const std::vector<uint32_t>& channels)
+        : m_cmem(0),
+          m_rb(0),
+          m_chan(0)
     {
+
+        if(channels.size() == 0) {
+            throw ConfigFailed(ERS_HERE, "No Filar input channels specified");
+        }
+
+        for(auto ch : channels) {
+            if((int)ch >= FILAR_MAX_LINKS) {
+                throw ConfigFailed(ERS_HERE, "Invalid Filar channel");
+            }
+            m_active[ch] = true;
+        }
+
         // buffer pool
         m_cmem = new CMemory(FILAR_POOL_SIZE);
 
@@ -40,31 +99,6 @@ namespace hltsv {
                               FILAR_POOL_SIZE,
                               m_cmem->paddr(),
                               m_cmem->uaddr());
-
-        // get channel number
-        std::string channel = source_type;
-	m_chan_mask=1;
-        if (channel.length() > 5)
-            {
-                channel.erase(channel.begin(), channel.end()-1);
-		// a bit of a kluge -> the last character is hex
-		switch ((channel.c_str())[0]) {
-		case 'A': m_chan_mask=10;
-		  break;
-		case 'B': m_chan_mask=11;
-		  break;
-		case 'C': m_chan_mask=12;
-		  break;
-		case 'D': m_chan_mask=13;
-		  break;
-		case 'E': m_chan_mask=14;
-		  break;
-		case 'F': m_chan_mask=15;
-		  break;
-		default:
-		  m_chan_mask = atoi(channel.c_str());
-		}
-            }
 
         // Open Filar device
         unsigned int code = FILAR_Open();
@@ -74,7 +108,6 @@ namespace hltsv {
 	bool chanset=false;
 	// clear the m_result, m_size and m_active arrays
 	for (int i_chan=0;i_chan<FILAR_MAX_LINKS;i_chan++){
-	  m_active[i_chan]=( (m_chan_mask&((int)1<<i_chan)) != 0 );
 	  m_result[i_chan]=0;
 	  m_size[i_chan]=0;
 	  if( !chanset && m_active[i_chan] ) {
@@ -213,7 +246,7 @@ namespace hltsv {
     }
 
     void
-    L1FilarSource::reset()
+    L1FilarSource::reset(uint32_t /* run_number */)
     {
         FILAR_in_t fin;
 	for (int c=0;c<FILAR_MAX_LINKS;c++) if(m_active[c]){
@@ -263,7 +296,7 @@ namespace hltsv {
             throw hltsv::FilarDevException(ERS_HERE, code);
         } else {
             // reset device
-            reset();
+            reset(0);
         }
 
     }

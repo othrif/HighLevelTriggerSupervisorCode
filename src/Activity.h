@@ -99,7 +99,7 @@ namespace hltsv {
     std::shared_ptr<EventScheduler> m_event_sched;
     
     // L1 Source
-    daq::dynlibs::DynamicLibrary    *m_l1source_lib;
+    std::vector<std::unique_ptr<daq::dynlibs::DynamicLibrary>>  m_l1source_libs;
     hltsv::L1Source                 *m_l1source;
     
     // ROS Clear interface

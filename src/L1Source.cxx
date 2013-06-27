@@ -7,7 +7,7 @@ namespace hltsv {
     {
     }
 
-    void L1Source::reset()
+    void L1Source::reset(uint32_t)
     {
     }
 

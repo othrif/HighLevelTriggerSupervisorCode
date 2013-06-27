@@ -168,6 +168,25 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   HLTSV_Rules@ConfigurationRuleBundle
   HLTSV_Rules@ConfigurationRuleBundle.Rules = [ HLTSV_ISRule@ConfigurationRule , HLTSV_OHRule@ConfigurationRule ]
 
+# 
+# RoIB plugins
+#
+
+   internal@RoIBPluginInternal
+   internal@RoIBPluginInternal.Libraries = [ "libsvl1internal" ]
+   internal@RoIBPluginInternal.IsMasterTrigger = True
+   internal@RoIBPluginInternal.FragmentSize = 240
+
+   preloaded@RoIBPluginPreload
+   preloaded@RoIBPluginPreload.Libraries = [ "libsvl1preloaded" ]
+   preloaded@RoIBPluginPreload.IsMasterTrigger = True
+
+   filar@RoIBPluginFilar
+   filar@RoIBPluginFilar.Libraries = [ "libsvl1filar" ]
+   filar@RoIBPluginFilar.IsMasterTrigger = False
+   filar@RoIBPluginFilar.Links = [ 0 , 1 ]
+
+
 #
 # HLTSV application
 #
@@ -176,6 +195,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   HLTSV@HLTSVApplication.RestartableDuringRun = True
   HLTSV@HLTSVApplication.RunsOn               = ${HLTSV_HOST:-${DEFAULT_HOST}}@Computer
   HLTSV@HLTSVApplication.ConfigurationRules   =  HLTSV_Rules@ConfigurationRuleBundle
+  HLTSV@HLTSVApplication.RoIBInput            = internal@RoIBPlugin
 
 # 
 # the testDCM and testROS binary, if not available in release

@@ -6,6 +6,14 @@
 #include <string>
 #include <vector>
 
+class Configuration;
+
+namespace daq {
+    namespace df {
+        class RoIBPlugin;
+    }
+}
+
 namespace hltsv {
 
     class LVL1Result;
@@ -24,7 +32,7 @@ namespace hltsv {
         /** 
          * \brief Abstract interfact to RoIBuilder.
          * 
-         * \param[in] source_type The name of the plugin.
+         * \param[in] roib A pointer to the RoIBPlugin object from OKS.
          * \param[in] file_names The list of file names for the pre-loaded mode.
          *
          * Each implementation must provide a function with
@@ -33,7 +41,7 @@ namespace hltsv {
          *
          */
         
-        typedef L1Source *(*creator_t)(const std::string& source_type, const std::vector<std::string>& file_names);
+        typedef L1Source *(*creator_t)(Configuration *config, const daq::df::RoIBPlugin *roib, const std::vector<std::string>& file_names);
 
         virtual ~L1Source();
 
@@ -45,7 +53,7 @@ namespace hltsv {
         virtual LVL1Result* getResult(void) = 0;
         
         /** Executed in PrepareForRun */
-        virtual void                    reset(); 
+        virtual void                    reset(uint32_t run_number); 
         
         /** Executed in Configure */
         virtual void                    preset();

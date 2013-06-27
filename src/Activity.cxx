@@ -13,6 +13,8 @@
 #include "DFdal/DFParameters.h"
 #include "DFdal/DataFile.h"
 
+#include "rc/RunParamsNamed.h"
+
 #include "L1Source.h"
 #include "LVL1Result.h"
 #include "ROSClear.h"
@@ -21,6 +23,7 @@
 #include "EventScheduler.h"
 
 #include "DFdal/HLTSVApplication.h"
+#include "DFdal/RoIBPlugin.h"
 
 #include "RunController/ConfigurationBridge.h"
 
@@ -44,7 +47,6 @@ namespace hltsv {
 
   Activity::Activity(const std::string& name)
     : daq::rc::Controllable(name), 
-      m_l1source_lib(nullptr),
       m_l1source(nullptr),
       m_network(false),
       m_running(false),
@@ -73,28 +75,29 @@ namespace hltsv {
     const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
 
     m_event_delay = self->get_EventDelay();
+
     // Load L1 Source
     std::vector<std::string> file_names;
-
     const std::vector<const daq::df::DataFile*>& dataFiles = dfparams->get_UsesDataFiles();
     std::transform(dataFiles.begin(), dataFiles.end(), file_names.begin(), [](const daq::df::DataFile* df) { return df->get_FileName(); });
 
-    std::string source_type = self->get_L1Source();
-    std::string lib_name("libsvl1");
-    if( source_type.compare(0,5,"filar")==0 ) 
-      lib_name += "filar";
-    else
-      lib_name += source_type;
-    
+    const daq::df::RoIBPlugin *source = self->get_RoIBInput();
+
     try {
-      m_l1source_lib = new DynamicLibrary(lib_name);
-      if(L1Source::creator_t make = m_l1source_lib->function<L1Source::creator_t>("create_source")) {
-          // fix me: get data files
-        m_l1source = make(source_type, std::vector<std::string>());
-	m_l1source->preset();
-      } else {
-	// fatal
-      }
+        for(const auto& lib_name : source->get_Libraries()) {
+          m_l1source_libs.emplace_back(new DynamicLibrary(lib_name));
+        }
+        
+        if(m_l1source_libs.size() == 0) {
+          throw ConfigFailed(ERS_HERE, "No libraries specified for RoIBPlugin");
+        }
+
+        if(L1Source::creator_t make =  m_l1source_libs.back().get()->function<L1Source::creator_t>("create_source")) {
+            m_l1source = make(conf, source, file_names);
+            m_l1source->preset();
+        } else {
+            // fatal
+        }
     } catch (ers::Issue& ex) {
       ers::fatal(ex);
       return;
@@ -109,8 +112,8 @@ namespace hltsv {
     if (masterholder) {
       master = masterholder->get_Controller();
       hltsvApp = conf->cast<daq::df::HLTSVApplication>(master);
-      if(source_type == "internal" || source_type == "preloaded") {
-	// Check if OKS is set correctly
+      if(source->get_IsMasterTrigger()) {
+        // Check if OKS is set correctly
 	if(hltsvApp) {
 	  // HLTSV is master trigger
 	  m_masterTrigger = true;
@@ -118,7 +121,7 @@ namespace hltsv {
 	} else {
 	  std::stringstream issue_txt;
 	  issue_txt << "HLTSV is not the master trigger, even if it is set to " 
-		    << source_type << " mode. The master trigger is: " 
+		    << source->UID() << " mode. The master trigger is: " 
 		    << masterholder->UID();
 	  std::string tmp = issue_txt.str();
 	  hltsv::MasterTriggerIssue fatal_i(ERS_HERE, tmp.c_str());
@@ -128,7 +131,7 @@ namespace hltsv {
 	if(hltsvApp) {
 	  std::stringstream issue_txt;
 	  issue_txt << "HLTSV is set as the master trigger, but the source type is: " 
-		    <<  source_type;
+		    <<  source->UID();
 	  std::string tmp = issue_txt.str();
 	  hltsv::MasterTriggerIssue warn_i(ERS_HERE, tmp.c_str());
 	  ers::warning(warn_i);
@@ -213,7 +216,12 @@ namespace hltsv {
 
   void Activity::prepareForRun(std::string& )
   {
-    m_l1source->reset();
+    const IPCPartition  partition(daq::rc::ConfigurationBridge::instance()->getPartition()->UID());
+
+    RunParamsNamed runparams(partition, "SOR_RunParams");
+    runparams.checkout();
+
+    m_l1source->reset(runparams.run_number);
 
     m_running = true;
     m_triggering = true;
@@ -277,8 +285,8 @@ namespace hltsv {
 
     delete m_l1source;
     m_l1source = 0;
-    m_l1source_lib->release();
-    delete m_l1source_lib;
+
+    m_l1source_libs.clear();
 
     for(auto& svc : *m_io_services) {
         svc.reset();

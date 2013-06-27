@@ -1,3 +1,9 @@
+#include <string>
+#include <vector>
+#include <map>
+#include <stdint.h>
+#include <mutex>
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <iostream>
@@ -13,11 +19,57 @@
 #include "CTPfragment/CTPdataformat.h"
 
 #include "Issues.h"
-#include "L1PreloadedSource.h"
 #include "LVL1Result.h"
+#include "L1Source.h"
 
-extern "C" hltsv::L1Source *create_source(const std::string& , const std::vector<std::string>& file_names)
+#include "config/Configuration.h"
+#include "DFdal/RoIBPluginPreload.h"
+
+namespace hltsv {
+
+    /**
+     * \brief The L1PreloadedSource class encapsulates the version of the
+     * L1Source class which provides a LVL1Result object from data
+     * preloaded from a byte stream formatted file as indicated in
+     * the configuration object.
+     *
+     */
+    class L1PreloadedSource : public L1Source {
+    public:
+        L1PreloadedSource(const std::vector<std::string>& file_names);
+        ~L1PreloadedSource();
+        
+        virtual LVL1Result* getResult() override;
+        virtual void        reset(uint32_t run_number) override;
+        virtual void        preset() override;
+        virtual void        setLB(uint32_t lb) override;
+        virtual void        setHLTCounter(uint16_t counter) override;
+        
+    private:
+        unsigned int  m_l1id;
+        unsigned int  m_max_l1id;
+
+        uint32_t      m_lb;
+        uint16_t      m_hltCounter;
+        uint32_t      m_run_number;
+        
+        std::map<unsigned int, std::vector<uint32_t*>*> m_data;
+        
+        unsigned int  m_firstid;
+        bool          m_modid;
+        
+        std::mutex    m_mutex; 
+
+        std::vector<std::string> m_file_names;
+    };
+}
+
+extern "C" hltsv::L1Source *create_source(Configuration *config, const daq::df::RoIBPlugin *roib, const std::vector<std::string>& file_names)
 {
+    const daq::df::RoIBPluginPreload *my_config = config->cast<daq::df::RoIBPluginPreload>(roib);
+    if(my_config == nullptr) {
+        throw hltsv::ConfigFailed(ERS_HERE, "Invalid type for configuration to L1PreloadedSource");
+    }
     return new hltsv::L1PreloadedSource(file_names);
 }
 
@@ -29,6 +81,9 @@ namespace hltsv {
         : m_l1id(0),
           m_file_names(file_names)
     {
+        if(m_file_names.empty()) {
+            throw hltsv::ConfigFailed(ERS_HERE, "Empty list of file names for L1PreloadedSource");
+        }
     }
 
     L1PreloadedSource::~L1PreloadedSource()
@@ -83,6 +138,7 @@ namespace hltsv {
                     // test_frag.rod_lvl1_id( test_frag.rod_lvl1_id() % m_max_l1id );
                     wrob.rod_lvl1_id(old_l1id % m_max_l1id);
                 }
+                wrob.rod_run_no(m_run_number);
             }
             // --- bind and copy fragment back
             const eformat::write::node_t* toplist = wrob.bind();
@@ -149,6 +205,7 @@ namespace hltsv {
         // also reset l1_id index
         m_l1id = 0;
         m_max_l1id = 0;
+        m_run_number = 0;
         m_modid = false;
 
         // empty the event map
@@ -330,9 +387,10 @@ namespace hltsv {
         m_max_l1id++;
     }
 
-    void L1PreloadedSource::reset()
+    void L1PreloadedSource::reset(uint32_t run_number)
     {
         m_firstid = m_l1id = 0;
+        m_run_number = run_number;
     } 
 
     void L1PreloadedSource::setLB(uint32_t lb)
