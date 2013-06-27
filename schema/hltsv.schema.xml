@@ -81,7 +81,7 @@
 
 <oks-schema>
 
-<info name="" type="" num-of-includes="3" num-of-items="6" oks-format="schema" oks-version="oks-06-06-07 built &quot;Jun 26 2013&quot;" created-by="glehmann" created-on="pcatd86" creation-time="20030820T141734" last-modified-by="rhauser" last-modified-on="msu-pc7.cern.ch" last-modification-time="20130626T094539"/>
+<info name="" type="" num-of-includes="3" num-of-items="6" oks-format="schema" oks-version="oks-06-06-07 built &quot;Jun 27 2013&quot;" created-by="glehmann" created-on="pcatd86" creation-time="20030820T141734" last-modified-by="rhauser" last-modified-on="msu-pc7.cern.ch" last-modification-time="20130627T152636"/>
 
 <include>
  <file path="daq/schema/core.schema.xml"/>
@@ -111,7 +111,7 @@
   <attribute name="FakeTimeout" description="Number of events after which to fake a timeout, 0 == disabled" type="u32" init-value="0" is-not-null="yes"/>
  </class>
 
- <class name="RoIBPlugin">
+ <class name="RoIBPlugin" is-abstract="yes">
   <attribute name="Libraries" description="A list of shared libraries to load for this plugin." type="string" is-multi-value="yes"/>
   <attribute name="IsMasterTrigger" type="bool" init-value="false"/>
  </class>
