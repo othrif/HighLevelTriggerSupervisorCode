@@ -111,7 +111,7 @@ case "$2" in
 
         # HLTSV_HOST=pc-tdq-dc-01.cern.ch
 	HLTSV_HOST=pc-tdq-sfo-05.cern.ch
-        MULTICAST="224.100.1.1/10.147.46.30"
+        MULTICAST="224.100.1.1/10.147.0.0"
 
 	count=1
 	for rack in 03 04 $(seq -w 6 13) $(seq -w 23 26) 38 42 $(seq -w 58 69)
