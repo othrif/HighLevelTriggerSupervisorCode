@@ -15,7 +15,6 @@ namespace hltsv {
         m_rate_thread(&EventScheduler::update_instantaneous_rate, this)
     {
         m_global_id = 0;
-        
     }
 
 
@@ -40,7 +39,8 @@ namespace hltsv {
         while(count-- > 0) {
             m_free_cores.push(dcm);
         }
-        m_stats->AvailableCores = m_free_cores.size();
+        auto n = m_free_cores.size();
+        m_stats->AvailableCores = n < 0 ? 0 : n;
     }
 
 
@@ -72,7 +72,8 @@ namespace hltsv {
             }
         } while(!real_dcm);        
 
-        m_stats->AvailableCores = m_free_cores.size();
+        auto n = m_free_cores.size();
+        m_stats->AvailableCores = n < 0 ? 0 : n;
     }
 
     void EventScheduler::push_events()

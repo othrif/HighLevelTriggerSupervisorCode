@@ -26,6 +26,7 @@ namespace hltsv {
           m_timeout_in_ms(timeout_in_ms),
           m_time_histo(time_histo)
     {
+        restart_timer();
     }
 
 
@@ -55,9 +56,6 @@ namespace hltsv {
                                      rois->set_timestamp();
 
                                      m_events.push_back(rois);
-            
-                                     // this might start the timer for the first time
-                                     restart_timer();
                                  });
             
             return true;
@@ -91,6 +89,8 @@ namespace hltsv {
                     it = m_events.erase(it);
                     continue;
                 } else {
+                    // Since the list is time ordered, the first time we have an event
+                    // that is not expired, we are done.
                     break;
                 }
             }
@@ -122,6 +122,7 @@ namespace hltsv {
     void DCMSession::onClose() noexcept
     {
         ERS_LOG("DCMSession::onClose() from " << remoteName());
+        m_timer.cancel();
     }
 
     void DCMSession::onCloseError(const boost::system::error_code& error) noexcept
@@ -166,8 +167,6 @@ namespace hltsv {
       auto s_this(std::static_pointer_cast<DCMSession>(shared_from_this()));
       m_scheduler->request_events(s_this, msg->num_request(), msg->num_l1ids());
 
-      restart_timer();
-      
       // DCM session is ready for receiving new messages
       asyncReceive();
     }
@@ -207,16 +206,8 @@ namespace hltsv {
 
     void DCMSession::restart_timer()
     {
-        if(!m_events.empty()) {
-            if(m_timer_cache != m_events.front()) {
-                m_timer_cache = m_events.front();
-
-                auto expire_duration = (m_events.front()->timestamp() + std::chrono::milliseconds(m_timeout_in_ms)) - LVL1Result::clock::now();
-
-                m_timer.expires_from_now(expire_duration);
-                m_timer.async_wait(getStrand().wrap(std::bind(&DCMSession::check_timeouts, this, std::placeholders::_1)));
-            }
-        }
+        m_timer.expires_from_now(std::chrono::seconds(1));
+        m_timer.async_wait(getStrand().wrap(std::bind(&DCMSession::check_timeouts, this, std::placeholders::_1)));
     }
 }
 

@@ -92,9 +92,6 @@ namespace hltsv {
         // The timeout of an event in milliseconds
         unsigned int                           m_timeout_in_ms;
 
-        // The cached value to the event that the timeout timer is using.
-        std::shared_ptr<LVL1Result>            m_timer_cache;
-
         // A shared reference to the 'ProcessingTime' histogram.
         monsvc::ptr<TH1F>                      m_time_histo;
     };
