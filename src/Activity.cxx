@@ -218,7 +218,7 @@ namespace hltsv {
   {
     const IPCPartition  partition(daq::rc::ConfigurationBridge::instance()->getPartition()->UID());
 
-    RunParamsNamed runparams(partition, "SOR_RunParams");
+    RunParamsNamed runparams(partition, "RunParams.SOR_RunParams");
     runparams.checkout();
 
     m_l1source->reset(runparams.run_number);
