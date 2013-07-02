@@ -89,11 +89,15 @@ macro svl1preloaded_shlibflags "-lers -leformat_write -leformat -lCTPfragment -l
 library svl1filar L1FilarSource.cxx
 macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lttcpr"
 
-macro constituents "hltsv hltsv_main svl1internal svl1preloaded test_l1source testDCM testROS" \
-      i686 "hltsv hltsv_main svl1internal svl1preloaded svl1filar test_l1source testDCM testROS"
+# read from TTC2LAN
+library svl1ttc2lan L1TTC2LANSource.cxx
+macro svl1ttc2lan_shlibflags "-leformat_write -leformat -lasyncmsg"
 
-macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libdaq-hltsv-dal.so" \
-      i686 "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1filar.so libdaq-hltsv-dal.so" 
+macro constituents "hltsv hltsv_main svl1internal svl1preloaded svl1ttc2lan test_l1source testDCM testROS" \
+      i686 "hltsv hltsv_main svl1internal svl1preloaded svl1filar svl1ttc2lan test_l1source testDCM testROS"
+
+macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc2lan.so libdaq-hltsv-dal.so" \
+      i686 "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1filar.so libsvl1ttc2lan.so libdaq-hltsv-dal.so" 
 
 #
 # Test applications
