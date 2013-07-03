@@ -25,8 +25,6 @@ use ROOT  * DQMCExternal
 
 private
 
-macro_append cppflags "-Wno-deprecated-declarations"
-
 # 
 # Generation of code for HLTSV configuration schema
 #
@@ -93,8 +91,8 @@ macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lttcpr"
 library svl1ttc2lan L1TTC2LANSource.cxx
 macro svl1ttc2lan_shlibflags "-leformat_write -leformat -lasyncmsg"
 
-macro constituents "hltsv hltsv_main svl1internal svl1preloaded svl1ttc2lan test_l1source testDCM testROS" \
-      i686 "hltsv hltsv_main svl1internal svl1preloaded svl1filar svl1ttc2lan test_l1source testDCM testROS"
+macro constituents "hltsv hltsv_main svl1internal svl1preloaded svl1ttc2lan test_l1source testDCM testROS testTTC2LAN" \
+      i686 "hltsv hltsv_main svl1internal svl1preloaded svl1filar svl1ttc2lan test_l1source testDCM testROS testTTC2LAN"
 
 macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc2lan.so libdaq-hltsv-dal.so" \
       i686 "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1filar.so libsvl1ttc2lan.so libdaq-hltsv-dal.so" 
@@ -124,17 +122,26 @@ macro testDCM_dependencies "daq-hltsv-dal"
 application testROS ../test/testROS.cxx
 macro testROSlinkopts "-lasyncmsg -lItemCtrl -lers -lcmdline -ldaq-df-dal"
 
+#
+# Emulator for TTC2LAN
+# 
+application testTTC2LAN ../test/testTTC2LAN.cxx
+macro testTTC2LANlinkopts "-lasyncmsg -lItemCtrl -lers -lcmdline -ldaq-df-dal"
+
 macro sw.repository.binary.testDCM:name         "Tester for hltsv"
 macro sw.repository.binary.testDCM:description  "Tester for hltsv"
 
 macro sw.repository.binary.testROS:name         "Tester for hltsv"
 macro sw.repository.binary.testROS:description  "Tester for hltsv"
 
+macro sw.repository.binary.testTTC2LAN:name         "TTC2LAN Tester for hltsv"
+macro sw.repository.binary.testTTC2LAN:description  "TTC2LAN Tester for hltsv"
+
 #
 # Installation
 #
 apply_pattern install_libs files="${to_install}"
-apply_pattern install_apps files="hltsv_main test_l1source testDCM testROS"
+apply_pattern install_apps files="hltsv_main test_l1source testDCM testROS testTTC2LAN"
 
 apply_pattern   install_db_files name=schema            files="../schema/hltsv.schema.xml" \
                                                         target_dir="schema"

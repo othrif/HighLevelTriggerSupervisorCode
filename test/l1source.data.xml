@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="ASCII"?>
+
+<!-- oks-data version 2.0 -->
+
+
+<!DOCTYPE oks-data [
+  <!ELEMENT oks-data (info, (include)?, (comments)?, (obj)+)>
+  <!ELEMENT info EMPTY>
+  <!ATTLIST info
+      name CDATA #REQUIRED
+      type CDATA #REQUIRED
+      num-of-includes CDATA #REQUIRED
+      num-of-items CDATA #REQUIRED
+      oks-format CDATA #FIXED "extended"
+      oks-version CDATA #REQUIRED
+      created-by CDATA #REQUIRED
+      created-on CDATA #REQUIRED
+      creation-time CDATA #REQUIRED
+      last-modified-by CDATA #REQUIRED
+      last-modified-on CDATA #REQUIRED
+      last-modification-time CDATA #REQUIRED
+  >
+  <!ELEMENT include (file)+>
+  <!ELEMENT file EMPTY>
+  <!ATTLIST file
+      path CDATA #REQUIRED
+  >
+  <!ELEMENT comments (comment)+>
+  <!ELEMENT comment EMPTY>
+  <!ATTLIST comment
+      creation-time CDATA #REQUIRED
+      created-by CDATA #REQUIRED
+      created-on CDATA #REQUIRED
+      author CDATA #REQUIRED
+      text CDATA #REQUIRED
+  >
+  <!ELEMENT obj (attr | rel)*>
+  <!ATTLIST obj
+      class CDATA #REQUIRED
+      id CDATA #REQUIRED
+  >
+  <!ELEMENT attr (#PCDATA)*>
+  <!ATTLIST attr
+      name CDATA #REQUIRED
+      type (bool|s8|u8|s16|u16|s32|u32|s64|u64|float|double|date|time|string|uid|enum|class|-) "-"
+      num CDATA "-1"
+  >
+  <!ELEMENT rel (#PCDATA)*>
+  <!ATTLIST rel
+      name CDATA #REQUIRED
+      num CDATA "-1"
+  >
+]>
+
+<oks-data>
+
+<info name="" type="" num-of-includes="1" num-of-items="4" oks-format="extended" oks-version="oks-06-06-07 built &quot;Jul  2 2013&quot;" created-by="rhauser" created-on="msu-pc7.cern.ch" creation-time="20130702T140449" last-modified-by="rhauser" last-modified-on="msu-pc7.cern.ch" last-modification-time="20130702T140449"/>
+
+<include>
+ <file path="daq/schema/hltsv.schema.xml"/>
+</include>
+
+<comments>
+ <comment creation-time="20130702T140449" created-by="rhauser" created-on="msu-pc7.cern.ch" author="rhauser" text="C++ oksconfig plug-in user: &apos;rhauser&apos;, host: &apos;msu-pc7.cern.ch&apos;, log message: &apos;python plug-in&apos;"/>
+</comments>
+
+
+<obj class="RoIBPluginFilar" id="filar">
+ <attr name="Libraries" type="string" num="1">
+  "libsvl1filar"
+ </attr>
+ <attr name="IsMasterTrigger" type="bool">0</attr>
+ <attr name="Links" type="u32" num="2">
+  0
+  1
+ </attr>
+</obj>
+
+<obj class="RoIBPluginInternal" id="internal">
+ <attr name="Libraries" type="string" num="1">
+  "libsvl1internal"
+ </attr>
+ <attr name="IsMasterTrigger" type="bool">1</attr>
+ <attr name="FragmentSize" type="u32">240</attr>
+</obj>
+
+<obj class="RoIBPluginPreload" id="preloaded">
+ <attr name="Libraries" type="string" num="1">
+  "libsvl1preloaded"
+ </attr>
+ <attr name="IsMasterTrigger" type="bool">1</attr>
+</obj>
+
+<obj class="RoIBPluginTTC2LAN" id="ttc2lan">
+ <attr name="Libraries" type="string" num="1">
+  "libsvl1ttc2lan"
+ </attr>
+ <attr name="IsMasterTrigger" type="bool">1</attr>
+ <attr name="Networks" type="string" num="1">
+  "137.138.0.0/255.255.0.0"
+ </attr>
+ <attr name="High_Watermark" type="u32">100000</attr>
+ <attr name="Low_Watermark" type="u32">80000</attr>
+ <attr name="FragmentSize" type="u32">4</attr>
+</obj>
+
+</oks-data>

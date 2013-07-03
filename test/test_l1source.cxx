@@ -18,6 +18,8 @@
 
 #include <iostream>
 
+#include "ipc/core.h"
+
 
 int main(int argc, char *argv[])
 {
@@ -28,6 +30,8 @@ int main(int argc, char *argv[])
              << "  where UID is the object ID of the RoIBPlugin" << std::endl;
         exit(EXIT_FAILURE);
     }
+
+    IPCCore::init(argc, argv);
 
     // will throw on error
     Configuration config(string("oksconfig:") + argv[1]);
@@ -70,7 +74,7 @@ int main(int argc, char *argv[])
             // once per run ?
             source->reset(1);
 
-            for(int i = 0; i < 1000; i++) {
+            for(int i = 0; i < 1000; ) {
                 if(hltsv::LVL1Result *event = source->getResult()) {
                     std::cout << "Got event: "
                               << "L1ID: " << event->l1_id() << std::endl
@@ -98,10 +102,7 @@ int main(int argc, char *argv[])
                             ;
                     }
                     std::cout << std::endl;
-                    
-                } else {
-                    std::cout << "No more events after " << i << " have been read" << std::endl;
-                    break;
+                    i++;
                 }
             }
 

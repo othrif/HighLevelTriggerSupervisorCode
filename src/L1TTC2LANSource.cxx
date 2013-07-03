@@ -34,7 +34,7 @@ namespace {
     class XONOFF : public daq::asyncmsg::OutputMessage {
     public:
 
-        static const uint32_t ID = 1;
+        static const uint32_t ID = 0x00DCDF50;
         
         XONOFF(XONOFFStatus on_off)
             : m_on_off(on_off)
@@ -66,7 +66,7 @@ namespace {
     class Update : public daq::asyncmsg::InputMessage {
     public:
 
-        static const uint32_t ID = 2;
+        static const uint32_t ID = 0x00DCDF51;
 
         uint32_t typeId() const override 
         {
@@ -145,10 +145,10 @@ namespace {
 
         void onReceive(std::unique_ptr<daq::asyncmsg::InputMessage> message) override
         {
-            auto msg = dynamic_cast<Update*>(message.get());
+            auto msg = std::unique_ptr<Update>(dynamic_cast<Update*>(message.release()));
 
             if(msg == 0) {
-                ERS_LOG("Received invalid message type " << message->typeId());
+                ERS_LOG("Received invalid message type " << msg->typeId());
                 return;
             }
 
@@ -205,17 +205,24 @@ namespace {
                const std::vector<std::string>& networks)
             : daq::asyncmsg::Server(service),
               m_service(service),
-              m_callback(cb)
+              m_callback(cb),
+              m_networks(networks)
         {
-            listen("HLTSV");
-            asyncAccept(std::make_shared<Session>(service, cb));
-
-            daq::asyncmsg::NameService name_service(IPCPartition(getenv("TDAQ_PARTITION")), networks);
-            name_service.publish("TTC2LAN", localEndpoint().port());
         }
 
         ~Server()
         {}
+
+        void start()
+        {
+            listen("HLTSV");
+
+            m_session = std::make_shared<Session>(m_service, m_callback);
+            asyncAccept(m_session);
+
+            daq::asyncmsg::NameService name_service(IPCPartition(getenv("TDAQ_PARTITION")), m_networks);
+            name_service.publish("TTC2LANReceiver", localEndpoint().port());
+        }
 
     protected:
 
@@ -223,8 +230,8 @@ namespace {
         {
             ERS_LOG("Accepted connection from " << session->remoteEndpoint());
             m_callback.connected(session);
-
-            asyncAccept(std::make_shared<Session>(m_service, m_callback));
+            m_session = std::make_shared<Session>(m_service, m_callback);
+            asyncAccept(m_session);
         }
 
         void onAcceptError(const boost::system::error_code& error,
@@ -239,6 +246,9 @@ namespace {
     private:
         boost::asio::io_service& m_service;
         Callback&                m_callback;
+        std::vector<std::string> m_networks;
+
+        std::shared_ptr<Session> m_session;
     };
 
 
@@ -276,7 +286,7 @@ namespace hltsv {
 
         // For the message passing
         boost::asio::io_service m_io_service;
-        std::unique_ptr<Server> m_server;
+        std::shared_ptr<Server> m_server;
 
         std::list<std::pair<uint32_t,uint32_t>> m_events;
         uint32_t                                m_event_count;
@@ -375,10 +385,10 @@ namespace hltsv {
     {
         m_events.clear();
         m_event_count = 0;
-        m_server.reset(new Server(m_io_service,
-                                  *this,
-                                  m_networks));
-                                  
+        m_server = std::make_shared<Server>(m_io_service,
+                                            *this,
+                                            m_networks);
+        m_server->start();
     }
 
     void

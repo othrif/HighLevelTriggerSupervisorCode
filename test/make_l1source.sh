@@ -19,4 +19,9 @@ pm_set.py -n -I daq/schema/hltsv.schema.xml l1source.data.xml <<EOF
    filar@RoIBPluginFilar.IsMasterTrigger = False
    filar@RoIBPluginFilar.Links = [ 0 , 1 ]
 
+   ttc2lan@RoIBPluginTTC2LAN
+   ttc2lan@RoIBPluginTTC2LAN.Libraries = [ "libsvl1ttc2lan" ]
+   ttc2lan@RoIBPluginTTC2LAN.IsMasterTrigger = True
+   ttc2lan@RoIBPluginTTC2LAN.Networks = [ '137.138.0.0/255.255.0.0' ]
+
 EOF

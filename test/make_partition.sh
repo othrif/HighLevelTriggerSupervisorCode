@@ -186,6 +186,9 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
    filar@RoIBPluginFilar.IsMasterTrigger = False
    filar@RoIBPluginFilar.Links = [ 0 , 1 ]
 
+   ttc2lan@RoIBPluginTTC2LAN
+   ttc2lan@RoIBPluginTTC2LAN.Libraries = [ "libsvl1ttc2lan" ]
+   ttc2lan@RoIBPluginTTC2LAN.IsMasterTrigger = True
 
 #
 # HLTSV application
