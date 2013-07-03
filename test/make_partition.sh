@@ -189,6 +189,8 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
    ttc2lan@RoIBPluginTTC2LAN
    ttc2lan@RoIBPluginTTC2LAN.Libraries = [ "libsvl1ttc2lan" ]
    ttc2lan@RoIBPluginTTC2LAN.IsMasterTrigger = True
+   ttc2lan@RoIBPluginTTC2LAN.Networks = [ '137.138.0.0/255.255.0.0' ]
+
 
 #
 # HLTSV application
@@ -210,6 +212,17 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 #  testROS@Binary
 #  testROS@Binary.BinaryName = 'testROS'
 #  testROS@Binary.BelongsTo =  ProtoRepo@SW_Repository
+
+#   testTTC2LAN@Binary
+#   testTTC2LAN@Binary.BinaryName = 'testTTC2LAN'
+#   testTTC2LAN@Binary.BelongsTo = ProtoRepo@SW_Repository
+
+#   ProtoRepo@SW_Repository.SW_Objects = [ testTTC2LAN@Binary ]
+
+# TTC2LAN application
+   TTC2LAN@RunControlApplication
+   TTC2LAN@RunControlApplication.Program = testTTC2LAN@Binary
+   TTC2LAN@RunControlApplication.RunsOn = ${TTC2LAN_HOST:-${DEFAULT_HOST}}@Computer
 
 #  ProtoRepo@SW_Repository.SW_Objects = [ testDCM@Binary , testROS@Binary ]
 

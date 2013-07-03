@@ -218,10 +218,6 @@ namespace {
             abort();
         }
 
-        XONOFFStatus status() const
-        {
-            return m_status;
-        }                
     private:
         XONOFFStatus&     m_status;
         std::atomic<bool> m_running;
@@ -256,6 +252,7 @@ namespace {
 
             m_service.reset();
             m_io_thread.join();
+            m_work.reset();
         }
     
         virtual void connect(std::string& ) override
@@ -273,23 +270,25 @@ namespace {
             // In IS you can see it as the object 'DF.MSG_TTC2LANReceiver'.
             // This will throw an exception if it can't find the name entry.
             auto addr = name_service.resolve("TTC2LANReceiver");
+
+            m_work.reset(new boost::asio::io_service::work(m_service));
+
+            // Start the Boost.ASIO thread
+            m_io_thread = std::thread([&]() { ERS_LOG("io_service starting"); m_service.run(); ERS_LOG("io_service finished"); });
             
             // Create the session with the endpoint we just got
             m_session = std::make_shared<Session>(m_service, m_status);
-            m_session->asyncOpen("TTC2LAN", addr);
-
-            // We should not return from this transition before the session is open;
-            // this is rather clumsy but since we have only one connection...
-            while(m_session->state() != daq::asyncmsg::Session::State::OPEN) {
-                usleep(10000);
-            }
+            m_session->asyncOpen(getName(), addr);
 
             m_event_count = 0;
             m_next_event = 0x01000000;
 
-            // Start the Boost.ASIO thread
-            m_io_thread = std::thread([&]() { m_service.run(); ERS_LOG("io_service finished"); });
+            // We should not return from this transition before the session is open;
+            // this is rather clumsy but since we have only one connection...
 
+            while(m_session->state() != daq::asyncmsg::Session::State::OPEN) {
+                usleep(10000);
+            }
         }
 
         virtual void stopROIB(std::string &) override
@@ -353,6 +352,7 @@ namespace {
         std::thread                  m_generator_thread;
         bool                         m_running;
         boost::asio::io_service      m_service;
+        std::unique_ptr<boost::asio::io_service::work> m_work;
         std::shared_ptr<Session>     m_session;
         std::unique_ptr<ISInfoDictionary> m_dict;
 

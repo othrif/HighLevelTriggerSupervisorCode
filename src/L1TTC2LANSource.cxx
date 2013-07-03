@@ -2,6 +2,7 @@
 #include <vector>
 #include <list>
 #include <string>
+#include <thread>
 
 #include "ers/ers.h"
 
@@ -163,6 +164,9 @@ namespace {
             }
 
             m_last_id = l1id;
+
+            asyncReceive();
+
         }
 
         void onReceiveError(const boost::system::error_code& error,
@@ -286,6 +290,7 @@ namespace hltsv {
 
         // For the message passing
         boost::asio::io_service m_io_service;
+        std::unique_ptr<boost::asio::io_service::work> m_work;
         std::shared_ptr<Server> m_server;
 
         std::list<std::pair<uint32_t,uint32_t>> m_events;
@@ -293,6 +298,8 @@ namespace hltsv {
         XONOFFStatus                            m_status;
 
         std::shared_ptr<daq::asyncmsg::Session> m_session;
+
+        std::thread                             m_io_thread;
     };
 }
 
@@ -383,12 +390,15 @@ namespace hltsv {
 
     void L1TTC2LANSource::preset()
     {
+        m_work.reset(new boost::asio::io_service::work(m_io_service));
+
         m_events.clear();
         m_event_count = 0;
         m_server = std::make_shared<Server>(m_io_service,
                                             *this,
                                             m_networks);
         m_server->start();
+        m_io_thread = std::thread([&] { m_io_service.run(); });
     }
 
     void
