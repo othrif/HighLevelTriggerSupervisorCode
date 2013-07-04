@@ -307,7 +307,7 @@ namespace hltsv {
       ERS_LOG("Starting l1 thread");
       int event_counter=0;
       std::vector<LVL1Result*> rate_vect;
-      ERS_LOG("TEST");
+
       while(m_running) {
           if(m_triggering) {
 	    if(m_event_delay > 0 && m_event_delay <= 1000) {

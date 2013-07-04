@@ -28,7 +28,9 @@
 namespace { 
 
     // The current state of XON/XOFF from the HLT supervisor.
-    // We don't know the size of a boolean, but we can control the size of an enum now...
+    // We don't know the size of a boolean, but we can control the size of an enum now
+    // in C++11
+
     enum class XONOFFStatus : uint32_t { OFF = 0, ON = 1 };
 
     /**
@@ -130,7 +132,7 @@ namespace {
     class Session : public daq::asyncmsg::Session {
     public:
         Session(boost::asio::io_service& service,
-                XONOFFStatus& status)
+                std::atomic<XONOFFStatus>& status)
             : daq::asyncmsg::Session(service),
               m_status(status)
         {
@@ -177,7 +179,7 @@ namespace {
                       std::uint32_t size) noexcept override
         {
             ERS_ASSERT_MSG(typeId == XONOFF::ID, "Unexpected type ID in message: " << typeId);
-            ERS_ASSERT_MSG(size == sizeof(uint32_t), "Unexpeted size: " << size);
+            ERS_ASSERT_MSG(size == sizeof(uint32_t), "Unexpected size: " << size);
             ERS_DEBUG(3,"createMessage, size = " << size);
 
             // all ok, create a new XONOFF object
@@ -219,8 +221,8 @@ namespace {
         }
 
     private:
-        XONOFFStatus&     m_status;
-        std::atomic<bool> m_running;
+        std::atomic<XONOFFStatus>& m_status;
+        std::atomic<bool>          m_running;
     };
     
     //
@@ -232,8 +234,9 @@ namespace {
     class TTC2LANApplication : public daq::rc::Controllable {
     public:
         TTC2LANApplication(std::string& name)
-            : daq::rc::Controllable(name), m_running(false), m_status(XONOFFStatus::ON)
+            : daq::rc::Controllable(name), m_running(false)
         {
+            m_status = XONOFFStatus::ON;
         }
 
         ~TTC2LANApplication()
@@ -319,21 +322,22 @@ namespace {
         void generate_events()
         {
             while(m_running) {
+
                 // We can't really reliably sleep for less than a millisecond
                 // since this is what the Linux scheduler gives us.
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
                 // If XON
                 if(m_status == XONOFFStatus::ON) {
 
                     // Send an update
-                    // Here we just increment the counter by 10, this gives
+                    // Here we just increment the counter by 100, this gives
                     // us a 10 kHz event rate. We keep track of the overall
                     // number of events in a 64bit counter, so we can publish
                     // that to IS.
 
-                    m_event_count += 10;
-                    m_next_event  += 10;
+                    m_event_count += 100;
+                    m_next_event  += 100;
 
                     // Create the message.
                     std::unique_ptr<Update> msg(new Update(m_next_event));
@@ -343,7 +347,6 @@ namespace {
                     // to us via Session::onSend() when the message can be deleted.
                     m_session->asyncSend(std::move(msg));
                 }
-
             }
         }
 
@@ -356,7 +359,7 @@ namespace {
         std::shared_ptr<Session>     m_session;
         std::unique_ptr<ISInfoDictionary> m_dict;
 
-        XONOFFStatus                 m_status;
+        std::atomic<XONOFFStatus>    m_status;
         uint32_t                     m_next_event;
         uint64_t                     m_event_count;
     };
