@@ -1,3 +1,4 @@
+
 #include "config/Configuration.h"
 #include "dal/Partition.h"
 #include "DFdal/DFParameters.h"
@@ -10,9 +11,10 @@
 #include "cmdl/cmdargs.h"
 
 #include "dcmessages/LVL1Result.h"
-#include "RunController/ConfigurationBridge.h"
-#include "RunController/Controllable.h"
-#include "RunController/ItemCtrl.h"
+#include "RunControl/Common/OnlineServices.h"
+#include "RunControl/Common/Controllable.h"
+#include "RunControl/Common/CmdLineParser.h"
+#include "RunControl/ItemCtrl/ItemCtrl.h"
 
 #include "ipc/core.h"
 #include "ers/ers.h"
@@ -27,21 +29,21 @@
 #include <stdlib.h>
 #include <atomic>
 #include <random>
+#include <memory>
 
 // *******************
 class DCMActivity : public daq::rc::Controllable {
 public:
-  DCMActivity(std::string & name);
-  ~DCMActivity();
+  DCMActivity();
+  ~DCMActivity() noexcept;
 
-  virtual void initialize(std::string & ) {};
-  virtual void configure(std::string & );
-  virtual void unconfigure(std::string & );
-  virtual void connect(std::string & );
-  virtual void disconnect(std::string & );
-  virtual void stopL2SV(std::string & );
-  virtual void prepareForRun(std::string & );
-  virtual void probe(std::string& );
+  virtual void configure(const daq::rc::TransitionCmd&  ) override;
+  virtual void unconfigure(const daq::rc::TransitionCmd&  ) override;
+  virtual void connect(const daq::rc::TransitionCmd&  ) override;
+  virtual void disconnect(const daq::rc::TransitionCmd&  ) override;
+  virtual void stopDC(const daq::rc::TransitionCmd&  ) override;
+  virtual void prepareForRun(const daq::rc::TransitionCmd&  ) override;
+  virtual void publish() override;
 
   void execute(unsigned worker_id);
 
@@ -73,8 +75,8 @@ private:
 
 
 
-DCMActivity::DCMActivity(std::string &name)
-    : daq::rc::Controllable(name),
+DCMActivity::DCMActivity()
+    : daq::rc::Controllable(),
       m_running(false),
       m_cores(8),
       m_l2_processing(40),
@@ -85,22 +87,22 @@ DCMActivity::DCMActivity(std::string &name)
 }
 
 
-DCMActivity::~DCMActivity()
+DCMActivity::~DCMActivity() noexcept
 {
 }
 
 
-void DCMActivity::configure(std::string & )
+void DCMActivity::configure(const daq::rc::TransitionCmd&  )
 {
-  Configuration *conf = daq::rc::ConfigurationBridge::instance()->getConfiguration();
+  Configuration& conf = daq::rc::OnlineServices::instance().getConfiguration();
 
-  const daq::core::Partition *partition = daq::rc::ConfigurationBridge::instance()->getPartition();
-  IPCPartition part(partition->UID());
+  const daq::core::Partition *partition = daq::rc::OnlineServices::instance().getPartition();
+  IPCPartition part = daq::rc::OnlineServices::instance().getIPCPartition();
 
-  const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
+  const daq::df::DFParameters *dfparams = conf.cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
   m_testns = new daq::asyncmsg::NameService(part, dfparams->get_DefaultDataNetworks());
 
-  const daq::df::HLTSV_DCMTest* self = conf->cast<daq::df::HLTSV_DCMTest>(daq::rc::ConfigurationBridge::instance()->getApplication());
+  const daq::df::HLTSV_DCMTest* self = conf.cast<daq::df::HLTSV_DCMTest>(daq::rc::OnlineServices::instance().getApplication());
 
   m_cores = self->get_NumberOfCores();
   m_l2_processing = self->get_L2ProcessingTime();
@@ -113,14 +115,14 @@ void DCMActivity::configure(std::string & )
 }
 
 
-void DCMActivity::unconfigure(std::string & )
+void DCMActivity::unconfigure(const daq::rc::TransitionCmd&  )
 {
   m_msgconf.unconfigure();
   delete m_testns;
 }
 
 
-void DCMActivity::connect(std::string &)
+void DCMActivity::connect(const daq::rc::TransitionCmd& )
 {  
   // Read the HLTSV port using the name Service
   std::vector<boost::asio::ip::tcp::endpoint> hltsv_eps = m_testns->lookup("HLTSV");
@@ -146,14 +148,14 @@ void DCMActivity::connect(std::string &)
   // create the session to talk to the HLTSV    
   m_session = std::make_shared<hltsv::HLTSVSession>(m_dcm_io_service);
   ERS_LOG(" *** created HLTSVSession *** ");
-  m_session->asyncOpen(getName(), hltsv_eps[0]);
+  m_session->asyncOpen(daq::rc::OnlineServices::instance().applicationName(), hltsv_eps[0]);
 
   while(m_session->state() != daq::asyncmsg::Session::State::OPEN) {
       usleep(10000);
   }
 }
 
-void DCMActivity::disconnect(std::string & )
+void DCMActivity::disconnect(const daq::rc::TransitionCmd&  )
 {
   ERS_LOG("DCMActivity::disconnect(): close HLTSV connection");
   // disconnect from HLTSV
@@ -168,7 +170,7 @@ void DCMActivity::disconnect(std::string & )
   m_service_thread.join();
 }
 
-void DCMActivity::stopL2SV(std::string & )
+void DCMActivity::stopDC(const daq::rc::TransitionCmd&  )
 {
   // stop the run loop and wake any threads waiting on HLTSV
   m_running = false;
@@ -182,7 +184,7 @@ void DCMActivity::stopL2SV(std::string & )
   m_work_threads.clear();
 }
 
-void DCMActivity::prepareForRun(std::string & )
+void DCMActivity::prepareForRun(const daq::rc::TransitionCmd&  )
 {
   ERS_LOG(" *** enter DCMActivity:prepareForRun *** ");
   m_running = true;
@@ -207,11 +209,11 @@ void DCMActivity::prepareForRun(std::string & )
 
 }
 
-void DCMActivity::probe(std::string& )
+void DCMActivity::publish()
 {
     ISInfoUnsignedLong value;
     value.setValue(m_events);
-    m_dict->checkin( "DF." + getName(), value);
+    m_dict->checkin( "DF." + daq::rc::OnlineServices::instance().applicationName(), value);
 }
 
 
@@ -246,7 +248,7 @@ void DCMActivity::execute(unsigned worker_id)
             // queue was interrupted, probably a new force build came in
             continue;
         } else {
-            // queue was aborted by StopL2SV. we're done here!
+            // queue was aborted by StopDC. we're done here!
             break;
         }
     }
@@ -299,44 +301,18 @@ int main(int argc, char *argv[])
 
   try{
     IPCCore::init(argc,argv);
-  } catch(daq::ipc::Exception& ex) {
-    ers::fatal(ex);
-    exit(EXIT_FAILURE);
+    daq::rc::CmdLineParser cmdline(argc, argv);
+    daq::rc::ItemCtrl control(cmdline, std::make_shared<DCMActivity>());
+    
+    std::random_device rd;
+    srand(rd());
+    
+    control.run();
+    
+  } catch(ers::Issue& ex) {
+      ers::fatal(ex);
+      exit(EXIT_FAILURE);
   }
-
-  std::string name;
-  std::string parent;
-  bool interactive;
-  
-  CmdArgStr     app('N',"name", "name", "application name", CmdArg::isOPT);
-  CmdArgStr     uniqueId('n',"uniquename", "uniquename", "unique application id", CmdArg::isREQ);
-  CmdArgBool    iMode('i',"iMode", "turn on interactive mode", CmdArg::isOPT);
-  CmdArgStr     segname('s',"segname", "segname", "segment name", CmdArg::isOPT);
-  CmdArgStr     parentname('P',"parentname", "parentname", "parent name", CmdArg::isREQ);
-
-  
-  segname = "";
-  parentname = "";
-  
-  CmdLine       cmd(*argv, &app, &uniqueId, &iMode, &segname, &parentname, NULL);
-  CmdArgvIter   argv_iter(--argc, (const char * const *) ++argv);
-
-  
-  unsigned int status = cmd.parse(argv_iter);
-  if (status) {
-    cmd.error() << argv[0] << ": parsing errors occurred!" << std::endl ;
-    exit(EXIT_FAILURE);
-  }
-  name = uniqueId;
-  interactive = iMode;
-  parent = parentname;
-  
-  daq::rc::ItemCtrl control(new DCMActivity(name), interactive, parent);
-
-  std::random_device rd;
-  srand(rd());
-
-  control.run();
 
 }
 

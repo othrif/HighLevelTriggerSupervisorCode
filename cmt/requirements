@@ -19,6 +19,8 @@ use cmdl
 use monsvc
 use asyncmsg
 use ROSfilar
+use RunControl
+use TriggerCommander
 
 use Boost * TDAQCExternal
 use ROOT  * DQMCExternal
@@ -54,7 +56,7 @@ macro_append daq-hltsv-dal_shlibflags "-lmonsvc-dal -ldaq-core-dal -ldaq-df-dal"
 # Main HLTSV library
 # 
 library hltsv L1Source.cxx Activity.cxx EventScheduler.cxx DCMSession.cxx ROSClear.cxx UnicastROSClear.cxx MulticastROSClear.cxx ROSSession.cxx HLTSVServer.cxx LVL1Result.cxx UpdateMessage.cxx ProcessMessage.cxx ClearMessage.cxx
-macro hltsv_shlibflags "-lItemCtrl -lers -ltbb -leformat_write -leformat -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg -ldynlibs"
+macro hltsv_shlibflags "-ltrgCommander -lrc_ItemCtrl -lers -ltbb -leformat_write -leformat -ldaq-hltsv-dal -lmonsvc -lmonsvcpub -lmonsvc-dal -lasyncmsg -ldynlibs"
 
 # this does not work in a nightly build:
 macro hltsv_dependencies "daq-hltsv-dal"
@@ -113,20 +115,20 @@ macro test_l1source_dependencies hltsv
 # Emulator for DCM
 #
 application testDCM ../test/testDCM.cxx ../test/HLTSVSession.cxx ../test/DCMMessages.cxx
-macro testDCMlinkopts "-lers -leformat -lac -ldcmessages -lmsginput -lmsgconf -lmsg -ldaq-hltsv-dal -lmonsvc-dal -ldaq-df-dal -lasyncmsg -ltbb"
+macro testDCMlinkopts "-lrc_ItemCtrl -lers -leformat -ldcmessages -lmsginput -lmsgconf -lmsg -ldaq-hltsv-dal -lmonsvc-dal -ldaq-df-dal -lasyncmsg -ltbb"
 macro testDCM_dependencies "daq-hltsv-dal"
 
 #
 # Emulator for ROS
 #
 application testROS ../test/testROS.cxx
-macro testROSlinkopts "-lasyncmsg -lItemCtrl -lers -lcmdline -ldaq-df-dal"
+macro testROSlinkopts "-lasyncmsg -lrc_ItemCtrl -lers -lcmdline -ldaq-df-dal"
 
 #
 # Emulator for TTC2LAN
 # 
 application testTTC2LAN ../test/testTTC2LAN.cxx
-macro testTTC2LANlinkopts "-lasyncmsg -lItemCtrl -lers -lcmdline -ldaq-df-dal"
+macro testTTC2LANlinkopts "-lasyncmsg -lrc_ItemCtrl -lers -lcmdline -ldaq-df-dal"
 
 macro sw.repository.binary.testDCM:name         "Tester for hltsv"
 macro sw.repository.binary.testDCM:description  "Tester for hltsv"

@@ -2,9 +2,10 @@
 
 #include "cmdl/cmdargs.h"
 
-#include "RunController/ConfigurationBridge.h"
-#include "RunController/Controllable.h"
-#include "RunController/ItemCtrl.h"
+#include "RunControl/Common/OnlineServices.h"
+#include "RunControl/Common/Controllable.h"
+#include "RunControl/Common/CmdLineParser.h"
+#include "RunControl/ItemCtrl/ItemCtrl.h"
 
 #include "asyncmsg/Server.h" 
 #include "asyncmsg/Session.h" 
@@ -233,17 +234,17 @@ namespace {
     // 
     class TTC2LANApplication : public daq::rc::Controllable {
     public:
-        TTC2LANApplication(std::string& name)
-            : daq::rc::Controllable(name), m_running(false)
+        TTC2LANApplication()
+            : daq::rc::Controllable(), m_running(false)
         {
             m_status = XONOFFStatus::ON;
         }
 
-        ~TTC2LANApplication()
+        ~TTC2LANApplication() noexcept
         {
         }
 
-        virtual void disconnect(std::string &) override
+        virtual void disconnect(const daq::rc::TransitionCmd& ) override
         {
             m_session->asyncClose();
 
@@ -258,7 +259,7 @@ namespace {
             m_work.reset();
         }
     
-        virtual void connect(std::string& ) override
+        virtual void connect(const daq::rc::TransitionCmd& ) override
         {
             // Get the partition from somewhere, assume it's in the environment for this test program.
             IPCPartition partition(getenv("TDAQ_PARTITION"));
@@ -281,7 +282,7 @@ namespace {
             
             // Create the session with the endpoint we just got
             m_session = std::make_shared<Session>(m_service, m_status);
-            m_session->asyncOpen(getName(), addr);
+            m_session->asyncOpen(daq::rc::OnlineServices::instance().applicationName(), addr);
 
             m_event_count = 0;
             m_next_event = 0x01000000;
@@ -294,7 +295,7 @@ namespace {
             }
         }
 
-        virtual void stopROIB(std::string &) override
+        virtual void stopROIB(const daq::rc::TransitionCmd& ) override
         {
             // We pretend to be an RoIBuilder, so we should stop
             // in this transition.
@@ -303,18 +304,18 @@ namespace {
             m_generator_thread.join();
         }
 
-        virtual void prepareForRun(std::string& ) override
+        virtual void prepareForRun(const daq::rc::TransitionCmd& ) override
         {
             m_running = true;
             m_generator_thread = std::thread(&TTC2LANApplication::generate_events, this);
         }
 
-        virtual void probe(std::string& ) override
+        virtual void publish() override
         {
             // Here we publish the total event counter to IS.
             ISInfoUnsignedLong value;
             value.setValue(m_event_count);
-            m_dict->checkin( "DF." + getName(), value);
+            m_dict->checkin( "DF." + daq::rc::OnlineServices::instance().applicationName(), value);
         }
 
         // The event generator is here for this test program since it's easier
@@ -371,31 +372,12 @@ namespace {
 //
 int main(int argc, char *argv[])
 {
-    std::string name;
-    std::string parent;
-    bool interactive;
-  
-    CmdArgStr     app('N',"name", "name", "application name", CmdArg::isOPT);
-    CmdArgStr     uniqueId('n',"uniquename", "uniquename", "unique application id", CmdArg::isREQ);
-    CmdArgBool    iMode('i',"iMode", "turn on interactive mode", CmdArg::isOPT);
-    CmdArgStr     segname('s',"segname", "segname", "segment name", CmdArg::isOPT);
-    CmdArgStr     parentname('P',"parentname", "parentname", "parent name", CmdArg::isREQ);
-  
-    segname = "";
-    parentname = "";
-  
-    CmdLine       cmd(*argv, &app, &uniqueId, &iMode, &segname, &parentname, NULL);
-    CmdArgvIter   argv_iter(--argc, (const char * const *) ++argv);
-  
-    unsigned int status = cmd.parse(argv_iter);
-    if (status) {
-        cmd.error() << argv[0] << ": parsing errors occurred!" << std::endl ;
-        exit(EXIT_FAILURE);
+    try {
+        daq::rc::CmdLineParser cmdline(argc, argv);
+        daq::rc::ItemCtrl control(cmdline, std::make_shared<TTC2LANApplication>());
+        control.run();
+    } catch(ers::Issue& ex) {
+        ers::fatal(ex);
+        exit(EXIT_SUCCESS);
     }
-    name = uniqueId;
-    interactive = iMode;
-    parent = parentname;
-  
-    daq::rc::ItemCtrl control(new TTC2LANApplication(name), interactive, parent);
-    control.run();
 }

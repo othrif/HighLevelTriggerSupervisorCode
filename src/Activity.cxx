@@ -25,7 +25,7 @@
 #include "DFdal/HLTSVApplication.h"
 #include "DFdal/RoIBPlugin.h"
 
-#include "RunController/ConfigurationBridge.h"
+#include "RunControl/Common/OnlineServices.h"
 
 #include "monsvc/MonitoringService.h"
 #include "monsvc/FilePublisher.h"
@@ -45,8 +45,8 @@ namespace hltsv {
 
   const size_t Num_Assign = 12;
 
-  Activity::Activity(const std::string& name)
-    : daq::rc::Controllable(name), 
+  Activity::Activity()
+    : daq::rc::Controllable(), 
       m_l1source(nullptr),
       m_network(false),
       m_running(false),
@@ -56,23 +56,23 @@ namespace hltsv {
   {
   }
 
-  Activity::~Activity()
+  Activity::~Activity() noexcept
   {
   }
   
-  void Activity::configure(std::string &)
+  void Activity::configure(const daq::rc::TransitionCmd& )
   {
 
     ERS_LOG(" *** Start of Activity::configure() ***");
 
-    Configuration* conf = daq::rc::ConfigurationBridge::instance()->getConfiguration();
+    Configuration& conf = daq::rc::OnlineServices::instance().getConfiguration();
 
-    const daq::df::HLTSVApplication *self = conf->cast<daq::df::HLTSVApplication>(daq::rc::ConfigurationBridge::instance()->getApplication());
+    const daq::df::HLTSVApplication *self = conf.cast<daq::df::HLTSVApplication>(daq::rc::OnlineServices::instance().getApplication());
 
-    const daq::core::Partition *partition = daq::rc::ConfigurationBridge::instance()->getPartition();
+    const daq::core::Partition *partition = daq::rc::OnlineServices::instance().getPartition();
     const IPCPartition          part(partition->UID());
 
-    const daq::df::DFParameters *dfparams = conf->cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
+    const daq::df::DFParameters *dfparams = conf.cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
 
     m_event_delay = self->get_EventDelay();
 
@@ -93,7 +93,7 @@ namespace hltsv {
         }
 
         if(L1Source::creator_t make =  m_l1source_libs.back().get()->function<L1Source::creator_t>("create_source")) {
-            m_l1source = make(conf, source, file_names);
+            m_l1source = make(&conf, source, file_names);
             m_l1source->preset();
         } else {
             // fatal
@@ -111,13 +111,13 @@ namespace hltsv {
     const daq::df::HLTSVApplication * hltsvApp = 0;
     if (masterholder) {
       master = masterholder->get_Controller();
-      hltsvApp = conf->cast<daq::df::HLTSVApplication>(master);
+      hltsvApp = conf.cast<daq::df::HLTSVApplication>(master);
       if(source->get_IsMasterTrigger()) {
         // Check if OKS is set correctly
 	if(hltsvApp) {
 	  // HLTSV is master trigger
 	  m_masterTrigger = true;
-	  m_cmdReceiver.reset(new daq::rc::CommandedTrigger(part, getName(), this));
+	  m_cmdReceiver.reset(new daq::trigger::CommandedTrigger(part, daq::rc::OnlineServices::instance().applicationName(), this));
 	} else {
 	  std::stringstream issue_txt;
 	  issue_txt << "HLTSV is not the master trigger, even if it is set to " 
@@ -143,8 +143,8 @@ namespace hltsv {
       ers::warning(warn2_i);
     }
 
-    m_publisher.reset(new monsvc::PublishingController(part,getName()));
-    m_publisher->add_configuration_rules(*conf);
+    m_publisher.reset(new monsvc::PublishingController(part,daq::rc::OnlineServices::instance().applicationName()));
+    m_publisher->add_configuration_rules(conf);
 
     m_io_services.reset(new std::vector<boost::asio::io_service>(self->get_NumberOfAssignThreads()));
 
@@ -185,13 +185,13 @@ namespace hltsv {
     m_event_sched = std::make_shared<EventScheduler>();
     m_myServer = std::make_shared<HLTSVServer> (*m_io_services, m_event_sched, m_ros_clear, self->get_Timeout());
 
-    m_myServer->listen(getName());
+    m_myServer->listen(daq::rc::OnlineServices::instance().applicationName());
 
     boost::asio::ip::tcp::endpoint my_endpoint = m_myServer->localEndpoint();
     ERS_LOG("Local endpoint: " << my_endpoint);
 
     // Publish port in IS for DCM
-    HLTSV_NameService.publish(getName(), my_endpoint.port());
+    HLTSV_NameService.publish(daq::rc::OnlineServices::instance().applicationName(), my_endpoint.port());
 
     //  HLTSVServer::start() calls Server::asyncAccept() which calls HLTSVServer::onAccept
     m_myServer->start();
@@ -205,7 +205,7 @@ namespace hltsv {
     return;
   }
 
-  void Activity::connect(std::string& )
+  void Activity::connect(const daq::rc::TransitionCmd& )
   {
     // ROS_Clear with TCP will establish the connection
     m_ros_clear->connect();
@@ -214,9 +214,9 @@ namespace hltsv {
     return;
   }
 
-  void Activity::prepareForRun(std::string& )
+  void Activity::prepareForRun(const daq::rc::TransitionCmd& )
   {
-    const IPCPartition  partition(daq::rc::ConfigurationBridge::instance()->getPartition()->UID());
+    const IPCPartition  partition(daq::rc::OnlineServices::instance().getIPCPartition());
 
     RunParamsNamed runparams(partition, "RunParams.SOR_RunParams");
     runparams.checkout();
@@ -231,18 +231,7 @@ namespace hltsv {
     return; 
   }
     
-  void Activity::disable(std::string & )
-  {
-    return;
-  }
-    
-  void Activity::enable(std::string &)
-  {
-    return;
-  }
-  
-
-  void Activity::stopL2SV(std::string &)
+  void Activity::stopDC(const daq::rc::TransitionCmd& )
   {
 
     m_event_sched->push_events();
@@ -256,13 +245,13 @@ namespace hltsv {
     return;
   }
 
-  void Activity::stopSFO(std::string& )
+  void Activity::stopSFO(const daq::rc::TransitionCmd& )
   {
     m_ros_clear->flush();
   }
 
 
-  void Activity::unconfigure(std::string &)
+  void Activity::unconfigure(const daq::rc::TransitionCmd& )
   {
 
     m_network = false;
@@ -296,7 +285,7 @@ namespace hltsv {
     return;
   }
 
-  void Activity::disconnect(std::string & )
+  void Activity::disconnect(const daq::rc::TransitionCmd&  )
   {
       m_publisher->stop_publishing();
       return;// DC::OK;
@@ -411,6 +400,10 @@ namespace hltsv {
     hltsv::MasterTriggerIssue warn(ERS_HERE, issue_txt.c_str());
     ers::warning(warn);
 
+  }
+
+  void Activity::increaseLumiBlock(uint32_t )
+  {
   }
   
 }
