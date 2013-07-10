@@ -245,7 +245,7 @@ namespace hltsv {
     return;
   }
 
-  void Activity::stopSFO(const daq::rc::TransitionCmd& )
+  void Activity::stopRecording(const daq::rc::TransitionCmd& )
   {
     m_ros_clear->flush();
   }

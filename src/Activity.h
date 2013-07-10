@@ -51,7 +51,7 @@ namespace hltsv {
     void connect(const daq::rc::TransitionCmd& ) override;
     void prepareForRun(const daq::rc::TransitionCmd& ) override;
     void stopDC(const daq::rc::TransitionCmd& ) override;
-    void stopSFO(const daq::rc::TransitionCmd& ) override;
+    void stopRecording(const daq::rc::TransitionCmd& ) override;
     void unconfigure(const daq::rc::TransitionCmd& ) override;
     void disconnect(const daq::rc::TransitionCmd& ) override;
 
