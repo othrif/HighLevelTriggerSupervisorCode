@@ -305,41 +305,33 @@ namespace hltsv {
   void Activity::l1_thread()
   {
       ERS_LOG("Starting l1 thread");
-      int event_counter=0;
-      std::vector<LVL1Result*> rate_vect;
+      int trigger_counter = 0;
+      int steer = 1000 / m_event_delay;
 
       while(m_running) {
-          if(m_triggering) {
-	    if(m_event_delay > 0 && m_event_delay <= 1000) {
-	      int steer = 1000/m_event_delay;
-	      LVL1Result* result = m_l1source->getResult();
-	      if(result) {
-		event_counter++;
-		rate_vect.push_back(result);
-	      }
-	      if(event_counter && event_counter%steer == 0) {
-		usleep(1000);
-		//ERS_LOG("TEST. event_counter = " << event_counter << " and steer= " << steer);
-		for(std::vector<LVL1Result*>::iterator it = rate_vect.begin() ; it != rate_vect.end(); ++it) {
-		  std::shared_ptr<LVL1Result> my_res(*it);
-		  m_event_sched->schedule_event(my_res);
-		}
-		event_counter=0;
-		rate_vect.clear();
-	      }
-	    } else {
-	      if (m_event_delay > 1000) usleep(m_event_delay);
-	      std::shared_ptr<LVL1Result> result(m_l1source->getResult());
-	      if(result) {
-		m_event_sched->schedule_event(result);
-		ERS_DEBUG(1,"L1ID #" << result->l1_id() << "  has been scheduled");             
-	      }
-	    }
-          } else {
-	    usleep(100000);
+        if(m_triggering) {
+          if (m_event_delay > 0 && m_event_delay <= 1000) {
+            trigger_counter++;
+            if (event_counter % steer == 0) {
+              usleep(1000);
+              trigger_counter = 0;
+            }
           }
+          else if (m_event_delay > 1000) usleep(m_event_delay);
+          else if (m_event_delay == 0) { /* go at max speed */ }
+
+          std::shared_ptr<LVL1Result> result(m_l1source->getResult());
+          if(result) {
+            m_event_sched->schedule_event(result);
+            ERS_DEBUG(1,"L1ID #" << result->l1_id() << "  has been scheduled");
+          }
+        } else {
+          usleep(100000);
+        }
       }
       ERS_LOG("Finishing l1 thread");
+
+
   }
 
   void Activity::io_thread(boost::asio::io_service& service)
