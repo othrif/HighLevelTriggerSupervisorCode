@@ -312,7 +312,7 @@ namespace hltsv {
         if(m_triggering) {
           if (m_event_delay > 0 && m_event_delay <= 1000) {
             trigger_counter++;
-            if (event_counter % steer == 0) {
+            if (trigger_counter % steer == 0) {
               usleep(1000);
               trigger_counter = 0;
             }
