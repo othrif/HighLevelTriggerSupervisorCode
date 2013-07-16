@@ -304,33 +304,32 @@ namespace hltsv {
 
   void Activity::l1_thread()
   {
-      ERS_LOG("Starting l1 thread");
-      int trigger_counter = 0;
-      int steer = 1000 / m_event_delay;
+    ERS_LOG("Starting l1 thread");
+    int trigger_counter = 0;
+    int steer = m_event_delay>0 ? (1000 / m_event_delay) : 0;
 
-      while(m_running) {
-        if(m_triggering) {
-          if (m_event_delay > 0 && m_event_delay <= 1000) {
-            trigger_counter++;
-            if (trigger_counter % steer == 0) {
-              usleep(1000);
-              trigger_counter = 0;
-            }
-          }
-          else if (m_event_delay > 1000) usleep(m_event_delay);
-          else if (m_event_delay == 0) { /* go at max speed */ }
+    while(m_running) {
+      if(m_triggering) {
+	if (m_event_delay > 0 && m_event_delay <= 1000) {
+	  trigger_counter++;
+	  if (trigger_counter % steer == 0) {
+	    usleep(1000);
+	    trigger_counter = 0;
+	  }
+	} else if (m_event_delay > 1000) {
+	  usleep(m_event_delay);
+	} else { /* go at max speed, m_event_delay == 0 */ }
 
-          std::shared_ptr<LVL1Result> result(m_l1source->getResult());
-          if(result) {
-            m_event_sched->schedule_event(result);
-            ERS_DEBUG(1,"L1ID #" << result->l1_id() << "  has been scheduled");
-          }
-        } else {
-          usleep(100000);
-        }
+	std::shared_ptr<LVL1Result> result(m_l1source->getResult());
+	if(result) {
+	  m_event_sched->schedule_event(result);
+	  ERS_DEBUG(1,"L1ID #" << result->l1_id() << "  has been scheduled");
+	}
+      } else {
+	usleep(100000);
       }
-      ERS_LOG("Finishing l1 thread");
-
+    }
+    ERS_LOG("Finishing l1 thread");
 
   }
 
