@@ -306,18 +306,23 @@ namespace hltsv {
   {
     ERS_LOG("Starting l1 thread");
     int trigger_counter = 0;
-    int steer = m_event_delay>0 ? (1000 / m_event_delay) : 0;
+    const uint16_t delay = (m_event_delay & 0xFFFF0000) >> 16; //MSbits (first 16)     
+    const uint16_t granularity = m_event_delay & 0x0000FFFF; //LSbits (last 16)
+
+    ERS_LOG("dealy=" << delay << " and granularity=" << granularity);     
+
+    int steer = m_event_delay>0 ? (granularity / delay) : 0;
 
     while(m_running) {
       if(m_triggering) {
-	if (m_event_delay > 0 && m_event_delay <= 1000) {
+	if (delay > 0 && delay <= granularity) {
 	  trigger_counter++;
 	  if (trigger_counter % steer == 0) {
-	    usleep(1000);
+	    usleep(granularity);
 	    trigger_counter = 0;
 	  }
-	} else if (m_event_delay > 1000) {
-	  usleep(m_event_delay);
+	} else if (delay > granularity) {
+	  usleep(delay);
 	} else { /* go at max speed, m_event_delay == 0 */ }
 
 	std::shared_ptr<LVL1Result> result(m_l1source->getResult());
