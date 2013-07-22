@@ -1,8 +1,7 @@
 
 package hltsv
 
-manager Reiner.Hauser@cern.ch Nicoletta.Garelli@cern.ch 
-# add: Ning, Chase, 
+manager Reiner.Hauser@cern.ch Nicoletta.Garelli@cern.ch Chase.Shimmin@cern.ch
 
 public
 
@@ -76,8 +75,12 @@ macro sw.repository.binary.hltsv_main:description  "HLT Supervisor Application"
 # 
 
 # internal generation
-library svl1internal  L1InternalSource.cxx
-macro svl1internal_shlibflags "-lers"
+library svl1internal  L1InternalSource.cxx L1InternalSource_loader.cxx
+
+library svl1ratelimitedinternal  L1InternalSource.cxx L1RateLimitedInternalSource.cxx L1RateLimitedInternalSource_loader.cxx
+macro svl1ratelimitedinternal_dependencies svl1internal
+# ^ have to put svl1internal as a dependency or else they compile L1InternalSource.cxx on top of each other...?
+
 
 # preload from file
 library svl1preloaded L1PreloadedSource.cxx
@@ -91,11 +94,11 @@ macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lttcpr"
 library svl1ttc2lan L1TTC2LANSource.cxx
 macro svl1ttc2lan_shlibflags "-leformat_write -leformat -lasyncmsg"
 
-macro constituents "hltsv hltsv_main svl1internal svl1preloaded svl1ttc2lan test_l1source testDCM testROS testTTC2LAN" \
-      i686 "hltsv hltsv_main svl1internal svl1preloaded svl1filar svl1ttc2lan test_l1source testDCM testROS testTTC2LAN"
+macro constituents "hltsv hltsv_main svl1internal svl1ratelimitedinternal svl1preloaded svl1ttc2lan test_l1source testDCM testROS testTTC2LAN" \
+      i686 "hltsv hltsv_main svl1internal svl1ratelimitedinternal svl1preloaded svl1filar svl1ttc2lan test_l1source testDCM testROS testTTC2LAN"
 
-macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc2lan.so libdaq-hltsv-dal.so" \
-      i686 "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1filar.so libsvl1ttc2lan.so libdaq-hltsv-dal.so" 
+macro to_install "libhltsv.so libsvl1internal.so libsvl1ratelimitedinternal.so libsvl1preloaded.so libsvl1ttc2lan.so libdaq-hltsv-dal.so" \
+      i686 "libhltsv.so libsvl1internal.so libsvl1ratelimitedinternal.so libsvl1preloaded.so libsvl1filar.so libsvl1ttc2lan.so libdaq-hltsv-dal.so" 
 
 #
 # Test applications
