@@ -177,11 +177,6 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
    internal@RoIBPluginInternal.IsMasterTrigger = True
    internal@RoIBPluginInternal.FragmentSize = 240
 
-   ratelimitedinternal@RoIBPluginRateLimitedInternal
-   ratelimitedinternal@RoIBPluginRateLimitedInternal.Libraries = [ "libsvl1ratelimitedinternal" ]
-   ratelimitedinternal@RoIBPluginRateLimitedInternal.IsMasterTrigger = True
-   ratelimitedinternal@RoIBPluginRateLimitedInternal.FragmentSize = 240
-
    preloaded@RoIBPluginPreload
    preloaded@RoIBPluginPreload.Libraries = [ "libsvl1preloaded" ]
    preloaded@RoIBPluginPreload.IsMasterTrigger = True

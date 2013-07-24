@@ -126,12 +126,6 @@
   <attribute name="FragmentSize" description="The fragment payload size in 32bit words." type="u32" init-value="250" is-not-null="yes"/>
  </class>
 
- <class name="RoIBPluginRateLimitedInternal" description="The RoIB plugin to generate a CTP fragment internally, at a limited rate.">
-  <superclass name="RoIBPluginInternal"/>
-  <attribute name="TargetRate" description="The nominal target event processing rate in kHz." type="float" init-value="100.0" is-not-null="yes"/>
-  <attribute name="Granularity" description="The minimum amount of time to sleep() in us. Smaller values are less stable." type="u32" init-value="1000" is-not-null="yes"/>
- </class>
-
  <class name="RoIBPluginPreload" description="The RoIB plugin to use a pre-loaded data file.">
   <superclass name="RoIBPlugin"/>
  </class>
