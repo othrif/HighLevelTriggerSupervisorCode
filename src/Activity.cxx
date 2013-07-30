@@ -40,6 +40,8 @@
 #include <is/info.h>
 
 #include <algorithm>
+#include <chrono>
+#include <ctime>
 
 namespace hltsv {
 
@@ -299,32 +301,52 @@ namespace hltsv {
   void Activity::disconnect(std::string & )
   {
       m_publisher->stop_publishing();
-      return;// DC::OK;
+      return;
   }
+
 
   void Activity::l1_thread()
   {
     ERS_LOG("Starting l1 thread");
-    int trigger_counter = 0;
-    const uint16_t delay = (m_event_delay & 0xFFFF0000) >> 16; //MSbits (first 16)     
+
+    using namespace std::chrono;
+
+    const uint16_t target_delay = (m_event_delay & 0xFFFF0000) >> 16; // MSbits (first 16)
+    unsigned long ns_target_delay = target_delay*1e3; // target delay in ns  
+    nanoseconds t_target_delay = nanoseconds(ns_target_delay); // target_delay in count ticks
+
     const uint16_t granularity = m_event_delay & 0x0000FFFF; //LSbits (last 16)
+    unsigned long us_granularity = granularity*1; // granularity in us
+    microseconds t_granularity = microseconds(us_granularity); // granularity in count ticks
 
-    ERS_LOG("dealy=" << delay << " and granularity=" << granularity);     
+    uint32_t trigger_count = 0; // count when you should sleep
+    steady_clock::time_point t_last; // time since we started couting trigger_count
 
-    int steer = m_event_delay>0 ? (granularity / delay) : 0;
+    // # of events to skip between clock-checking
+    uint32_t correction_rate = t_granularity.count()/ ( (target_delay>0) ? target_delay : 1);
+    if(correction_rate == 0) correction_rate = 1; // 0 events does not make sense
 
     while(m_running) {
       if(m_triggering) {
-	if (delay > 0 && delay <= granularity) {
-	  trigger_counter++;
-	  if (trigger_counter % steer == 0) {
-	    usleep(granularity);
-	    trigger_counter = 0;
-	  }
-	} else if (delay > granularity) {
-	  usleep(delay);
-	} else { /* go at max speed, m_event_delay == 0 */ }
 
+	if (trigger_count == 0) {
+	  t_last = steady_clock::now();
+	}
+	
+	if (trigger_count % correction_rate == 0) {
+	  steady_clock::time_point now = steady_clock::now();
+
+	  duration<double> t_elapsed = duration_cast<duration<double>>(now - t_last);
+	  auto t_delta = trigger_count * t_target_delay - t_elapsed;
+	  
+	  std::this_thread::sleep_for(t_delta);
+	  
+	  if (trigger_count > 1e9) {
+	    trigger_count = 0;
+	  } 
+	}
+	trigger_count++;
+      
 	std::shared_ptr<LVL1Result> result(m_l1source->getResult());
 	if(result) {
 	  m_event_sched->schedule_event(result);
@@ -337,6 +359,8 @@ namespace hltsv {
     ERS_LOG("Finishing l1 thread");
 
   }
+
+
 
   void Activity::io_thread(boost::asio::io_service& service)
   {
