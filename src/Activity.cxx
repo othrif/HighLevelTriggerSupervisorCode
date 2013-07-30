@@ -326,11 +326,17 @@ namespace hltsv {
     uint32_t correction_rate = t_granularity.count()/ ( (target_delay>0) ? target_delay : 1);
     if(correction_rate == 0) correction_rate = 1; // 0 events does not make sense
 
+    // maximum number of trigger counts to average over.
+    // if this is too large, high frequency fluctuations may not be compensated.
+    // if it's too small, you won't have good average performance.
+    const uint32_t MAXIMUM_TRIGGER_COUNT = 1e9; // 1e9 / 100kHz = 2.8 hrs.
+
     while(m_running) {
       if(m_triggering) {
 
-	if (trigger_count == 0) {
-	  t_last = steady_clock::now();
+    if ( (trigger_count == 0) || (trigger_count > MAXIMUM_TRIGGER_COUNT) ) {
+      t_last = steady_clock::now();
+      trigger_count = 0;
 	}
 	
 	if (trigger_count % correction_rate == 0) {
@@ -341,9 +347,6 @@ namespace hltsv {
 	  
 	  std::this_thread::sleep_for(t_delta);
 	  
-	  if (trigger_count > 1e9) {
-	    trigger_count = 0;
-	  } 
 	}
 	trigger_count++;
       
