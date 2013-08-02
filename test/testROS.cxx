@@ -2,9 +2,10 @@
 
 #include "cmdl/cmdargs.h"
 
-#include "RunController/ConfigurationBridge.h"
-#include "RunController/Controllable.h"
-#include "RunController/ItemCtrl.h"
+#include "RunControl/Common/OnlineServices.h"
+#include "RunControl/Common/Controllable.h"
+#include "RunControl/Common/CmdLineParser.h"
+#include "RunControl/ItemCtrl/ItemCtrl.h"
 
 #include "asyncmsg/Server.h" 
 #include "asyncmsg/Session.h" 
@@ -287,24 +288,25 @@ private:
 
 class ROSApplication : public daq::rc::Controllable {
 public:
-    ROSApplication(std::string& name)
-        : daq::rc::Controllable(name), m_running(false)
+    ROSApplication()
+        : daq::rc::Controllable(), 
+          m_running(false)
     {
     }
 
 
-    ~ROSApplication()
+    ~ROSApplication() noexcept
     {
     }
 
-    virtual void configure(std::string& ) override
+    virtual void configure(const daq::rc::TransitionCmd& ) override
     {
-        daq::rc::ConfigurationBridge *cb = daq::rc::ConfigurationBridge::instance();
-        Configuration *config = cb->getConfiguration();
+        daq::rc::OnlineServices& services = daq::rc::OnlineServices::instance();
+        Configuration& config = services.getConfiguration();
 
-        const daq::df::DFParameters *dfparams = config->cast<daq::df::DFParameters>(cb->getPartition()->get_DataFlowParameters());
+        const daq::df::DFParameters *dfparams = config.cast<daq::df::DFParameters>(services.getPartition()->get_DataFlowParameters());
 
-        m_dict.reset(new ISInfoDictionary(IPCPartition(cb->getPartition()->UID())));
+        m_dict.reset(new ISInfoDictionary(services.getIPCPartition()));
 
         if(dfparams->get_MulticastAddress().empty()) {
 
@@ -313,10 +315,10 @@ public:
             m_server.reset(new ClearServer(m_service));
             
             // CLEAR+appname
-            m_server->listen("CLEAR_" + getName());
-            daq::asyncmsg::NameService name_service(IPCPartition(cb->getPartition()->UID()),
+            m_server->listen("CLEAR_" + services.applicationName());
+            daq::asyncmsg::NameService name_service(services.getIPCPartition(),
                                                     dfparams->get_DefaultDataNetworks());
-            name_service.publish("CLEAR_" + getName(), m_server->localEndpoint().port());
+            name_service.publish("CLEAR_" + services.applicationName(), m_server->localEndpoint().port());
             
             m_server->start();
 
@@ -341,33 +343,33 @@ public:
 
     }
 
-    virtual void unconfigure(std::string &) override
+    virtual void unconfigure(const daq::rc::TransitionCmd& ) override
     {
         if(m_server) {
             m_server->stop();
         } // else stop UDPsession
     }
     
-    virtual void connect(std::string& ) override
+    virtual void connect(const daq::rc::TransitionCmd& ) override
     {
     }
 
-    virtual void stopL2SV(std::string &) override
+    virtual void stopDC(const daq::rc::TransitionCmd& ) override
     {
         m_running = false;
     }
 
-    virtual void prepareForRun(std::string& ) override
+    virtual void prepareForRun(const daq::rc::TransitionCmd& ) override
     {
         num_clears = 0;
         m_running = true;
     }
 
-    virtual void probe(std::string& ) override
+    virtual void publish() override
     {
         ISInfoUnsignedLong value;
         value.setValue(num_clears);
-        m_dict->checkin( "DF." + getName(), value);
+        m_dict->checkin( "DF." + daq::rc::OnlineServices::instance().applicationName(), value);
     }
   
 private:
@@ -381,31 +383,12 @@ private:
 
 int main(int argc, char *argv[])
 {
-    std::string name;
-    std::string parent;
-    bool interactive;
-  
-    CmdArgStr     app('N',"name", "name", "application name", CmdArg::isOPT);
-    CmdArgStr     uniqueId('n',"uniquename", "uniquename", "unique application id", CmdArg::isREQ);
-    CmdArgBool    iMode('i',"iMode", "turn on interactive mode", CmdArg::isOPT);
-    CmdArgStr     segname('s',"segname", "segname", "segment name", CmdArg::isOPT);
-    CmdArgStr     parentname('P',"parentname", "parentname", "parent name", CmdArg::isREQ);
-  
-    segname = "";
-    parentname = "";
-  
-    CmdLine       cmd(*argv, &app, &uniqueId, &iMode, &segname, &parentname, NULL);
-    CmdArgvIter   argv_iter(--argc, (const char * const *) ++argv);
-  
-    unsigned int status = cmd.parse(argv_iter);
-    if (status) {
-        cmd.error() << argv[0] << ": parsing errors occurred!" << std::endl ;
+    try {
+        daq::rc::CmdLineParser cmdline(argc, argv);
+        daq::rc::ItemCtrl control(cmdline, std::make_shared<ROSApplication>());
+        control.run();
+    } catch(ers::Issue& ex) {
+        ers::fatal(ex);
         exit(EXIT_FAILURE);
     }
-    name = uniqueId;
-    interactive = iMode;
-    parent = parentname;
-  
-    daq::rc::ItemCtrl control(new ROSApplication(name), interactive, parent);
-    control.run();
 }

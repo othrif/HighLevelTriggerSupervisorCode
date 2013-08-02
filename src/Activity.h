@@ -3,9 +3,11 @@
 #define HLTSV_ACTIVITY_H_
 
 // Run control related
-#include "RunController/Controllable.h"
-#include "RunController/CommandedTrigger.h"
-#include "RunController/MasterTrigger.h"
+#include "RunControl/Common/Controllable.h"
+
+// MasterTrigger
+#include "TriggerCommander/CommandedTrigger.h"
+#include "TriggerCommander/MasterTrigger.h"
 
 // Monitoring
 #include "TH1F.h"
@@ -39,31 +41,30 @@ namespace hltsv {
    * and all associated actions.
    */
 
-  class Activity : public daq::rc::Controllable, public daq::rc::MasterTrigger {
+  class Activity : public daq::rc::Controllable, public daq::trigger::MasterTrigger {
   public:
-    Activity(const std::string&);
-    ~Activity();
+    Activity();
+    ~Activity() noexcept;
     
     // Run control commands
-    void configure(std::string&) override;
-    void connect(std::string&) override;
-    void prepareForRun(std::string&) override;
-    void disable(std::string&) override;
-    void enable(std::string&) override;
-    void stopL2SV(std::string&) override;
-    void stopSFO(std::string&) override;
-    void unconfigure(std::string&) override;
-    void disconnect(std::string&) override;
+    void configure(const daq::rc::TransitionCmd& ) override;
+    void connect(const daq::rc::TransitionCmd& ) override;
+    void prepareForRun(const daq::rc::TransitionCmd& ) override;
+    void stopDC(const daq::rc::TransitionCmd& ) override;
+    void stopRecording(const daq::rc::TransitionCmd& ) override;
+    void unconfigure(const daq::rc::TransitionCmd& ) override;
+    void disconnect(const daq::rc::TransitionCmd& ) override;
 
     // Master Trigger commands
     uint32_t hold();
     void resume();
-    void setL1Prescales(uint32_t l1p);
-    void setHLTPrescales(uint32_t hltp, uint32_t lb);
-    void setPrescales(uint32_t  l1p, uint32_t hltp, uint32_t lb);
-    void setLumiBlock(uint32_t lb, uint32_t runno);
-    void setBunchGroup(uint32_t bg);
-    void setConditionsUpdate(uint32_t folderIndex, uint32_t lb);
+    void setL1Prescales(uint32_t l1p) override;
+    void setHLTPrescales(uint32_t hltp, uint32_t lb) override;
+    void setPrescales(uint32_t  l1p, uint32_t hltp, uint32_t lb) override;
+    void setLumiBlock(uint32_t lb, uint32_t runno) override;
+    void setBunchGroup(uint32_t bg) override;
+    void setConditionsUpdate(uint32_t folderIndex, uint32_t lb) override;
+    void increaseLumiBlock(uint32_t) override;
 
   private:
 
@@ -121,7 +122,7 @@ namespace hltsv {
     bool                            m_triggering;
 
     // for MasterTrigger interface
-    std::unique_ptr<daq::rc::CommandedTrigger> m_cmdReceiver;
+    std::unique_ptr<daq::trigger::CommandedTrigger> m_cmdReceiver;
 
     // hold trigger counter
     int                             m_triggerHoldCounter;
