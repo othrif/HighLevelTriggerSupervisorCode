@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
     
     std::random_device rd;
     srand(rd());
-    
+    control.init(); 
     control.run();
     
   } catch(ers::Issue& ex) {

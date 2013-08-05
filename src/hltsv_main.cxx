@@ -17,6 +17,7 @@ int main(int argc, char** argv)
         IPCCore::init(argc,argv);
         daq::rc::CmdLineParser cmdline(argc, argv);
         daq::rc::ItemCtrl control(cmdline, std::make_shared<hltsv::Activity>());
+        control.init();
         control.run();
 
     } catch(ers::Issue& ex) {

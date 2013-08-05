@@ -386,6 +386,7 @@ int main(int argc, char *argv[])
     try {
         daq::rc::CmdLineParser cmdline(argc, argv);
         daq::rc::ItemCtrl control(cmdline, std::make_shared<ROSApplication>());
+        control.init();
         control.run();
     } catch(ers::Issue& ex) {
         ers::fatal(ex);
