@@ -123,6 +123,8 @@ macro testDCM_dependencies "daq-hltsv-dal"
 #
 application testROS ../test/testROS.cxx
 macro testROSlinkopts "-lasyncmsg -lrc_ItemCtrl -lers -lcmdline -ldaq-df-dal"
+macro testROS_dependencies "daq-hltsv-dal"
+
 
 #
 # Emulator for TTC2LAN
