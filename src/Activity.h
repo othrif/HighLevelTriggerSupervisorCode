@@ -122,7 +122,7 @@ namespace hltsv {
     bool                            m_triggering;
 
     // for MasterTrigger interface
-    std::unique_ptr<daq::trigger::CommandedTrigger> m_cmdReceiver;
+    daq::trigger::CommandedTrigger *m_cmdReceiver;
 
     // hold trigger counter
     int                             m_triggerHoldCounter;

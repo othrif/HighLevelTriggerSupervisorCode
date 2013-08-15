@@ -53,6 +53,7 @@ namespace hltsv {
       m_network(false),
       m_running(false),
       m_triggering(false),
+      m_cmdReceiver(0),
       m_triggerHoldCounter(0),
       m_masterTrigger(false)
   {
@@ -119,7 +120,7 @@ namespace hltsv {
 	if(hltsvApp) {
 	  // HLTSV is master trigger
 	  m_masterTrigger = true;
-	  m_cmdReceiver.reset(new daq::trigger::CommandedTrigger(part, daq::rc::OnlineServices::instance().applicationName(), this));
+	  m_cmdReceiver = new daq::trigger::CommandedTrigger(part, daq::rc::OnlineServices::instance().applicationName(),this);
 	} else {
 	  std::stringstream issue_txt;
 	  issue_txt << "HLTSV is not the master trigger, even if it is set to " 
@@ -287,6 +288,11 @@ namespace hltsv {
         svc.reset();
     }
     m_ros_io_service.reset();
+
+    if(m_masterTrigger && m_cmdReceiver) {
+      m_cmdReceiver->shutdown(); // shutdown() will delete m_cmdReceiver
+      m_cmdReceiver = 0;
+    }
 
     return;
   }
