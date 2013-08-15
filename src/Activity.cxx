@@ -256,6 +256,8 @@ namespace hltsv {
   void Activity::unconfigure(const daq::rc::TransitionCmd& )
   {
 
+    ERS_LOG("HLTSV is UNCONFIGURING");
+
     m_network = false;
 
     m_myServer->stop();
@@ -267,15 +269,17 @@ namespace hltsv {
     m_ros_clear.reset();
     m_myServer.reset();
 
-    // m_io_service.stop();
-    // m_ros_io_service.stop();
-
     for(auto& thr : m_io_threads) {
         thr.join();
     }
+    m_io_threads.clear();
 
-    delete m_l1source;
-    m_l1source = 0;
+    if(m_l1source) {
+      delete m_l1source;
+      m_l1source = 0;
+    } else {
+      ERS_LOG("m_l1source = 0");
+    }
 
     m_l1source_libs.clear();
 

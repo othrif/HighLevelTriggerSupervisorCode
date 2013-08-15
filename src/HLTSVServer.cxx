@@ -27,8 +27,9 @@ namespace hltsv {
 
     HLTSVServer::~HLTSVServer()
     {
-        stop();
-        monsvc::MonitoringService::instance().remove_object(std::string("ProcessingTime"));
+      ERS_LOG("Deleting HLTSV server");
+      stop();
+      monsvc::MonitoringService::instance().remove_object(std::string("ProcessingTime"));
     }
 
     void HLTSVServer::start()
@@ -48,11 +49,11 @@ namespace hltsv {
 
     void HLTSVServer::stop()
     {
-        close();
-        for(auto session : m_sessions) {
-            session->asyncClose();
-        }
-        m_sessions.clear();
+      close();
+      for(auto session : m_sessions) {
+	session->asyncClose();
+      }
+      m_sessions.clear();
     }
 
     void HLTSVServer::onAccept(std::shared_ptr<daq::asyncmsg::Session> session) noexcept 
@@ -78,7 +79,7 @@ namespace hltsv {
     void HLTSVServer::onAcceptError(const boost::system::error_code& error,
                                     std::shared_ptr<daq::asyncmsg::Session> ) noexcept
     {
-        ERS_LOG("onAcceptError: " << error);
+      ERS_LOG("onAcceptError: " << error.message());
     }
 }
 
