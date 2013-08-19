@@ -261,15 +261,15 @@ namespace hltsv {
 
     m_network = false;
 
-    for(auto& thr : m_io_threads) {
-        thr.join();
-    }
-    m_io_threads.clear();
-
     m_myServer->stop();
 
     m_work.reset();
     m_ros_work.reset();
+
+    for(auto& thr : m_io_threads) {
+        thr.join();
+    }
+    m_io_threads.clear();
 
     m_event_sched.reset();
     m_ros_clear.reset();
