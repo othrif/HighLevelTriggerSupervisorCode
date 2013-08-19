@@ -261,6 +261,11 @@ namespace hltsv {
 
     m_network = false;
 
+    for(auto& thr : m_io_threads) {
+        thr.join();
+    }
+    m_io_threads.clear();
+
     m_myServer->stop();
 
     m_work.reset();
@@ -269,11 +274,6 @@ namespace hltsv {
     m_event_sched.reset();
     m_ros_clear.reset();
     m_myServer.reset();
-
-    for(auto& thr : m_io_threads) {
-        thr.join();
-    }
-    m_io_threads.clear();
 
     if(m_l1source) {
       delete m_l1source;

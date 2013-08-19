@@ -46,8 +46,8 @@ case "$2" in
         x=(pc-tbed-r3-{21..30}.cern.ch@Computer)
         SEGMENTS[3]=$(echo ${x[*]} | sed 's; ; , ;g')
 
-        x=(pc-tbed-r3-{31..40}.cern.ch@Computer)
-        SEGMENTS[4]=$(echo ${x[*]} | sed 's; ; , ;g')
+        #x=(pc-tbed-r3-{31..40}.cern.ch@Computer)
+        #SEGMENTS[4]=$(echo ${x[*]} | sed 's; ; , ;g')
 
         INCLUDES="${INCLUDES} -I daq/hw/hosts.data.xml"
         ;;
