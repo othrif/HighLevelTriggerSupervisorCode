@@ -4,10 +4,6 @@
 #include "DFdal/DFParameters.h"
 #include "DFdal/HLTSV_DCMTest.h"
 
-#include "msg/Port.h"
-#include "msgconf/MessageConfiguration.h"
-#include "msginput/MessageHeader.h"
-
 #include "cmdl/cmdargs.h"
 
 #include "dcmessages/LVL1Result.h"
@@ -48,7 +44,6 @@ public:
   void execute(unsigned worker_id);
 
 private:
-  MessageConfiguration m_msgconf;
   daq::asyncmsg::NameService *m_testns;
   std::shared_ptr<hltsv::HLTSVSession> m_session;
 
@@ -117,7 +112,6 @@ void DCMActivity::configure(const daq::rc::TransitionCmd&  )
 
 void DCMActivity::unconfigure(const daq::rc::TransitionCmd&  )
 {
-  m_msgconf.unconfigure();
   delete m_testns;
 }
 

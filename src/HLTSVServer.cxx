@@ -50,9 +50,12 @@ namespace hltsv {
     void HLTSVServer::stop()
     {
       close();
+#if 0
+      // DCM should have closed the sessions
       for(auto session : m_sessions) {
 	session->asyncClose();
       }
+#endif
       m_sessions.clear();
     }
 

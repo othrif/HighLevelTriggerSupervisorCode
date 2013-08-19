@@ -115,7 +115,7 @@ macro test_l1source_dependencies hltsv
 # Emulator for DCM
 #
 application testDCM ../test/testDCM.cxx ../test/HLTSVSession.cxx ../test/DCMMessages.cxx
-macro testDCMlinkopts "-lrc_ItemCtrl -lers -leformat -ldcmessages -lmsginput -lmsgconf -lmsg -ldaq-hltsv-dal -lmonsvc-dal -ldaq-df-dal -lasyncmsg -ltbb"
+macro testDCMlinkopts "-lrc_ItemCtrl -lers -leformat -ldaq-hltsv-dal -lmonsvc-dal -ldaq-df-dal -lasyncmsg -ltbb"
 macro testDCM_dependencies "daq-hltsv-dal"
 
 #
