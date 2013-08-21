@@ -175,8 +175,9 @@ namespace hltsv {
     {
       ERS_LOG("DCMSession::onReceiveError, with error: " << error << " from " << remoteName());
 
-      // TODO: report, do we close this connection ?
       m_in_error = true;
+
+      asyncClose();
 
       // reassign events
       for(auto event : m_events) {
@@ -195,6 +196,8 @@ namespace hltsv {
     {
         ERS_LOG("Send error: " << error << " from " << remoteName());
         m_in_error = true;
+
+        asyncClose();
 
         // reassign events
         for(auto event : m_events) {

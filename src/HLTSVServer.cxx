@@ -7,6 +7,8 @@
 
 #include "TH1F.h"
 
+#include <thread>
+
 namespace hltsv {
     
     HLTSVServer::HLTSVServer(std::vector<boost::asio::io_service>& services,
@@ -27,7 +29,6 @@ namespace hltsv {
 
     HLTSVServer::~HLTSVServer()
     {
-      ERS_LOG("Deleting HLTSV server");
       stop();
       monsvc::MonitoringService::instance().remove_object(std::string("ProcessingTime"));
     }
@@ -49,19 +50,36 @@ namespace hltsv {
 
     void HLTSVServer::stop()
     {
+      using namespace daq::asyncmsg;
+
       close();
-#if 0
-      // DCM should have closed the sessions
+
+      // DCM should have closed the sessions already
+      // clean up the rest.
+
       for(auto session : m_sessions) {
-	session->asyncClose();
+        if(session->state() != Session::State::CLOSED) {
+          ERS_LOG("Session still open: " << session->remoteName());
+          session->asyncClose();
+        }
       }
-#endif
+
+      for(auto session : m_sessions) {
+
+        if(session->state() != Session::State::CLOSED) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
+        if(session->state() != Session::State::CLOSED) {        
+          ERS_LOG("Session still open after close and 10ms wait: " << session->remoteName());
+        }
+      }
+
       m_sessions.clear();
     }
 
     void HLTSVServer::onAccept(std::shared_ptr<daq::asyncmsg::Session> session) noexcept 
     {
-	ERS_LOG("HLTSV Server accepted a DCM connection!");
         // save a reference to the new session
         std::shared_ptr<DCMSession> dcm(session, dynamic_cast<DCMSession*>(session.get()));
 

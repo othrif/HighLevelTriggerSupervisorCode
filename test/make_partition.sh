@@ -111,7 +111,7 @@ case "$2" in
         if [ ! -f farm.data.xml ]; then
             pm_farm.py --add=${DEFAULT_HOST} farm.data.xml
         fi
-        #INCLUDES="${INCLUDES} -I farm.data.xml"
+        INCLUDES="${INCLUDES} -I farm.data.xml"
         ;;
 esac
 

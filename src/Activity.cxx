@@ -259,9 +259,9 @@ namespace hltsv {
 
     ERS_LOG("HLTSV is UNCONFIGURING");
 
-    m_network = false;
-
     m_myServer->stop();
+
+    m_network = false;
 
     m_work.reset();
     m_ros_work.reset();
