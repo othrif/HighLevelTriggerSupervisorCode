@@ -179,7 +179,15 @@ namespace hltsv {
 
     LVL1Result* L1FilarSource::getResult()
     {
-        if(!resultAvailable()) return 0;
+      if(!resultAvailable()) {
+	// update the channel to avoid stalling
+	for (int i=0;i<FILAR_MAX_LINKS;i++) {
+	  m_chan++;
+	  m_chan=m_chan%FILAR_MAX_LINKS;
+	  if( m_active[m_chan] ) break;
+	}
+	return 0;
+      }
 
         FILAR_in_t fin;
 
