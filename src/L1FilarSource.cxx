@@ -179,39 +179,39 @@ namespace hltsv {
 
     LVL1Result* L1FilarSource::getResult()
     {
-      if(!resultAvailable()) {
-	// update the channel to avoid stalling
-	for (int i=0;i<FILAR_MAX_LINKS;i++) {
-	  m_chan++;
-	  m_chan=m_chan%FILAR_MAX_LINKS;
-	  if( m_active[m_chan] ) break;
-	}
-	return 0;
-      }
+        if(!resultAvailable()) {
+            // update the channel to avoid stalling
+            for (int i=0;i<FILAR_MAX_LINKS;i++) {
+                m_chan = (m_chan + 1) % FILAR_MAX_LINKS;
+                if( m_active[m_chan] ) break;
+            }
+            return nullptr;
+        }
 
         FILAR_in_t fin;
 
-        LVL1Result* l1Result = 0;
+        LVL1Result* l1Result = nullptr;
 
         try {
-	  //            l1Result = new LVL1Result( m_result[m_chan], m_size[m_chan] );
-                        // locate the ROD fragments
+            // locate the ROD fragments
             const uint32_t* rod[MAXLVL1RODS];
             uint32_t        rodsize[MAXLVL1RODS];
 
             uint32_t num_frags = eformat::find_rods(m_result[m_chan], m_size[m_chan], rod, rodsize, MAXLVL1RODS);
             uint32_t size_word = 0;
+            uint32_t lvl1_id = 0;
 
             // create the ROB fragments out of ROD fragments
             eformat::write::ROBFragment* writers[MAXLVL1RODS];
             for (size_t i = 0; i < num_frags; ++i) {
-                writers[i] = 
-                    new eformat::write::ROBFragment(const_cast<uint32_t*>(rod[i]), rodsize[i]);
+                writers[i] = new eformat::write::ROBFragment(const_cast<uint32_t*>(rod[i]), rodsize[i]);
 
                 //update ROB header
                 writers[i]->rob_source_id(writers[i]->rod_source_id());
                 // m_len[i] = writers[i]->size_word();
                 size_word += writers[i]->size_word();
+
+                lvl1_id = writers[i]->rod_lvl1_id();
             }
 
             // make one single buffer out of the whole data
@@ -223,8 +223,7 @@ namespace hltsv {
                 delete writers[i];
             }
 
-            l1Result = new LVL1Result( 0, event, size_word);
-            
+            l1Result = new LVL1Result( lvl1_id, event, size_word);
 
             ERS_DEBUG(3, "Created LVL1Result with l1id: " << l1Result->l1ID()
                       << " and size " << m_size[m_chan] );
@@ -257,12 +256,19 @@ namespace hltsv {
     L1FilarSource::reset(uint32_t /* run_number */)
     {
         FILAR_in_t fin;
-	for (int c=0;c<FILAR_MAX_LINKS;c++) if(m_active[c]){
-	  // reset device
-	  unsigned int code = FILAR_Reset(c);
-	  if (code) {
+
+        // reset device
+
+        // The upper bits of the channel are interpreted
+        // as a card number. 
+        // TODO: do not hardcode this to 0 here:
+
+        unsigned int code = FILAR_Reset(0);
+        if (code) {
             throw hltsv::FilarDevException(ERS_HERE, code);
-	  }
+        }
+
+	for (int c=0;c<FILAR_MAX_LINKS;c++) if(m_active[c]){
 
 	  code = FILAR_LinkReset(c);
 	  if (code) {
