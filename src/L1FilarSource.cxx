@@ -171,6 +171,7 @@ namespace hltsv {
                 if (code) {
                     throw hltsv::FilarDevException(ERS_HERE, code);
                 }
+                return false;
             }
 
         m_size[m_chan] = fout.fragsize[0];
@@ -310,7 +311,7 @@ namespace hltsv {
             throw hltsv::FilarDevException(ERS_HERE, code);
         } else {
             // reset device
-            reset(0);
+            // reset(0);
         }
 
     }
