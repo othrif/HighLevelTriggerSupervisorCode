@@ -6,7 +6,6 @@
 
 #include "cmdl/cmdargs.h"
 
-#include "dcmessages/LVL1Result.h"
 #include "RunControl/Common/OnlineServices.h"
 #include "RunControl/Common/Controllable.h"
 #include "RunControl/Common/CmdLineParser.h"
