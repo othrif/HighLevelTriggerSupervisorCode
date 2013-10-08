@@ -90,13 +90,13 @@ void DCMActivity::configure(const daq::rc::TransitionCmd&  )
 {
   Configuration& conf = daq::rc::OnlineServices::instance().getConfiguration();
 
-  const daq::core::Partition *partition = daq::rc::OnlineServices::instance().getPartition();
+  const daq::core::Partition& partition = daq::rc::OnlineServices::instance().getPartition();
   IPCPartition part = daq::rc::OnlineServices::instance().getIPCPartition();
 
-  const daq::df::DFParameters *dfparams = conf.cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
+  const daq::df::DFParameters *dfparams = conf.cast<daq::df::DFParameters>(partition.get_DataFlowParameters());
   m_testns = new daq::asyncmsg::NameService(part, dfparams->get_DefaultDataNetworks());
 
-  const daq::df::HLTSV_DCMTest* self = conf.cast<daq::df::HLTSV_DCMTest>(daq::rc::OnlineServices::instance().getApplication());
+  const daq::df::HLTSV_DCMTest* self = conf.cast<daq::df::HLTSV_DCMTest>(&daq::rc::OnlineServices::instance().getApplication());
 
   m_cores = self->get_NumberOfCores();
   m_l2_processing = self->get_L2ProcessingTime();

@@ -304,7 +304,7 @@ public:
         daq::rc::OnlineServices& services = daq::rc::OnlineServices::instance();
         Configuration& config = services.getConfiguration();
 
-        const daq::df::DFParameters *dfparams = config.cast<daq::df::DFParameters>(services.getPartition()->get_DataFlowParameters());
+        const daq::df::DFParameters *dfparams = config.cast<daq::df::DFParameters>(services.getPartition().get_DataFlowParameters());
 
         m_dict.reset(new ISInfoDictionary(services.getIPCPartition()));
 

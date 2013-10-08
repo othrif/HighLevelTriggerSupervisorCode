@@ -70,12 +70,12 @@ namespace hltsv {
 
     Configuration& conf = daq::rc::OnlineServices::instance().getConfiguration();
 
-    const daq::df::HLTSVApplication *self = conf.cast<daq::df::HLTSVApplication>(daq::rc::OnlineServices::instance().getApplication());
+    const daq::df::HLTSVApplication* self = conf.cast<daq::df::HLTSVApplication>(&daq::rc::OnlineServices::instance().getApplication());
 
-    const daq::core::Partition *partition = daq::rc::OnlineServices::instance().getPartition();
-    const IPCPartition          part(partition->UID());
+    const daq::core::Partition& partition = daq::rc::OnlineServices::instance().getPartition();
+    const IPCPartition          part(daq::rc::OnlineServices::instance().getIPCPartition());
 
-    const daq::df::DFParameters *dfparams = conf.cast<daq::df::DFParameters>(partition->get_DataFlowParameters());
+    const daq::df::DFParameters *dfparams = conf.cast<daq::df::DFParameters>(partition.get_DataFlowParameters());
 
     m_event_delay = self->get_EventDelay();
 
@@ -109,7 +109,7 @@ namespace hltsv {
 
     // Conditions for which the HLTSV should be Master Trigger
     const daq::core::MasterTrigger* masterholder = 0;
-    masterholder = partition->get_MasterTrigger();
+    masterholder = partition.get_MasterTrigger();
     const daq::core::RunControlApplicationBase * master = 0;
     const daq::df::HLTSVApplication * hltsvApp = 0;
     if (masterholder) {
@@ -408,9 +408,16 @@ namespace hltsv {
     m_l1source->setHLTCounter(lb);
   }
   
-  void Activity::setLumiBlock(uint32_t lb, uint32_t )
+  void Activity::increaseLumiBlock(uint32_t lb)
   {
-    m_l1source->setLB(lb);
+  }
+
+  void Activity::setLumiBlockInterval(uint32_t seconds)
+  {
+  }
+
+  void Activity::setMinLumiBlockLength(uint32_t seconds)
+  {
   }
   
   void Activity::setPrescales(uint32_t l1p, uint32_t hltp, uint32_t lb)
@@ -435,8 +442,5 @@ namespace hltsv {
 
   }
 
-  void Activity::increaseLumiBlock(uint32_t )
-  {
-  }
   
 }

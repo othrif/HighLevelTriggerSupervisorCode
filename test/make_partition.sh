@@ -107,9 +107,13 @@ case "$2" in
         DATA_NETWORKS='"137.138.0.0/255.255.0.0", "188.184.2.64/255.255.255.192"'
         SEGMENTS[1]="${DEFAULT_HOST}@Computer"
 	#MULTICAST="225.0.1.1/137.138.0.0"
-        
-        if [ ! -f farm.data.xml ]; then
+
+	if ! echo ${DEFAULT_HOST} | grep -q pc-tbed
+        then
+          if [ ! -f farm.data.xml ]; then
             pm_farm.py --add=${DEFAULT_HOST} farm.data.xml
+          fi
+          INCLUDES="${INCLUDES} -I farm.data.xml"
         fi
         INCLUDES="${INCLUDES} -I farm.data.xml"
         ;;

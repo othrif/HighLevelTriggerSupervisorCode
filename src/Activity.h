@@ -58,13 +58,15 @@ namespace hltsv {
     // Master Trigger commands
     uint32_t hold();
     void resume();
+    void setPrescales(uint32_t  l1p, uint32_t hltp, uint32_t lb) override;
     void setL1Prescales(uint32_t l1p) override;
     void setHLTPrescales(uint32_t hltp, uint32_t lb) override;
-    void setPrescales(uint32_t  l1p, uint32_t hltp, uint32_t lb) override;
-    void setLumiBlock(uint32_t lb, uint32_t runno) override;
+    void increaseLumiBlock(uint32_t) override;
+    void setLumiBlockInterval(uint32_t runno) override;
+    void setMinLumiBlockLength(uint32_t runno) override;
     void setBunchGroup(uint32_t bg) override;
     void setConditionsUpdate(uint32_t folderIndex, uint32_t lb) override;
-    void increaseLumiBlock(uint32_t) override;
+
 
   private:
 
