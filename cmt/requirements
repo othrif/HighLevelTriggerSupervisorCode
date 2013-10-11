@@ -92,6 +92,7 @@ macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lttcpr"
 # read from TTC2LAN
 library svl1ttc2lan L1TTC2LANSource.cxx
 macro svl1ttc2lan_shlibflags "-leformat_write -leformat -lasyncmsg"
+macro svl1ttc2lan_dependencies "daq-hltsv-dal"
 
 macro constituents "hltsv hltsv_main svl1internal svl1preloaded svl1ttc2lan test_l1source testDCM testROS testTTC2LAN" \
       i686 "hltsv hltsv_main svl1internal svl1preloaded svl1filar svl1ttc2lan test_l1source testDCM testROS testTTC2LAN"
