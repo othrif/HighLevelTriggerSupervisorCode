@@ -237,6 +237,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   DCM@HLTSV_DCMTest.Program = testDCM@Binary
   DCM@HLTSV_DCMTest.Instances = 0
   DCM@HLTSV_DCMTest.RestartableDuringRun = True
+  DCM@HLTSV_DCMTest.RunsOn = 'AllHosts'
 
   DCM@HLTSV_DCMTest.L2ProcessingTime = 40
   DCM@HLTSV_DCMTest.L2Acceptance = 5
@@ -267,6 +268,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   dcm@DcmApplication.Program            = dcm_main@Binary
   dcm@DcmApplication.ConfigurationRules = dcmRules@ConfigurationRuleBundle
   dcm@DcmApplication.Instances          = 1
+  dcm@DcmApplication.RunsOn             = 'AllHosts'
 
   dcm@DcmApplication.l1Source           = dcmL1Source@DcmHltsvL1Source
   dcm@DcmApplication.dataCollector      = dcmDatacollector@DcmRosDataCollector
@@ -278,10 +280,10 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 # DCM segments x ${NUM_SEGMENTS}
 # 
   $(for i in $(seq 1 ${NUM_SEGMENTS}) ; do 
-     echo DCM-Segment-${i}@HLTSegment 
-     echo DCM-Segment-${i}@HLTSegment.IsControlledBy = DefRC@RunControlTemplateApplication 
-     echo DCM-Segment-${i}@HLTSegment.TemplateApplications = [ ${DCM_APPLICATION} ]
-     echo DCM-Segment-${i}@HLTSegment.TemplateHosts = [ ${SEGMENTS[${i}]} ]
+     echo DCM-Segment-${i}@Segment 
+     echo DCM-Segment-${i}@Segment.IsControlledBy = DefRC@RunControlTemplateApplication 
+     echo DCM-Segment-${i}@Segment.Applications = [ ${DCM_APPLICATION} ]
+     echo DCM-Segment-${i}@Segment.Hosts = [ ${SEGMENTS[${i}]} ]
     done)
 
 #
@@ -323,9 +325,10 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 
   ${PARTITION}@Partition
   ${PARTITION}@Partition.OnlineInfrastructure = setup@OnlineSegment 
-  ${PARTITION}@Partition.DefaultTags = [ x86_64-slc6-gcc47-opt@Tag , x86_64-slc6-gcc47-dbg@Tag , x86_64-slc5-gcc47-opt@Tag ,  x86_64-slc5-gcc47-dbg@Tag ]
+  ${PARTITION}@Partition.DefaultTags = [ x86_64-slc6-gcc47-opt@Tag , x86_64-slc6-gcc47-dbg@Tag , x86_64-slc5-gcc47-opt@Tag ,  x86_64-slc5-gcc47-dbg@Tag , i686-slc6-gcc47-opt@Tag ]
   ${PARTITION}@Partition.DataFlowParameters = Dataflow@DFParameters
-  ${PARTITION}@Partition.Parameters = [ CommonParameters@VariableSet ]
+  ${PARTITION}@Partition.ProcessEnvironment = [ CommonEnvironment@VariableSet , External-environment@VariableSet ]
+  ${PARTITION}@Partition.Parameters = [ CommonParameters@VariableSet , External-parameters@VariableSet ]
   ${PARTITION}@Partition.DefaultHost = ${DEFAULT_HOST}@Computer
   ${PARTITION}@Partition.RepositoryRoot = "${REPOSITORY}"
   ${PARTITION}@Partition.LogRoot = "${LOGROOT}"
@@ -334,7 +337,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
   ${PARTITION}@Partition.Segments = [ HLT@Segment ]
 
   $(for i in $(seq 1 ${NUM_SEGMENTS}) ; do 
-     echo ${PARTITION}@Partition.Segments += [ DCM-Segment-${i}@HLTSegment ]
+     echo ${PARTITION}@Partition.Segments += [ DCM-Segment-${i}@Segment ]
     done)
 
   ${PARTITION}@Partition.Segments += [ ROS@Segment ]
@@ -350,7 +353,7 @@ pm_set.py -n ${INCLUDES} ${PARTITION}.data.xml <<EOF
 
   counters@IS_InformationSources
   counters@IS_InformationSources.LVL1 = lvl1-counter@IS_EventsAndRates
-  counters@IS_InformationSources.LVL2 = lvl2-counter@IS_EventsAndRates
+  counters@IS_InformationSources.HLT = lvl2-counter@IS_EventsAndRates
 
   ${PARTITION}@Partition.IS_InformationSource = counters@IS_InformationSources
 
