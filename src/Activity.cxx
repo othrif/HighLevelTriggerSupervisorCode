@@ -82,6 +82,7 @@ namespace hltsv {
     // Load L1 Source
     std::vector<std::string> file_names;
     const std::vector<const daq::df::DataFile*>& dataFiles = dfparams->get_UsesDataFiles();
+    file_names.resize(dataFiles.size());
     std::transform(dataFiles.begin(), dataFiles.end(), file_names.begin(), [](const daq::df::DataFile* df) { return df->get_FileName(); });
 
     const daq::df::RoIBPlugin *source = self->get_RoIBInput();
