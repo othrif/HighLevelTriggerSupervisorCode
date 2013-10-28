@@ -334,22 +334,25 @@ namespace hltsv {
     while(m_running) {
       if(m_triggering) {
 
-    if ( (trigger_count == 0) || (trigger_count > MAXIMUM_TRIGGER_COUNT) ) {
-      t_last = steady_clock::now();
-      trigger_count = 0;
-	}
-	
-	if (trigger_count % correction_rate == 0) {
-	  steady_clock::time_point now = steady_clock::now();
+	if(m_event_delay != 0) {
 
-	  duration<double> t_elapsed = duration_cast<duration<double>>(now - t_last);
-	  auto t_delta = trigger_count * t_target_delay - t_elapsed;
+	  if ( (trigger_count == 0) || (trigger_count > MAXIMUM_TRIGGER_COUNT) ) {
+	    t_last = steady_clock::now();
+	    trigger_count = 0;
+	  }
 	  
-	  std::this_thread::sleep_for(t_delta);
-	  
+	  if (trigger_count % correction_rate == 0) {
+	    steady_clock::time_point now = steady_clock::now();
+	    
+	    duration<double> t_elapsed = duration_cast<duration<double>>(now - t_last);
+	    auto t_delta = trigger_count * t_target_delay - t_elapsed;
+	    
+	    std::this_thread::sleep_for(t_delta);
+	    
+	  }
+	  trigger_count++;
 	}
-	trigger_count++;
-      
+
 	std::shared_ptr<LVL1Result> result(m_l1source->getResult());
 	if(result) {
 	  m_event_sched->schedule_event(result);
