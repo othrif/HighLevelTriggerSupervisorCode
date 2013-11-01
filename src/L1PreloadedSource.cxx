@@ -142,9 +142,9 @@ namespace hltsv {
             }
             // --- bind and copy fragment back
             const eformat::write::node_t* toplist = wrob.bind();
-            eformat::write::copy(*toplist, *fit, wrob.size_word());
-            robs[i] = *fit;
+	    robs[i] = new uint32_t[wrob.size_word()];
             lengths[i] = wrob.size_word();
+            eformat::write::copy(*toplist, robs[i], wrob.size_word());
 
             uint32_t* rob = robs[i];
             // Rewrite LB and HLT counter in CTP fragment
@@ -172,7 +172,7 @@ namespace hltsv {
         }
 
         if (rob_frag->size()) {
-            l1Result = new LVL1Result( lvl1_id, rob_frag->size(), robs, lengths, [](uint32_t*) {} );
+	    l1Result = new LVL1Result( lvl1_id, rob_frag->size(), robs, lengths);
         } else {
             std::ostringstream mesg;
             mesg <<"looking for LVL1 RoIs to build LVL1Result with l1id " <<
