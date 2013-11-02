@@ -28,7 +28,6 @@
 #include "RunControl/Common/OnlineServices.h"
 
 #include "monsvc/MonitoringService.h"
-#include "monsvc/FilePublisher.h"
 
 #include "HLTSV.h"
 
