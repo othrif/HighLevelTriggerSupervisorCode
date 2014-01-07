@@ -88,6 +88,7 @@ macro svl1preloaded_shlibflags "-lers -leformat_write -leformat -lCTPfragment -l
 # read from Filar (aka RoIB hardware)
 library svl1filar L1FilarSource.cxx
 macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lttcpr"
+macro svl1filar_dependencies "daq-hltsv-dal"
 
 # read from TTC2LAN
 library svl1ttc2lan L1TTC2LANSource.cxx
