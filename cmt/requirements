@@ -80,10 +80,12 @@ macro sw.repository.binary.hltsv_main:description  "HLT Supervisor Application"
 # internal generation
 library svl1internal  L1InternalSource.cxx
 macro svl1internal_shlibflags "-lers"
+macro svl1internal_dependencies "daq-hltsv-dal"
 
 # preload from file
 library svl1preloaded L1PreloadedSource.cxx
 macro svl1preloaded_shlibflags "-lers -leformat_write -leformat -lCTPfragment -lDataReader"
+macro svl1preloaded_dependencies "daq-hltsv-dal"
 
 # read from Filar (aka RoIB hardware)
 library svl1filar L1FilarSource.cxx
