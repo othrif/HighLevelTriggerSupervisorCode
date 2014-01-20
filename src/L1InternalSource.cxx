@@ -28,6 +28,7 @@ namespace hltsv {
         unsigned int          m_l1id;
         uint32_t              m_size;
         std::vector<uint32_t> m_dummy_data;
+        uint32_t              m_run_no;
     };
 }
 
@@ -46,7 +47,8 @@ namespace hltsv {
     L1InternalSource::L1InternalSource(const daq::df::RoIBPluginInternal *config)
         : m_l1id(0),
           m_size(config->get_FragmentSize()),
-          m_dummy_data(m_size)
+          m_dummy_data(m_size),
+          m_run_no(0)
     {
     }
 
@@ -56,8 +58,10 @@ namespace hltsv {
 
     LVL1Result* L1InternalSource::getResult()
     {
+
+        if(m_hold) return nullptr;
+
         //create the ROB fragment 
-        const uint32_t run_no	   = 0x0;
         const uint32_t bc_id	   = 0x1;
         const uint32_t lvl1_type = 0xff;
   
@@ -65,7 +69,7 @@ namespace hltsv {
 
         eformat::helper::SourceIdentifier src(eformat::TDAQ_CTP, 1);
 
-        eformat::write::ROBFragment rob(src.code(), run_no, m_l1id, bc_id,
+        eformat::write::ROBFragment rob(src.code(), m_run_no, m_l1id, bc_id,
                                         lvl1_type, event_type, 
                                         m_size, &m_dummy_data[0], 
                                         eformat::STATUS_FRONT);
@@ -81,10 +85,12 @@ namespace hltsv {
 
 
     void
-    L1InternalSource::reset(uint32_t /* run_number */)
+    L1InternalSource::reset(uint32_t run_number)
     {
         // temporary hack to initialize L1ID 
         m_l1id = 0;
+        m_lb   = 1;
+        m_run_no = run_number;
     }
 
 }

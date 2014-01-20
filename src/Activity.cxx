@@ -24,6 +24,7 @@
 
 #include "DFdal/HLTSVApplication.h"
 #include "DFdal/RoIBPlugin.h"
+#include "DFdal/RoIBMasterTriggerPlugin.h"
 
 #include "RunControl/Common/OnlineServices.h"
 
@@ -44,17 +45,12 @@
 
 namespace hltsv {
 
-  const size_t Num_Assign = 12;
-
   Activity::Activity()
     : daq::rc::Controllable(), 
       m_l1source(nullptr),
       m_network(false),
       m_running(false),
-      m_triggering(false),
-      m_cmdReceiver(0),
-      m_triggerHoldCounter(0),
-      m_masterTrigger(false)
+      m_cmdReceiver(0)
   {
   }
 
@@ -106,44 +102,8 @@ namespace hltsv {
       return;
     }
 
-
-    // Conditions for which the HLTSV should be Master Trigger
-    const daq::core::MasterTrigger* masterholder = 0;
-    masterholder = partition.get_MasterTrigger();
-    const daq::core::RunControlApplicationBase * master = 0;
-    const daq::df::HLTSVApplication * hltsvApp = 0;
-    if (masterholder) {
-      master = masterholder->get_Controller();
-      hltsvApp = conf.cast<daq::df::HLTSVApplication>(master);
-      if(source->get_IsMasterTrigger()) {
-        // Check if OKS is set correctly
-	if(hltsvApp) {
-	  // HLTSV is master trigger
-	  m_masterTrigger = true;
-	  m_cmdReceiver = new daq::trigger::CommandedTrigger(part, daq::rc::OnlineServices::instance().applicationName(),this);
-	} else {
-	  std::stringstream issue_txt;
-	  issue_txt << "HLTSV is not the master trigger, even if it is set to " 
-		    << source->UID() << " mode. The master trigger is: " 
-		    << masterholder->UID();
-	  std::string tmp = issue_txt.str();
-	  hltsv::MasterTriggerIssue fatal_i(ERS_HERE, tmp.c_str());
-	  ers::fatal(fatal_i);
-	}   
-      } else {
-	if(hltsvApp) {
-	  std::stringstream issue_txt;
-	  issue_txt << "HLTSV is set as the master trigger, but the source type is: " 
-		    <<  source->UID();
-	  std::string tmp = issue_txt.str();
-	  hltsv::MasterTriggerIssue warn_i(ERS_HERE, tmp.c_str());
-	  ers::warning(warn_i);
-	}
-      }
-    } else {
-      std::string issue_txt = "Master Trigger not defined in the partition";
-      hltsv::MasterTriggerIssue warn2_i(ERS_HERE, issue_txt.c_str());
-      ers::warning(warn2_i);
+    if(source->cast<daq::df::RoIBMasterTriggerPlugin>()) {
+        m_cmdReceiver = new daq::trigger::CommandedTrigger(part, daq::rc::OnlineServices::instance().applicationName(), m_l1source);
     }
 
     m_publisher.reset(new monsvc::PublishingController(part,daq::rc::OnlineServices::instance().applicationName()));
@@ -225,9 +185,11 @@ namespace hltsv {
     runparams.checkout();
 
     m_l1source->reset(runparams.run_number);
+    if(m_cmdReceiver) {
+        m_l1source->startLumiBlockUpdate();
+    }
 
     m_running = true;
-    m_triggering = true;
 
     m_l1_thread = std::thread(&Activity::l1_thread, this);
     
@@ -239,9 +201,10 @@ namespace hltsv {
 
     m_event_sched->push_events();
 
-    m_triggering = false;
     m_running = false;
-
+    if(m_cmdReceiver) {
+        m_l1source->stopLumiBlockUpdate();
+    }
 
     m_l1_thread.join();
     
@@ -289,7 +252,7 @@ namespace hltsv {
     }
     m_ros_io_service.reset();
 
-    if(m_masterTrigger && m_cmdReceiver) {
+    if(m_cmdReceiver) {
       m_cmdReceiver->shutdown(); // shutdown() will delete m_cmdReceiver
       m_cmdReceiver = 0;
     }
@@ -331,40 +294,36 @@ namespace hltsv {
     const uint32_t MAXIMUM_TRIGGER_COUNT = 1e9; // 1e9 / 100kHz = 2.8 hrs.
 
     while(m_running) {
-      if(m_triggering) {
 
 	if(m_event_delay != 0) {
-
-	  if ( (trigger_count == 0) || (trigger_count > MAXIMUM_TRIGGER_COUNT) ) {
-	    t_last = steady_clock::now();
-	    trigger_count = 0;
-	  }
-	  
-	  if (trigger_count % correction_rate == 0) {
-	    steady_clock::time_point now = steady_clock::now();
+            
+            if ( (trigger_count == 0) || (trigger_count > MAXIMUM_TRIGGER_COUNT) ) {
+                t_last = steady_clock::now();
+                trigger_count = 0;
+            }
+            
+            if (trigger_count % correction_rate == 0) {
+                steady_clock::time_point now = steady_clock::now();
+                
+                duration<double> t_elapsed = duration_cast<duration<double>>(now - t_last);
+                auto t_delta = trigger_count * t_target_delay - t_elapsed;
 	    
-	    duration<double> t_elapsed = duration_cast<duration<double>>(now - t_last);
-	    auto t_delta = trigger_count * t_target_delay - t_elapsed;
-	    
-	    std::this_thread::sleep_for(t_delta);
-	    
-	  }
-	  trigger_count++;
+                std::this_thread::sleep_for(t_delta);
+                
+            }
+            trigger_count++;
 	}
-
+        
 	std::shared_ptr<LVL1Result> result(m_l1source->getResult());
 	if(result) {
-	  m_event_sched->schedule_event(result);
-	  ERS_DEBUG(1,"L1ID #" << result->l1_id() << "  has been scheduled");
+            m_event_sched->schedule_event(result);
+            ERS_DEBUG(1,"L1ID #" << result->l1_id() << "  has been scheduled");
 	}
-      } else {
-	usleep(100000);
-      }
+        
     }
+
     ERS_LOG("Finishing l1 thread");
-
   }
-
 
 
   void Activity::io_thread(boost::asio::io_service& service)
@@ -376,74 +335,4 @@ namespace hltsv {
       };
   }
 
-
-  /**
-   *     MasterTrigger interface
-   **/
-    
-  uint32_t Activity::hold()
-  {
-    m_triggerHoldCounter += 1;
-    if(m_masterTrigger)  m_triggering = false;
-    return 0;
-  }
-  
-  void Activity::resume()
-  {
-    if (m_triggerHoldCounter > 0) {
-      m_triggerHoldCounter -= 1;
-    }
-    
-    if (m_triggerHoldCounter == 0 && m_masterTrigger) {
-      m_triggering = true;
-    } 
-  }
-  
-  void Activity::setL1Prescales(uint32_t )
-  {
-    std::string issue_txt = "HLTSV cannot set L1 Prescale";
-    hltsv::MasterTriggerIssue warn(ERS_HERE, issue_txt.c_str());
-    ers::warning(warn);
-  }
-  
-  void Activity::setHLTPrescales(uint32_t , uint32_t lb)
-  {
-    m_l1source->setHLTCounter(lb);
-  }
-  
-  void Activity::increaseLumiBlock(uint32_t lb)
-  {
-  }
-
-  void Activity::setLumiBlockInterval(uint32_t seconds)
-  {
-  }
-
-  void Activity::setMinLumiBlockLength(uint32_t seconds)
-  {
-  }
-  
-  void Activity::setPrescales(uint32_t l1p, uint32_t hltp, uint32_t lb)
-  {
-    setL1Prescales(l1p);
-    setHLTPrescales(hltp, lb);
-  }
-  
-  void Activity::setBunchGroup(uint32_t)
-  {
-    std::string issue_txt = "HLTSV cannot set Bunch Group";
-    hltsv::MasterTriggerIssue warn(ERS_HERE, issue_txt.c_str());
-    ers::warning(warn);
-
-  }
-  
-  void Activity::setConditionsUpdate(uint32_t, uint32_t)
-  {
-    std::string issue_txt = "HLTSV cannot set Conditions Update";
-    hltsv::MasterTriggerIssue warn(ERS_HERE, issue_txt.c_str());
-    ers::warning(warn);
-
-  }
-
-  
 }

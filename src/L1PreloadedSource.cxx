@@ -42,15 +42,11 @@ namespace hltsv {
         virtual LVL1Result* getResult() override;
         virtual void        reset(uint32_t run_number) override;
         virtual void        preset() override;
-        virtual void        setLB(uint32_t lb) override;
-        virtual void        setHLTCounter(uint16_t counter) override;
         
     private:
         unsigned int  m_l1id;
         unsigned int  m_max_l1id;
 
-        uint32_t      m_lb;
-        uint16_t      m_hltCounter;
         uint32_t      m_run_number;
         
         std::map<unsigned int, std::vector<uint32_t*>*> m_data;
@@ -155,12 +151,16 @@ namespace hltsv {
             if ( rob_frag.source_id()==0x00770001 ) {    // CTP fragment
                 if ( CTPfragment::ctpFormatVersion(&rob_frag) == 0 ) {
                     // test_frag.rod_detev_type(...)
-                    rob[16] = ((m_lb & CTPdataformat::LumiBlockMask) << CTPdataformat::LumiBlockShift) |
-                        ((m_hltCounter & CTPdataformat::HltCounterMask_v0) << CTPdataformat::HltCounterShift_v0);
+                    //  
+                    //  read lb once atomically...
+                    uint32_t lb = m_lb;   
+                    rob[16] = ((lb & CTPdataformat::LumiBlockMask) << CTPdataformat::LumiBlockShift) |
+                        ((m_folder_index & CTPdataformat::HltCounterMask_v0) << CTPdataformat::HltCounterShift_v0);
                 }
                 else {
-                    rob[16] = ((m_lb & CTPdataformat::LumiBlockMask) << CTPdataformat::LumiBlockShift) |
-                        ((m_hltCounter & CTPdataformat::HltCounterMask_v1) << CTPdataformat::HltCounterShift_v1);
+                    uint32_t lb = m_lb;   
+                    rob[16] = ((lb & CTPdataformat::LumiBlockMask) << CTPdataformat::LumiBlockShift) |
+                        ((m_folder_index & CTPdataformat::HltCounterMask_v1) << CTPdataformat::HltCounterShift_v1);
                 }
             }
 
@@ -391,19 +391,7 @@ namespace hltsv {
     {
         m_firstid = m_l1id = 0;
         m_run_number = run_number;
+        m_lb = 1;
     } 
-
-    void L1PreloadedSource::setLB(uint32_t lb)
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_lb = lb;
-    }
-
-    void L1PreloadedSource::setHLTCounter(uint16_t counter)
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_hltCounter = counter;
-    }
-
 
 }

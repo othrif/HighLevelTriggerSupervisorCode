@@ -116,18 +116,22 @@
   <attribute name="IsMasterTrigger" type="bool" init-value="false"/>
  </class>
 
+ <class name="RoIBMasterTriggerPlugin" is-abstract="yes">
+  <superclass name="RoIBPlugin"/>
+ </class>
+
  <class name="RoIBPluginFilar" description="The RoIB plugin to read from Filar/Tilar (i.e. the real RoIBuilder or feeder)">
   <superclass name="RoIBPlugin"/>
   <attribute name="Links" description="A list of indexes specifying which channel on the Filar/Tilar card to read." type="u32" is-multi-value="yes" init-value="0" is-not-null="yes"/>
  </class>
 
  <class name="RoIBPluginInternal" description="The RoIB plugin to generate a CTP fragment internally.">
-  <superclass name="RoIBPlugin"/>
+  <superclass name="RoIBMasterTriggerPlugin"/>
   <attribute name="FragmentSize" description="The fragment payload size in 32bit words." type="u32" init-value="250" is-not-null="yes"/>
  </class>
 
  <class name="RoIBPluginPreload" description="The RoIB plugin to use a pre-loaded data file.">
-  <superclass name="RoIBPlugin"/>
+  <superclass name="RoIBMasterTriggerPlugin"/>
  </class>
 
  <class name="RoIBPluginTTC2LAN" description="The RoIB plugin to use TTC2LAN as input.">

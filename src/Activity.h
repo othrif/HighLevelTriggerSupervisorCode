@@ -41,7 +41,7 @@ namespace hltsv {
    * and all associated actions.
    */
 
-  class Activity : public daq::rc::Controllable, public daq::trigger::MasterTrigger {
+  class Activity : public daq::rc::Controllable {
   public:
     Activity();
     ~Activity() noexcept;
@@ -54,19 +54,6 @@ namespace hltsv {
     void stopRecording(const daq::rc::TransitionCmd& ) override;
     void unconfigure(const daq::rc::TransitionCmd& ) override;
     void disconnect(const daq::rc::TransitionCmd& ) override;
-
-    // Master Trigger commands
-    uint32_t hold();
-    void resume();
-    void setPrescales(uint32_t  l1p, uint32_t hltp, uint32_t lb) override;
-    void setL1Prescales(uint32_t l1p) override;
-    void setHLTPrescales(uint32_t hltp, uint32_t lb) override;
-    void increaseLumiBlock(uint32_t) override;
-    void setLumiBlockInterval(uint32_t runno) override;
-    void setMinLumiBlockLength(uint32_t runno) override;
-    void setBunchGroup(uint32_t bg) override;
-    void setConditionsUpdate(uint32_t folderIndex, uint32_t lb) override;
-
 
   private:
 
@@ -119,17 +106,8 @@ namespace hltsv {
     // We are in running state.
     bool                            m_running;
 
-    // We are in triggering state.
-    // This can be different from running if we are the master trigger.
-    bool                            m_triggering;
-
     // for MasterTrigger interface
     daq::trigger::CommandedTrigger *m_cmdReceiver;
-
-    // hold trigger counter
-    int                             m_triggerHoldCounter;
-    // hold trigger flag
-    bool                            m_masterTrigger;
     
   };
 }

@@ -5,6 +5,10 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <atomic>
+#include <thread>
+
+#include "TriggerCommander/MasterTrigger.h"
 
 class Configuration;
 
@@ -26,7 +30,7 @@ namespace hltsv {
      * of LVL1Result objects.
      *
      */
-    class L1Source {
+    class L1Source : public daq::trigger::MasterTrigger {
     public:
 
         /** 
@@ -43,6 +47,7 @@ namespace hltsv {
         
         typedef L1Source *(*creator_t)(Configuration *config, const daq::df::RoIBPlugin *roib, const std::vector<std::string>& file_names);
 
+        L1Source();
         virtual ~L1Source();
 
     public:
@@ -50,7 +55,7 @@ namespace hltsv {
         /** Try to get an event from LVL1.
          *  @returns A pointer to the event, NULL if none available.
          */
-        virtual LVL1Result* getResult(void) = 0;
+        virtual LVL1Result*             getResult(void) = 0;
         
         /** Executed in PrepareForRun */
         virtual void                    reset(uint32_t run_number); 
@@ -58,10 +63,47 @@ namespace hltsv {
         /** Executed in Configure */
         virtual void                    preset();
 
-        /**  Called from the MasterTrigger interface. */
-        virtual void                    setLB(uint32_t);
-        virtual void                    setHLTCounter(uint16_t);
+        /** MasterTrigger interface.
+         *
+         *  All of these have a a default implementation.
+         */
+        uint32_t hold() override;
+        void resume() override;
+        void setPrescales(uint32_t  l1p, uint32_t hltp, uint32_t lb) override;
+        void setL1Prescales(uint32_t l1p) override;
+        void setHLTPrescales(uint32_t hltp, uint32_t lb) override;
+        void increaseLumiBlock(uint32_t runno) override;
+        void setLumiBlockInterval(uint32_t seconds) override;
+        void setMinLumiBlockLength(uint32_t seconds) override;
+        void setBunchGroup(uint32_t bg) override;
+        void setConditionsUpdate(uint32_t folderIndex, uint32_t lb) override;
+
+        void startLumiBlockUpdate();
+        void stopLumiBlockUpdate();
+
+    protected:
+        /**
+         * These methods and variables are used to communicate the MasterTrigger
+         * state to the subclasses.
+         */
+
+        std::atomic<uint32_t> m_hold;
+        std::atomic<uint32_t> m_lb;
+
+        std::atomic<uint32_t> m_l1_prescale;
+        std::atomic<uint32_t> m_hlt_prescale;
+
+        std::atomic<uint32_t> m_lb_interval_seconds;
+        std::atomic<uint32_t> m_lb_minimal_block_length_seconds;
         
+        uint32_t m_bunchgroup;
+
+        std::atomic<uint32_t> m_folder_index;
+
+        // for update thread
+        std::atomic<bool>     m_update;
+        std::thread m_thread;
+
     };
     
 }

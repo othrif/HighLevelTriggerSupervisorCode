@@ -1,8 +1,7 @@
 
 package hltsv
 
-manager Reiner.Hauser@cern.ch Nicoletta.Garelli@cern.ch 
-# add: Ning, Chase, 
+manager Reiner.Hauser@cern.ch Nicoletta.Garelli@cern.ch,jls@anl.gov
 
 public
 
