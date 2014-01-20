@@ -99,6 +99,9 @@ namespace hltsv {
 
     LVL1Result* L1PreloadedSource::getResult()
     {
+
+        if(m_hold) return nullptr;
+
         // Create LVL1result, re-use ROBFragment
         LVL1Result* l1Result = 0;
 
