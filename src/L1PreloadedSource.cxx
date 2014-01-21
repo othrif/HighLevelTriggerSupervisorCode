@@ -47,8 +47,6 @@ namespace hltsv {
         unsigned int  m_l1id;
         unsigned int  m_max_l1id;
 
-        uint32_t      m_run_number;
-        
         std::map<unsigned int, std::vector<uint32_t*>*> m_data;
         
         unsigned int  m_firstid;
@@ -158,12 +156,12 @@ namespace hltsv {
                     //  read lb once atomically...
                     uint32_t lb = m_lb;   
                     rob[16] = ((lb & CTPdataformat::LumiBlockMask) << CTPdataformat::LumiBlockShift) |
-                        ((m_folder_index & CTPdataformat::HltCounterMask_v0) << CTPdataformat::HltCounterShift_v0);
+                        ((m_hlt_counter & CTPdataformat::HltCounterMask_v0) << CTPdataformat::HltCounterShift_v0);
                 }
                 else {
                     uint32_t lb = m_lb;   
                     rob[16] = ((lb & CTPdataformat::LumiBlockMask) << CTPdataformat::LumiBlockShift) |
-                        ((m_folder_index & CTPdataformat::HltCounterMask_v1) << CTPdataformat::HltCounterShift_v1);
+                        ((m_hlt_counter & CTPdataformat::HltCounterMask_v1) << CTPdataformat::HltCounterShift_v1);
                 }
             }
 
@@ -395,6 +393,7 @@ namespace hltsv {
         m_firstid = m_l1id = 0;
         m_run_number = run_number;
         m_lb = 1;
+        m_hlt_counter = 1;
     } 
 
 }

@@ -273,7 +273,7 @@ namespace hltsv {
 
         // L1Source interface
         LVL1Result* getResult() override;
-        void        reset(uint32_t /* run_number */ ) override;
+        void        reset(uint32_t run_number) override;
         void        preset() override;
 
         // Callback interface
@@ -285,8 +285,6 @@ namespace hltsv {
         uint32_t                 m_high_watermark;
         uint32_t                 m_low_watermark;
         std::vector<uint32_t>    m_dummy_data;
-        uint32_t                 m_lbn;
-        uint32_t                 m_run_no;
 
         // For the message passing
         boost::asio::io_service m_io_service;
@@ -320,8 +318,6 @@ namespace hltsv {
           m_high_watermark(config->get_High_Watermark()),
           m_low_watermark(config->get_Low_Watermark()),          
           m_dummy_data(5),
-          m_lbn(1),
-          m_run_no(1),
           m_event_count(0),
           m_status(XONOFFStatus::ON)
     {
@@ -356,7 +352,7 @@ namespace hltsv {
 
         eformat::helper::SourceIdentifier src(eformat::TDAQ_CTP, 1);
 
-        eformat::write::ROBFragment rob(src.code(), m_run_no, l1id, bc_id,
+        eformat::write::ROBFragment rob(src.code(), m_run_number, l1id, bc_id,
                                         lvl1_type, event_type, 
                                         m_dummy_data.size(), &m_dummy_data[0], 
                                         eformat::STATUS_FRONT);
@@ -402,10 +398,11 @@ namespace hltsv {
     }
 
     void
-    L1TTC2LANSource::reset(uint32_t /* run_number */)
+    L1TTC2LANSource::reset(uint32_t run_number)
     {
         m_events.clear();
         m_event_count = 0;
+        m_run_number = run_number;
     }
     
 

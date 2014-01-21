@@ -7,6 +7,8 @@
 #include <vector>
 #include <atomic>
 #include <thread>
+#include <condition_variable>
+#include <mutex>
 
 #include "TriggerCommander/MasterTrigger.h"
 
@@ -87,6 +89,8 @@ namespace hltsv {
          * state to the subclasses.
          */
 
+        void publish_lumiblock();
+
         std::atomic<uint32_t> m_hold;
         std::atomic<uint32_t> m_lb;
 
@@ -100,8 +104,16 @@ namespace hltsv {
 
         std::atomic<uint32_t> m_folder_index;
 
+        // Set to lb on hlt prescale update
+        std::atomic<uint32_t> m_hlt_counter;
+
+        // set by subclass
+        std::atomic<uint32_t> m_run_number;
+
         // for update thread
-        std::atomic<bool>     m_update;
+        std::atomic<bool>       m_update;
+        std::mutex              m_mutex;
+        std::condition_variable m_cond;
         std::thread m_thread;
 
     };

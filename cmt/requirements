@@ -20,6 +20,7 @@ use asyncmsg
 use ROSfilar
 use RunControl
 use TriggerCommander
+use TTCInfo
 
 use Boost * TDAQCExternal
 use ROOT  * DQMCExternal
