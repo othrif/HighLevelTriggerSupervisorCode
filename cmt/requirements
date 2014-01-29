@@ -18,6 +18,7 @@ use cmdl
 use monsvc
 use asyncmsg
 use ROSfilar
+use ROSMemoryPool
 use RunControl
 use TriggerCommander
 use TTCInfo
@@ -89,7 +90,7 @@ macro svl1preloaded_dependencies "daq-hltsv-dal"
 
 # read from Filar (aka RoIB hardware)
 library svl1filar L1FilarSource.cxx
-macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lttcpr"
+macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lROSMemoryPool"
 macro svl1filar_dependencies "daq-hltsv-dal"
 
 # read from TTC2LAN
