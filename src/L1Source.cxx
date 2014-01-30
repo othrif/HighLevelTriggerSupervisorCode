@@ -70,7 +70,6 @@ namespace hltsv {
 
     void L1Source::increaseLumiBlock(uint32_t runno) 
     {
-        m_lb += 1;
         m_cond.notify_one();
         ERS_LOG("Increase lumi block " << runno);
     }
