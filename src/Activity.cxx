@@ -185,6 +185,8 @@ namespace hltsv {
     runparams.checkout();
 
     m_l1source->reset(runparams.run_number);
+    m_event_sched->reset();
+
     if(m_cmdReceiver) {
         m_l1source->startLumiBlockUpdate();
     }
