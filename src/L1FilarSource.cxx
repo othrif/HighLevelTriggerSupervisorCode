@@ -5,6 +5,7 @@
 #include <deque>
 #include <map>
 #include <vector>
+#include <cstdlib>
 
 #include "eformat/write/ROBFragment.h"
 #include "eformat/util.h"
@@ -31,6 +32,8 @@
 namespace hltsv {
 
   const int FILAR_PAGE_SIZE = 0x1000;
+
+  const size_t NUM_FIFOS = 16;
 
   /**
    * The L1FilarSource class encapsulates the version of the
@@ -64,11 +67,11 @@ namespace hltsv {
     std::vector<u_int> m_active;
     std::vector<u_int>::iterator m_activeIter;
 
-    std::vector<std::deque<ROS::MemoryPage*>*> m_available;
-    std::vector<std::deque<ROS::MemoryPage*>*>::iterator m_availableIter;
+    std::vector<std::vector<ROS::MemoryPage*>*> m_available;
+    std::vector<std::vector<ROS::MemoryPage*>*>::iterator m_availableIter;
 
-    std::vector<std::deque<std::pair<u_int,ROS::MemoryPage*>>*> m_completed;
-    std::vector<std::deque<std::pair<u_int,ROS::MemoryPage*>>*>::iterator m_completedIter;
+    std::vector<std::vector<std::pair<u_int,ROS::MemoryPage*>>*> m_completed;
+    std::vector<std::vector<std::pair<u_int,ROS::MemoryPage*>>*>::iterator m_completedIter;
 
   };
 }
@@ -104,13 +107,15 @@ namespace hltsv {
 	throw ConfigFailed(ERS_HERE, "Invalid Filar channel");
       }
       m_active.push_back(ch);
-      m_available.push_back( new std::deque<ROS::MemoryPage*> );
-      m_completed.push_back( new std::deque<std::pair<u_int,ROS::MemoryPage*>> );
+      m_available.push_back( new std::vector<ROS::MemoryPage*> );
+      m_available.back()->reserve(NUM_FIFOS);
+      m_completed.push_back( new std::vector<std::pair<u_int,ROS::MemoryPage*>> );
+      m_completed.back()->reserve(NUM_FIFOS);
       m_rols++;
     }
 
     // make use of all the INFIFO entries
-    m_buffers = MAXINFIFO;
+    m_buffers = NUM_FIFOS;
 
     // buffer pool
     try {
@@ -168,11 +173,11 @@ namespace hltsv {
     // any buffers available for this channel?
     while (!(*m_availableIter)->empty())
       {
-	auto ptr = (*m_availableIter)->front();
+	auto ptr = (*m_availableIter)->back();
 	fin.pciaddr[fin.nvalid] = ptr->physicalAddress();
 	fin.nvalid++;
 
-	(*m_availableIter)->pop_front();
+	(*m_availableIter)->pop_back();
       }
 
     unsigned int code = FILAR_PagesIn(&fin);
@@ -255,52 +260,18 @@ namespace hltsv {
 
     LVL1Result* l1Result = nullptr;
 
-    auto ptr((*m_completedIter)->front());
+    auto ptr((*m_completedIter)->back());
     auto result = reinterpret_cast<const uint32_t*>((ptr.second)->address());
     auto size = ptr.first;
 
-    try {
-      // locate the ROD fragments
-      const uint32_t* rod[MAXLVL1RODS];
-      uint32_t        rodsize[MAXLVL1RODS];
+    uint32_t *rod_data = new uint32_t[size];
+    memcpy(rod_data, result, size * sizeof(uint32_t));
 
-      uint32_t num_frags = eformat::find_rods(result, size, rod, rodsize, MAXLVL1RODS);
-      uint32_t size_word = 0;
-      uint32_t lvl1_id = 0;
-
-      // create the ROB fragments out of ROD fragments
-      eformat::write::ROBFragment* writers[MAXLVL1RODS];
-      for (size_t i = 0; i < num_frags; ++i) {
-	writers[i] = new eformat::write::ROBFragment(const_cast<uint32_t*>(rod[i]), rodsize[i]);
-
-	//update ROB header
-	writers[i]->rob_source_id(writers[i]->rod_source_id());
-	// m_len[i] = writers[i]->size_word();
-	size_word += writers[i]->size_word();
-
-	lvl1_id = writers[i]->rod_lvl1_id();
-      }
-
-      // make one single buffer out of the whole data
-      uint32_t *event = new uint32_t[size_word];
-      uint32_t current = 0;
-      for (size_t i = 0; i< num_frags; ++i) {
-	eformat::write::copy(*writers[i]->bind(), &event[current], writers[i]->size_word());
-	current += writers[i]->size_word();
-	delete writers[i];
-      }
-
-      l1Result = new LVL1Result( lvl1_id, event, size_word);
-
-      ERS_DEBUG(3, "Created LVL1Result with l1id: " << l1Result->l1_id()
-		<< " and size " << size );
-    } catch (eformat::Issue &e) {
-      ers::error(e); 
-    }
+    l1Result = new LVL1Result( rod_data, size);
         
     // initialize next io
     (*m_availableIter)->push_back(ptr.second);
-    (*m_completedIter)->pop_front();
+    (*m_completedIter)->pop_back();
 
     nextChan();
     startIO();

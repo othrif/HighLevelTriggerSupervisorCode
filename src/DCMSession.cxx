@@ -41,6 +41,13 @@ namespace hltsv {
         if(!m_in_error) {
             
             getStrand().dispatch([rois,this]() {
+
+                                     if(!rois->create_rob_data()) {
+                                         // conversion error, error message has been sent
+                                         // Note that event won't be cleared because we
+                                         // may not be able to get the LVL1 ID.
+                                         return;
+                                     }
                                      
                                      // Create a ProcessMessage which ontains the ROIs
                                      ERS_DEBUG(1,"DCMSession::handle_event: #" << rois->l1_id());

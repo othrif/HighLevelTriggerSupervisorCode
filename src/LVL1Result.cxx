@@ -1,12 +1,29 @@
 
+#include "ers/ers.h"
 #include "LVL1Result.h"
+#include "eformat/util.h"
+#include "L1Source.h"
+
+// #include "eformat/eformat.h"
+// #include "eformat/write/eformat.h"
 
 namespace hltsv {
 
+    LVL1Result::LVL1Result(uint32_t *rod_data, uint32_t rod_length)
+        : m_lvl1_id(),
+          m_deleter([](uint32_t *) {}),
+          m_reassigned(false),
+          m_converted(false),
+          m_rod_data(rod_data),
+          m_rod_length(rod_length)
+    {
+    }
 
     LVL1Result::~LVL1Result()
     {
         for(auto ptr : m_data) m_deleter(ptr);
+        for(auto wr : m_writers) delete wr;
+        delete [] m_rod_data;
     }
 
     uint32_t LVL1Result::l1_id() const
@@ -61,6 +78,46 @@ namespace hltsv {
         }
     }
 
+    bool LVL1Result::create_rob_data()
+    {
+        if(!m_converted) {
+
+            try {
+                // locate the ROD fragments
+                const uint32_t* rod[MAXLVL1RODS];
+                uint32_t        rodsize[MAXLVL1RODS];
+
+                uint32_t num_frags = eformat::find_rods(m_rod_data, m_rod_length, rod, rodsize, MAXLVL1RODS);
+
+                // create the ROB fragments out of ROD fragments
+                // eformat::write::ROBFragment* writers[MAXLVL1RODS];
+                for (size_t i = 0; i < num_frags; ++i) {
+                    m_writers.push_back(new eformat::write::ROBFragment(const_cast<uint32_t*>(rod[i]), rodsize[i]));
+
+                    //update ROB header
+                    m_writers[i]->rob_source_id(m_writers[i]->rod_source_id());
+                    m_lvl1_id = m_writers[i]->rod_lvl1_id();
+                }
+
+                // make one single buffer out of the whole data
+                for (size_t i = 0; i< num_frags; ++i) {
+                    auto writer_list = m_writers[i]->bind();
+                    while(writer_list) {
+                        m_data.push_back(writer_list->base);
+                        m_lengths.push_back(writer_list->size_word);
+                        writer_list = writer_list->next;
+                    }
+                }
+
+                m_converted = true;
+
+            } catch (eformat::Issue &e) {
+                ers::error(e); 
+            }
+        }
+
+        return m_converted;
+    }
 
 }
 

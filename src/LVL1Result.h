@@ -9,6 +9,8 @@
 
 #include "boost/asio/buffer.hpp"
 
+#include "eformat/write/ROBFragment.h"
+
 namespace hltsv {
 
     /** \brief The ROIs received from RoIBuilder.
@@ -36,7 +38,10 @@ namespace hltsv {
               m_data(1, roi_data),
               m_lengths(1, length),
               m_deleter(del),
-              m_reassigned(false)
+              m_reassigned(false),
+              m_converted(true),
+              m_rod_data(nullptr),
+              m_rod_length(0)
         {
         }
 
@@ -45,11 +50,16 @@ namespace hltsv {
         LVL1Result(uint32_t lvl1_id, uint32_t count, uint32_t *roi_data[], uint32_t lengths[], DELETER del = DELETER())
             : m_lvl1_id(lvl1_id),
               m_deleter(del),
-              m_reassigned(false)
+              m_reassigned(false),
+              m_converted(true),
+              m_rod_data(nullptr),
+              m_rod_length(0)
         {
             m_data.assign(&roi_data[0], &roi_data[count]);
             m_lengths.assign(&lengths[0], &lengths[count]);
         }
+
+        LVL1Result(uint32_t *rod_data, uint32_t rod_length);
 
         ~LVL1Result();
 
@@ -95,8 +105,13 @@ namespace hltsv {
                 buffers.push_back(boost::asio::buffer(m_data[i], m_lengths[i] * sizeof(uint32_t)));
             }
         }
+        
+        /// Convert the ROD to ROB fragments if necessary
+        /// Return false if an error occured during conversion.
+        bool create_rob_data();
 
     private:
+
         uint32_t                        m_lvl1_id;
         uint64_t                        m_global_id;
         std::vector<uint32_t*>          m_data;
@@ -104,6 +119,11 @@ namespace hltsv {
         std::function<void (uint32_t*)> m_deleter;
         time_point                      m_time_stamp;
         bool                            m_reassigned;
+
+        bool                            m_converted;
+        uint32_t                        *m_rod_data;
+        uint32_t                        m_rod_length;
+        std::vector<eformat::write::ROBFragment*> m_writers;
     };
 }
 
