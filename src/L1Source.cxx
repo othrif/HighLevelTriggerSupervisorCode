@@ -127,7 +127,7 @@ namespace hltsv {
 
     void L1Source::publish_lumiblock()
     {
-        LumiBlockNamed lumiblock(daq::rc::OnlineServices::instance().getIPCPartition(), "RunParams.LuminosityInfo");
+        LumiBlockNamed lumiblock(daq::rc::OnlineServices::instance().getIPCPartition(), "RunParams.LumiBlock");
         lumiblock.RunNumber = m_run_number;
         lumiblock.LumiBlockNumber = m_lb;
         lumiblock.Time = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
