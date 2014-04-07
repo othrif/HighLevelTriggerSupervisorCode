@@ -6,7 +6,7 @@
 namespace hltsv {
 
     L1Source::L1Source()
-        : m_hold(0),
+        : m_hold(1),
           m_lb(1),
           m_l1_prescale(),
           m_hlt_prescale(),
