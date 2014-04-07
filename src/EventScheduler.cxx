@@ -119,8 +119,10 @@ namespace hltsv {
 
         while(m_update) {
             sleep(5);
-            auto rate     = (double)(m_stats->ProcessedEvents - last_count)/5.0;
-            m_stats->Rate = rate;
+            if(m_stats->ProcessedEvents >= last_count)  {
+                auto rate     = (double)(m_stats->ProcessedEvents - last_count)/5.0;
+                m_stats->Rate = rate;
+            }
             last_count    = m_stats->ProcessedEvents;
         }
     }

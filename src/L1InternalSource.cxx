@@ -89,6 +89,7 @@ namespace hltsv {
         m_l1id = 0;
         m_lb   = 1;
         m_run_number = run_number;
+        m_hold = 1;
     }
 
 }

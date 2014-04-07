@@ -394,6 +394,7 @@ namespace hltsv {
         m_run_number = run_number;
         m_lb = 1;
         m_hlt_counter = 1;
+        m_hold = 1;
     } 
 
 }
