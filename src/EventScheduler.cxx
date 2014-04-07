@@ -54,7 +54,10 @@ namespace hltsv {
         std::weak_ptr<DCMSession> dcm;
         std::shared_ptr<DCMSession> real_dcm;
 
-        rois->set_global_id(m_global_id++);
+        auto global_id = m_global_id++;
+
+        rois->set_global_id(global_id);
+        m_stats->Recent_Global_ID = global_id;
 
         // First try to work on the re-assigned events if there are any
         push_events();
