@@ -26,6 +26,7 @@
 #include "is/infoT.h"
 #include "is/infodictionary.h"
 
+
 namespace { 
 
     // The current state of XON/XOFF from the HLT supervisor.
@@ -238,6 +239,8 @@ namespace {
             : daq::rc::Controllable(), m_running(false)
         {
             m_status = XONOFFStatus::ON;
+          
+          ERS_LOG("TTC2LANApplication(): m_status = "<< (m_status == XONOFFStatus::ON) ? 1 : 0 );
         }
 
         ~TTC2LANApplication() noexcept
@@ -262,6 +265,7 @@ namespace {
         virtual void connect(const daq::rc::TransitionCmd& ) override
         {
             // Get the partition from somewhere, assume it's in the environment for this test program.
+          ERS_LOG("getting IPC partition: "<< getenv("TDAQ_PARTITION"));
             IPCPartition partition(getenv("TDAQ_PARTITION"));
 
             // For publishing our event counter status.
@@ -270,6 +274,15 @@ namespace {
             // Create the name service object to lookup the HLTSV address
             daq::asyncmsg::NameService name_service(partition, std::vector<std::string>());
 
+          
+            // for debugging: find all applications and their endpoints
+          std::map<std::string,boost::asio::ip::tcp::endpoint> apps;
+          apps = name_service.lookup_names("");
+          std::map<std::string,boost::asio::ip::tcp::endpoint>::iterator iter;
+          ERS_LOG("applications found: ");
+          for (iter = apps.begin(); iter != apps.end(); iter++) {
+            ERS_LOG(iter->first);
+          }
             // Do the lookup, the HLTSV will publish its endpoint under 'TTC2LANReceiver'.
             // In IS you can see it as the object 'DF.MSG_TTC2LANReceiver'.
             // This will throw an exception if it can't find the name entry.
@@ -293,6 +306,8 @@ namespace {
             while(m_session->state() != daq::asyncmsg::Session::State::OPEN) {
                 usleep(10000);
             }
+          
+          ERS_LOG("TTC2LANApplication()::connect(): m_status = "<< (m_status == XONOFFStatus::ON) ? 1 : 0 );
         }
 
         virtual void stopROIB(const daq::rc::TransitionCmd& ) override
@@ -308,10 +323,12 @@ namespace {
         {
             m_running = true;
             m_generator_thread = std::thread(&TTC2LANApplication::generate_events, this);
+            ERS_LOG("TTC2LANApplication()::prepareForRun(): m_status = "<< (m_status == XONOFFStatus::ON) ? 1 : 0 );
         }
 
         virtual void publish() override
         {
+            ERS_LOG("TTC2LANApplication()::publish(): m_status = "<< (m_status == XONOFFStatus::ON) ? 1 : 0 );
             // Here we publish the total event counter to IS.
             ISInfoUnsignedLong value;
             value.setValue(m_event_count);
@@ -322,11 +339,12 @@ namespace {
         // to directly access the xon/xoff status
         void generate_events()
         {
+            ERS_LOG("TTC2LANApplication()::generateEvents(): m_status = "<< (m_status == XONOFFStatus::ON) ? 1 : 0 );
             while(m_running) {
 
                 // We can't really reliably sleep for less than a millisecond
                 // since this is what the Linux scheduler gives us.
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
                 // If XON
                 if(m_status == XONOFFStatus::ON) {
