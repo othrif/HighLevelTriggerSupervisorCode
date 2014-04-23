@@ -113,7 +113,9 @@ namespace {
         explicit Session(boost::asio::io_service& service, Callback& cb)
             : daq::asyncmsg::Session(service),
               m_last_id(0),
-              m_callback(cb)
+              m_callback(cb),
+              m_ECRcnt(0),
+              m_debug(false)
         {
         }
 
@@ -154,12 +156,16 @@ namespace {
             }
 
             uint32_t l1id = msg->l1_id();
-            
+          
+            if (m_debug) ERS_LOG("TTC2LAN: recieved new L1ID  "<<l1id<<" in hex: "<<std::hex<<l1id);
+                               
             if((m_last_id & 0xff000000) == (l1id & 0xff000000)) {
                 // no ECR happened
                 m_callback.insert(m_last_id + 1, l1id);
             } else {
                 // ECR happened
+              m_ECRcnt++;
+                if (m_debug) ERS_LOG("TTC2LAN: ECR detected "<<l1id<<" in hex: "<<std::hex<<l1id);
                 m_callback.insert(l1id & 0xff000000, l1id);
             }
 
@@ -200,6 +206,8 @@ namespace {
     private:
         uint32_t  m_last_id;
         Callback& m_callback;
+        uint32_t m_ECRcnt;
+        bool m_debug;
     };
 
     class Server : public daq::asyncmsg::Server {
@@ -294,6 +302,7 @@ namespace hltsv {
         std::list<std::pair<uint32_t,uint32_t>> m_events;
         uint32_t                                m_event_count;
         XONOFFStatus                            m_status;
+        bool                                    m_debug;
 
         std::shared_ptr<daq::asyncmsg::Session> m_session;
 
@@ -319,7 +328,8 @@ namespace hltsv {
           m_low_watermark(config->get_Low_Watermark()),          
           m_dummy_data(5),
           m_event_count(0),
-          m_status(XONOFFStatus::ON)
+          m_status(XONOFFStatus::ON),
+          m_debug(false)
     {
     }
 
@@ -329,7 +339,15 @@ namespace hltsv {
 
     LVL1Result* L1TTC2LANSource::getResult()
     {
+      
+      if (m_debug) {ERS_LOG("L1TTC2LANSource::getResult(): m_event_count = "<<m_event_count
+              <<" m_low_watermark = "<<m_low_watermark
+              <<" m_status = "<<bool(m_status == XONOFFStatus::ON)
+              <<" l1ids in list: "<<m_events.size()
+                          );}
+       
         if(m_status == XONOFFStatus::OFF && m_event_count < m_low_watermark) {
+          if (m_debug) { ERS_LOG("L1TTC2LANSource::getResult(): sending XON"); }
             std::unique_ptr<daq::asyncmsg::OutputMessage> msg(new XONOFF(XONOFFStatus::ON));
             m_session->asyncSend(std::move(msg));
             m_status = XONOFFStatus::ON;
@@ -371,15 +389,17 @@ namespace hltsv {
     {
         m_events.push_back(std::make_pair(first,last));
         m_event_count += (last - first + 1);
-
+      
+        if(m_debug) {ERS_LOG("L1TTC2LANSource::insert(): first = "<<first<<" last = "<<last<<" new m_event_count = "<<m_event_count);}
         if(m_event_count > m_high_watermark && m_status == XONOFFStatus::ON) {
             std::unique_ptr<daq::asyncmsg::OutputMessage> msg(new XONOFF(XONOFFStatus::OFF));
             m_session->asyncSend(std::move(msg));
             m_status = XONOFFStatus::OFF;
+            ERS_LOG("L1TTC2LANSource::insert(): sending XOFF because m_event_count:  "<<m_event_count<<" > m_high_watermark = "<<m_high_watermark);
         }
     }
 
-    void L1TTC2LANSource::connected(std::shared_ptr<daq::asyncmsg::Session> session) 
+    void L1TTC2LANSource::connected(std::shared_ptr<daq::asyncmsg::Session> session)
     {
         m_session = session;
     }
