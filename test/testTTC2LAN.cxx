@@ -240,7 +240,7 @@ namespace {
         {
             m_status = XONOFFStatus::ON;
           
-          ERS_LOG("TTC2LANApplication(): m_status = "<< (m_status == XONOFFStatus::ON) ? 1 : 0 );
+          ERS_LOG("TTC2LANApplication(): m_status = "<< ((m_status == XONOFFStatus::ON) ? 1 : 0) );
         }
 
         ~TTC2LANApplication() noexcept
@@ -307,7 +307,7 @@ namespace {
                 usleep(10000);
             }
           
-          ERS_LOG("TTC2LANApplication()::connect(): m_status = "<< (m_status == XONOFFStatus::ON) ? 1 : 0 );
+          ERS_LOG("TTC2LANApplication()::connect(): m_status = "<< ((m_status == XONOFFStatus::ON) ? 1 : 0 ));
         }
 
         virtual void stopROIB(const daq::rc::TransitionCmd& ) override
@@ -323,12 +323,12 @@ namespace {
         {
             m_running = true;
             m_generator_thread = std::thread(&TTC2LANApplication::generate_events, this);
-            ERS_LOG("TTC2LANApplication()::prepareForRun(): m_status = "<< (m_status == XONOFFStatus::ON) ? 1 : 0 );
+            ERS_LOG("TTC2LANApplication()::prepareForRun(): m_status = "<< ((m_status == XONOFFStatus::ON) ? 1 : 0) );
         }
 
         virtual void publish() override
         {
-            ERS_LOG("TTC2LANApplication()::publish(): m_status = "<< (m_status == XONOFFStatus::ON) ? 1 : 0 );
+            ERS_LOG("TTC2LANApplication()::publish(): m_status = "<< ((m_status == XONOFFStatus::ON) ? 1 : 0 ));
             // Here we publish the total event counter to IS.
             ISInfoUnsignedLong value;
             value.setValue(m_event_count);
@@ -339,7 +339,7 @@ namespace {
         // to directly access the xon/xoff status
         void generate_events()
         {
-            ERS_LOG("TTC2LANApplication()::generateEvents(): m_status = "<< (m_status == XONOFFStatus::ON) ? 1 : 0 );
+            ERS_LOG("TTC2LANApplication()::generateEvents(): m_status = "<< ((m_status == XONOFFStatus::ON) ? 1 : 0) );
             while(m_running) {
 
                 // We can't really reliably sleep for less than a millisecond
