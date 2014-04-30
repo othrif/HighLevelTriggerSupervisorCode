@@ -122,7 +122,6 @@ namespace hltsv {
             // --- set event_type
             wrob.rod_detev_type(event_type);
 
-
             // --- set event type with Lumi Block from L2SVP
             if ( m_max_l1id > 0 && m_modid ) {
                 // eformat::write::ROBFragment test_frag(const_cast<uint32_t*>(robs[i]));

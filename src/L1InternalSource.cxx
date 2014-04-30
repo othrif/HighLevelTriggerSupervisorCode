@@ -60,14 +60,13 @@ namespace hltsv {
         if(m_hold) return nullptr;
 
         //create the ROB fragment 
-        const uint32_t bc_id	   = 0x1;
         const uint32_t lvl1_type = 0xff;
   
         const uint32_t event_type = 0x0; // params->getLumiBlock(); ?????
 
         eformat::helper::SourceIdentifier src(eformat::TDAQ_CTP, 1);
 
-        eformat::write::ROBFragment rob(src.code(), m_run_number, m_l1id, bc_id,
+        eformat::write::ROBFragment rob(src.code(), m_run_number, m_l1id, m_l1id,
                                         lvl1_type, event_type, 
                                         m_size, &m_dummy_data[0], 
                                         eformat::STATUS_FRONT);
