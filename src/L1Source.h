@@ -69,11 +69,11 @@ namespace hltsv {
          *
          *  All of these have a a default implementation.
          */
-        uint32_t hold() override;
-        void resume() override;
-        void setPrescales(uint32_t  l1p, uint32_t hltp, uint32_t lb) override;
+        uint32_t hold(const std::string& /* mask */) override;
+        void resume(const std::string& /* mask */) override;
+        void setPrescales(uint32_t  l1p, uint32_t hltp) override;
         void setL1Prescales(uint32_t l1p) override;
-        void setHLTPrescales(uint32_t hltp, uint32_t lb) override;
+        void setHLTPrescales(uint32_t hltp) override;
         void increaseLumiBlock(uint32_t runno) override;
         void setLumiBlockInterval(uint32_t seconds) override;
         void setMinLumiBlockLength(uint32_t seconds) override;

@@ -30,14 +30,14 @@ namespace hltsv {
     {
     }
 
-    uint32_t L1Source::hold()
+    uint32_t L1Source::hold(const std::string& )
     {
         m_hold += 1;
         ERS_LOG("Hold trigger");
         return m_hold;
     }
 
-    void L1Source::resume() 
+    void L1Source::resume(const std::string& ) 
     {
         if(m_hold > 0) {
             m_hold -= 1;
@@ -45,7 +45,7 @@ namespace hltsv {
         ERS_LOG("Resume trigger");
     }
 
-    void L1Source::setPrescales(uint32_t  l1p, uint32_t hltp, uint32_t /* lb */) 
+    void L1Source::setPrescales(uint32_t  l1p, uint32_t hltp) 
     {
         m_l1_prescale = l1p;
         m_hlt_prescale = hltp;
@@ -60,7 +60,7 @@ namespace hltsv {
         ERS_LOG("Set L1 prescale: " << l1p);
     }
 
-    void L1Source::setHLTPrescales(uint32_t hltp, uint32_t /* lb */) 
+    void L1Source::setHLTPrescales(uint32_t hltp)
     {
         m_hlt_prescale = hltp;
         m_hlt_counter = m_lb + 1;
