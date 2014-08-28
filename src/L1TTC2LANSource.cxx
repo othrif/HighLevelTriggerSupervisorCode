@@ -335,6 +335,9 @@ namespace hltsv {
 
     L1TTC2LANSource::~L1TTC2LANSource()
     {
+        m_work.reset();
+        m_io_service.stop();
+        m_io_thread.join();
     }
 
     LVL1Result* L1TTC2LANSource::getResult()
