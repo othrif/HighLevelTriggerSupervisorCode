@@ -3,6 +3,8 @@
 #include <list>
 #include <string>
 #include <thread>
+#include <mutex>
+#include <atomic>
 
 #include "ers/ers.h"
 
@@ -299,6 +301,7 @@ namespace hltsv {
         std::unique_ptr<boost::asio::io_service::work> m_work;
         std::shared_ptr<Server> m_server;
 
+        std::mutex                              m_mutex;
         std::list<std::pair<uint32_t,uint32_t>> m_events;
         uint32_t                                m_event_count;
         XONOFFStatus                            m_status;
@@ -356,14 +359,22 @@ namespace hltsv {
             m_status = XONOFFStatus::ON;
         }
 
-        if(m_events.empty()) {
-            return 0;
-        }
+        uint32_t l1id;
 
-        uint32_t l1id = m_events.front().first;
-        if(++m_events.front().first > m_events.front().second) {
-            m_events.pop_front();
-        }
+        { // lock
+            std::unique_lock<std::mutex> lock(m_mutex);
+                
+            if(m_events.empty()) {
+                return 0;
+            }
+            
+            l1id = m_events.front().first;
+            if(++m_events.front().first > m_events.front().second) {
+                m_events.pop_front();
+            }
+
+            m_event_count--;
+        } // end of lock
 
         //create the ROB fragment 
         const uint32_t bc_id	 = 0x1;
@@ -383,15 +394,16 @@ namespace hltsv {
 
         LVL1Result* l1Result = new LVL1Result(l1id, fragment, rob.size_word());
 
-        m_event_count--;
-
         return l1Result;
     }
 
     void L1TTC2LANSource::insert(uint32_t first, uint32_t last)
     {
-        m_events.push_back(std::make_pair(first,last));
-        m_event_count += (last - first + 1);
+        { // lock
+            std::unique_lock<std::mutex> lock(m_mutex);
+            m_events.push_back(std::make_pair(first,last));
+            m_event_count += (last - first + 1);
+        } // end of lock
       
         if(m_debug) {ERS_LOG("L1TTC2LANSource::insert(): first = "<<first<<" last = "<<last<<" new m_event_count = "<<m_event_count);}
         if(m_event_count > m_high_watermark && m_status == XONOFFStatus::ON) {
