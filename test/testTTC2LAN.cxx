@@ -257,9 +257,10 @@ namespace {
                 usleep(10000);
             }
 
-            m_service.reset();
-            m_io_thread.join();
             m_work.reset();
+            m_service.stop();
+            m_io_thread.join();
+
         }
     
         virtual void connect(const daq::rc::TransitionCmd& ) override
