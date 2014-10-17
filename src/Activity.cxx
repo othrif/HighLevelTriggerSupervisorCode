@@ -45,12 +45,13 @@
 
 namespace hltsv {
 
-  Activity::Activity()
+  Activity::Activity(bool restarted)
     : daq::rc::Controllable(), 
       m_l1source(nullptr),
       m_network(false),
       m_running(false),
-      m_cmdReceiver(0)
+      m_cmdReceiver(0),
+      m_restarted(restarted)
   {
   }
 
@@ -172,6 +173,22 @@ namespace hltsv {
   {
     // ROS_Clear with TCP will establish the connection
     m_ros_clear->connect();
+
+    if(m_restarted) {
+        // This throws an exception, e.g. because the HLTSV information is not there
+        // we want to stop, since we have no idea with which event ID to recover. So let
+        // the IS exception just propagate.
+        HLTSV hltsv_info;
+        ISInfoDictionary dict(daq::rc::OnlineServices::instance().getIPCPartition());
+        dict.getValue("DF.HLTSV.Events",hltsv_info);
+
+        m_initial_event_id = hltsv_info.Recent_Global_ID + 10000000;
+
+        ERS_LOG("HLTSV has been restarted during run; starting with global event ID" << m_initial_event_id);
+    } else {
+        m_initial_event_id = 0;
+    }
+
     
     m_publisher->start_publishing();
     return;
@@ -185,7 +202,8 @@ namespace hltsv {
     runparams.checkout();
 
     m_l1source->reset(runparams.run_number);
-    m_event_sched->reset();
+
+    m_event_sched->reset(m_initial_event_id);
 
     if(m_cmdReceiver) {
         m_l1source->startLumiBlockUpdate();

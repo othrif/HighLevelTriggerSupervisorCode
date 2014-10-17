@@ -43,7 +43,7 @@ namespace hltsv {
 
   class Activity : public daq::rc::Controllable {
   public:
-    Activity();
+    explicit Activity(bool restarted);
     ~Activity() noexcept;
     
     // Run control commands
@@ -108,6 +108,12 @@ namespace hltsv {
 
     // for MasterTrigger interface
     daq::trigger::CommandedTrigger *m_cmdReceiver;
+
+    // This application has been restarted during a run.
+    bool                            m_restarted;
+
+    // The initial event ID, usually 0 except in case of restart
+    uint64_t                        m_initial_event_id;
     
   };
 }

@@ -108,9 +108,9 @@ namespace hltsv {
         m_reassigned_events.push(rois);
     }
 
-    void EventScheduler::reset()
+    void EventScheduler::reset(uint64_t initial_event_id)
     {
-        m_global_id = 0;
+        m_global_id = initial_event_id;
         m_stats->reset();
         m_free_cores.clear();
         m_reassigned_events.clear();

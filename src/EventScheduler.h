@@ -58,10 +58,10 @@ namespace hltsv {
       /** 
        * \brief Reset the scheduler to the default state.
        *
-       * Resets the global event ID to 0 and deletes all state about available DCMS.
+       * Resets the global event ID and deletes all state about available DCMS.
        * This is called before a new run.
        */
-      void reset();
+      void reset(uint64_t initial_event_id);
 
       /** 
        * \brief Push all events in reassign queue to DCMs.
