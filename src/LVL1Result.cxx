@@ -2,6 +2,7 @@
 #include "ers/ers.h"
 #include "LVL1Result.h"
 #include "eformat/util.h"
+#include "eformat/SourceIdentifier.h"
 #include "L1Source.h"
 
 // #include "eformat/eformat.h"
@@ -96,7 +97,9 @@ namespace hltsv {
 
                     //update ROB header
                     m_writers[i]->rob_source_id(m_writers[i]->rod_source_id());
-                    m_lvl1_id = m_writers[i]->rod_lvl1_id();
+                    if(m_writers[i]->rob_source_id() == eformat::TDAQ_CTP) {
+                        m_lvl1_id = m_writers[i]->rod_lvl1_id();
+                    }
                 }
 
                 // make one single buffer out of the whole data
