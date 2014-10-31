@@ -114,7 +114,7 @@ namespace {
     public:
         explicit Session(boost::asio::io_service& service, Callback& cb)
             : daq::asyncmsg::Session(service),
-              m_last_id(0),
+              m_last_id(0xff000000),
               m_callback(cb),
               m_ECRcnt(0),
               m_debug(false)
