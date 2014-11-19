@@ -97,7 +97,7 @@ namespace hltsv {
 
                     //update ROB header
                     m_writers[i]->rob_source_id(m_writers[i]->rod_source_id());
-                    if(m_writers[i]->rob_source_id() == eformat::TDAQ_CTP) {
+                    if(eformat::helper::SourceIdentifier(m_writers[i]->rob_source_id()).subdetector_id() == eformat::TDAQ_CTP) {
                         m_lvl1_id = m_writers[i]->rod_lvl1_id();
                     }
                 }

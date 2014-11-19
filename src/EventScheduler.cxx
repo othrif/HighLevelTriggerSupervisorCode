@@ -58,6 +58,7 @@ namespace hltsv {
 
         rois->set_global_id(global_id);
         m_stats->Recent_Global_ID = global_id;
+        m_stats->Recent_LVL1_ID = rois->l1_id();
 
         // First try to work on the re-assigned events if there are any
         push_events();
