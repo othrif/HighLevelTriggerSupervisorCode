@@ -213,6 +213,9 @@ namespace hltsv {
 	    ERS_DEBUG(1, " Error processing L1ID " << std::hex
 		      << reinterpret_cast<const uint32_t*>(page->address())[5]);
 
+            hltsv::InvalidEventData msg(ERS_HERE);
+            ers::error(msg);
+
 	    // discard result, make page available again;
 	    (*m_availableIter)->push_back(page);
 	  }

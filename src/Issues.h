@@ -101,4 +101,20 @@ ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
                         ERS_EMPTY,
 			((const char*) what )) //attribute of this class
 
+ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
+			InvalidEventData, // issue class name
+			hltsv::Issue, //base class name
+			" Invalid Event Data, cannot decode", //message
+                        ERS_EMPTY,
+                        ERS_EMPTY
+			)
+
+ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
+			NoCTPFragment, // issue class name
+			hltsv::Issue, //base class name
+			" No CTP fragment in ROIB data, invalid L1ID may be used", //message
+                        ERS_EMPTY,
+                        ERS_EMPTY
+			)
+
 #endif //__HLTSV_ISSUES_H__

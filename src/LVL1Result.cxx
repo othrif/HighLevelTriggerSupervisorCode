@@ -4,6 +4,7 @@
 #include "eformat/util.h"
 #include "eformat/SourceIdentifier.h"
 #include "L1Source.h"
+#include "Issues.h"
 
 // #include "eformat/eformat.h"
 // #include "eformat/write/eformat.h"
@@ -88,6 +89,8 @@ namespace hltsv {
                 const uint32_t* rod[MAXLVL1RODS];
                 uint32_t        rodsize[MAXLVL1RODS];
 
+                bool found_ctp = false;
+
                 uint32_t num_frags = eformat::find_rods(m_rod_data, m_rod_length, rod, rodsize, MAXLVL1RODS);
 
                 // create the ROB fragments out of ROD fragments
@@ -99,7 +102,10 @@ namespace hltsv {
                     m_writers[i]->rob_source_id(m_writers[i]->rod_source_id());
                     if(eformat::helper::SourceIdentifier(m_writers[i]->rob_source_id()).subdetector_id() == eformat::TDAQ_CTP) {
                         m_lvl1_id = m_writers[i]->rod_lvl1_id();
-                    }
+                        found_ctp = true;
+                    } else if(!found_ctp) {
+                        m_lvl1_id = m_writers[i]->rod_lvl1_id();
+                    } // else CTP fragment already seen.
                 }
 
                 // make one single buffer out of the whole data
@@ -113,6 +119,10 @@ namespace hltsv {
                 }
 
                 m_converted = true;
+
+                if(!found_ctp) {
+                    throw hltsv::NoCTPFragment(ERS_HERE);
+                }
 
             } catch (eformat::Issue &e) {
                 ers::error(e); 
