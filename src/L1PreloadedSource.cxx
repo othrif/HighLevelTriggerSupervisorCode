@@ -134,8 +134,8 @@ namespace hltsv {
                     // test_frag.rod_lvl1_id( test_frag.rod_lvl1_id() % m_max_l1id );
                     wrob.rod_lvl1_id(old_l1id % m_max_l1id);
                 }
-                wrob.rod_run_no(m_run_number);
             }
+            wrob.rod_run_no(m_run_number);
             // --- bind and copy fragment back
             const eformat::write::node_t* toplist = wrob.bind();
 	    robs[i] = new uint32_t[wrob.size_word()];
