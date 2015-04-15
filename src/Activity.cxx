@@ -342,11 +342,19 @@ namespace hltsv {
             trigger_count++;
 	}
         
-	std::shared_ptr<LVL1Result> result(m_l1source->getResult());
-	if(result) {
-            m_event_sched->schedule_event(result);
-            ERS_DEBUG(1,"L1ID #" << result->l1_id() << "  has been scheduled");
-	}
+        try {
+            std::shared_ptr<LVL1Result> result(m_l1source->getResult());
+            if(result) {
+                m_event_sched->schedule_event(result);
+                ERS_DEBUG(1,"L1ID #" << result->l1_id() << "  has been scheduled");
+            }
+        } catch (ers::Issue& ex) {
+            ers::error(ex);
+        } catch (std::exception& ex) {
+            ERS_LOG("Unexcpected std::exception " << ex.what());
+        } catch (...) {
+            ERS_LOG("Unknown exception thrown");
+        }
         
     }
 

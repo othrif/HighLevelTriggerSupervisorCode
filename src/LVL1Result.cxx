@@ -127,6 +127,13 @@ namespace hltsv {
 
             } catch (eformat::Issue &e) {
                 ers::error(e); 
+                m_converted = false;
+            } catch(std::exception& e) {
+                ERS_LOG("Unexpected std::exception " << e.what());
+                m_converted = false;
+            } catch (...) {
+                ERS_LOG("Unknwown exception");
+                m_converted = false;
             }
         }
 
