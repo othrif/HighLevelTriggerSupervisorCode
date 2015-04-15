@@ -201,6 +201,8 @@ namespace hltsv {
     RunParamsNamed runparams(partition, "RunParams.SOR_RunParams");
     runparams.checkout();
 
+    m_event_sched->reset(m_initial_event_id);
+
     m_l1source->reset(runparams.run_number);
 
     // For the FILAR input we need a second reset after
@@ -210,8 +212,6 @@ namespace hltsv {
     // just reset some counters and clear data structures.
     usleep(500000);
     m_l1source->reset(runparams.run_number);    
-
-    m_event_sched->reset(m_initial_event_id);
 
     if(m_cmdReceiver) {
         m_l1source->startLumiBlockUpdate();
