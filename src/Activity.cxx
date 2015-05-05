@@ -221,7 +221,7 @@ namespace hltsv {
 
     m_l1_thread = std::thread(&Activity::l1_thread, this);
     
-    return; 
+    return;
   }
     
   void Activity::stopDC(const daq::rc::TransitionCmd& )
@@ -256,15 +256,14 @@ namespace hltsv {
 
     m_work.reset();
     m_ros_work.reset();
+    m_event_sched.reset();
+    m_ros_clear.reset();
+    m_myServer.reset();
 
     for(auto& thr : m_io_threads) {
         thr.join();
     }
     m_io_threads.clear();
-
-    m_event_sched.reset();
-    m_ros_clear.reset();
-    m_myServer.reset();
 
     if(m_l1source) {
       delete m_l1source;
