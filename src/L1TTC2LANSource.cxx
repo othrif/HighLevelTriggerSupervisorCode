@@ -5,6 +5,7 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include <time.h>
 
 #include "ers/ers.h"
 
@@ -329,7 +330,7 @@ namespace hltsv {
         : m_networks(config->get_Networks()),
           m_high_watermark(config->get_High_Watermark()),
           m_low_watermark(config->get_Low_Watermark()),          
-          m_dummy_data(5),
+          m_dummy_data(s_ctp_template),
           m_event_count(0),
           m_status(XONOFFStatus::ON),
           m_debug(false)
@@ -391,6 +392,12 @@ namespace hltsv {
 
         auto fragment = new uint32_t[rob.size_word()];
         eformat::write::copy(*rob.bind(), fragment, rob.size_word());
+
+        timespec current_time;
+        clock_gettime(CLOCK_REALTIME, &current_time);
+
+        const_cast<uint32_t*>(rob.rod_data())[0] = current_time.tv_nsec;
+        const_cast<uint32_t*>(rob.rod_data())[1] = current_time.tv_sec;
 
         LVL1Result* l1Result = new LVL1Result(l1id, fragment, rob.size_word());
 

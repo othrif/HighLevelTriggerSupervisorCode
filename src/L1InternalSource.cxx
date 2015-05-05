@@ -46,8 +46,9 @@ namespace hltsv {
     L1InternalSource::L1InternalSource(const daq::df::RoIBPluginInternal *config)
         : m_l1id(0),
           m_size(config->get_FragmentSize()),
-          m_dummy_data(m_size)
+          m_dummy_data(s_ctp_template)
     {
+        m_dummy_data.resize(m_size);
     }
 
     L1InternalSource::~L1InternalSource()

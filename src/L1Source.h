@@ -116,6 +116,8 @@ namespace hltsv {
         std::condition_variable m_cond;
         std::thread m_thread;
 
+        static std::vector<uint32_t> s_ctp_template;
+
     };
     
 }
