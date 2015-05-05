@@ -48,6 +48,9 @@ namespace hltsv {
         /// Do any connect operation that is necessary
         virtual void connect();
 
+        /// Do any prepareForRun action (now: reset sequence number)
+        void prepareForRun();
+
     protected:
         
         /** 

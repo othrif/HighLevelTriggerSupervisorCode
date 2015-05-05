@@ -5,7 +5,8 @@
 namespace hltsv {
 
     ROSClear::ROSClear(size_t threshold)
-        : m_threshold(threshold)
+        : m_threshold(threshold),
+          m_sequence()
     {
         m_event_ids.reserve(m_threshold);
     }
@@ -55,6 +56,12 @@ namespace hltsv {
 
     void ROSClear::connect()
     {
+    }
+
+    void ROSClear::prepareForRun()
+    {
+        tbb::spin_mutex::scoped_lock lock(m_mutex);
+        m_sequence = 0;
     }
 
 }

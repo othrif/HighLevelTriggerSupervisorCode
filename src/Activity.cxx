@@ -196,6 +196,8 @@ namespace hltsv {
 
   void Activity::prepareForRun(const daq::rc::TransitionCmd& )
   {
+    m_ros_clear->prepareForRun();
+
     const IPCPartition  partition(daq::rc::OnlineServices::instance().getIPCPartition());
 
     RunParamsNamed runparams(partition, "RunParams.SOR_RunParams");
