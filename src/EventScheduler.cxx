@@ -34,13 +34,19 @@ namespace hltsv {
     void EventScheduler::request_events(std::shared_ptr<DCMSession> dcm, unsigned int count, unsigned int finished_events)
     {
         ERS_DEBUG(1,"EventScheduler::request_events, with count = " << count );
-        m_stats->ProcessedEvents += finished_events;
+        // m_stats->ProcessedEvents += finished_events;
 
         while(count-- > 0) {
             m_free_cores.push(dcm);
         }
+
         auto n = m_free_cores.size();
-        m_stats->AvailableCores = n < 0 ? 0 : n;
+        {
+            std::lock_guard<monsvc::ptr<HLTSV> > lock(m_stats);
+            auto hltsv = m_stats.get();
+            hltsv->ProcessedEvents += finished_events;
+            hltsv->AvailableCores = n < 0 ? 0 : n;
+        }
     }
 
 
@@ -49,16 +55,16 @@ namespace hltsv {
     void EventScheduler::schedule_event(std::shared_ptr<LVL1Result> rois)
     {
 
-        m_stats->LVL1Events++;
+        // m_stats->LVL1Events++;
 
         std::weak_ptr<DCMSession> dcm;
         std::shared_ptr<DCMSession> real_dcm;
 
         auto global_id = m_global_id++;
-
         rois->set_global_id(global_id);
-        m_stats->Recent_Global_ID = global_id;
-        m_stats->Recent_LVL1_ID = rois->l1_id();
+
+        // m_stats->Recent_Global_ID = global_id;
+        // m_stats->Recent_LVL1_ID = rois->l1_id();
 
         // First try to work on the re-assigned events if there are any
         push_events();
@@ -72,12 +78,22 @@ namespace hltsv {
                 if(!real_dcm->handle_event(rois)) {
                     continue;
                 }
-                m_stats->AssignedEvents++;
+                // m_stats->AssignedEvents++;
             }
         } while(!real_dcm);        
 
         auto n = m_free_cores.size();
-        m_stats->AvailableCores = n < 0 ? 0 : n;
+        // m_stats->AvailableCores = n < 0 ? 0 : n;
+
+        {
+            std::lock_guard<monsvc::ptr<HLTSV> > lock(m_stats);
+            auto hltsv = m_stats.get();
+            hltsv->LVL1Events++;
+            hltsv->Recent_Global_ID = global_id;
+            hltsv->Recent_LVL1_ID = rois->l1_id();
+            hltsv->AssignedEvents++;
+            hltsv->AvailableCores = n < 0 ? 0 : n;
+        }
     }
 
     void EventScheduler::push_events()
@@ -86,6 +102,9 @@ namespace hltsv {
         std::shared_ptr<DCMSession> real_dcm;
 
         std::shared_ptr<LVL1Result> revent;
+
+        unsigned int events = 0;
+
         while(m_reassigned_events.try_pop(revent)) {
             do {
                 // might block
@@ -95,9 +114,15 @@ namespace hltsv {
                     if(!real_dcm->handle_event(revent)) {
                         continue;
                     }
-                    m_stats->ReassignedEvents++;
+                    events++;
                 }
             } while(!real_dcm);
+        }
+
+        {
+            std::lock_guard<monsvc::ptr<HLTSV> > lock(m_stats);
+            auto hltsv = m_stats.get();
+            hltsv->ReassignedEvents += events;;
         }
 
     }
@@ -121,13 +146,20 @@ namespace hltsv {
     {
         uint64_t last_count = m_stats->ProcessedEvents;
 
+        const int sleep_interval_secs = 5;
+
         while(m_update) {
-            sleep(5);
-            if(m_stats->ProcessedEvents >= last_count)  {
-                auto rate     = (double)(m_stats->ProcessedEvents - last_count)/5.0;
-                m_stats->Rate = rate;
+            sleep(sleep_interval_secs);
+            {
+                std::lock_guard<monsvc::ptr<HLTSV> > lock(m_stats);
+                auto hltsv = m_stats.get();
+                if(hltsv->ProcessedEvents >= last_count)  {
+                    auto rate   = (double)(hltsv->ProcessedEvents - last_count)/(double)(sleep_interval_secs);
+                    hltsv->Rate = rate;
+                }
+                last_count    = hltsv->ProcessedEvents;
             }
-            last_count    = m_stats->ProcessedEvents;
+
         }
     }
 
