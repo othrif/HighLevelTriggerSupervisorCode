@@ -140,5 +140,15 @@ namespace hltsv {
         return m_converted;
     }
 
+    const uint32_t* LVL1Result::rod_data() const
+    {
+        return m_rod_data;
+    }
+
+    uint32_t LVL1Result::rod_length() const
+    {
+        return m_rod_length;
+    }
+
 }
 

@@ -385,19 +385,23 @@ namespace hltsv {
 
         eformat::helper::SourceIdentifier src(eformat::TDAQ_CTP, 1);
 
-        eformat::write::ROBFragment rob(src.code(), m_run_number, l1id, bc_id,
-                                        lvl1_type, event_type, 
-                                        m_dummy_data.size(), &m_dummy_data[0], 
-                                        eformat::STATUS_FRONT);
-
-        auto fragment = new uint32_t[rob.size_word()];
-        eformat::write::copy(*rob.bind(), fragment, rob.size_word());
+        std::vector<uint32_t> ctp_rod(m_dummy_data);
 
         timespec current_time;
         clock_gettime(CLOCK_REALTIME, &current_time);
 
-        const_cast<uint32_t*>(rob.rod_data())[0] = current_time.tv_nsec;
-        const_cast<uint32_t*>(rob.rod_data())[1] = current_time.tv_sec;
+        ctp_rod[0] = current_time.tv_nsec;
+        ctp_rod[1] = current_time.tv_sec;
+
+        eformat::write::ROBFragment rob(src.code(), m_run_number, l1id, bc_id,
+                                        lvl1_type, event_type, 
+                                        ctp_rod.size(), &ctp_rod[0], 
+                                        eformat::STATUS_BACK);
+
+        rob.rod_minor_version(0x1815);
+
+        auto fragment = new uint32_t[rob.size_word()];
+        eformat::write::copy(*rob.bind(), fragment, rob.size_word());
 
         LVL1Result* l1Result = new LVL1Result(l1id, fragment, rob.size_word());
 

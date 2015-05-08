@@ -110,6 +110,10 @@ namespace hltsv {
         /// Return false if an error occured during conversion.
         bool create_rob_data();
 
+        /// Return pointe to rod_data (maybe nullptr)
+        const uint32_t *rod_data() const;
+        uint32_t        rod_length() const;
+
     private:
 
         uint32_t                        m_lvl1_id;
