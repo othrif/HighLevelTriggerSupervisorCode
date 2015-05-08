@@ -157,6 +157,27 @@ namespace hltsv {
     // Publish port in IS for DCM
     HLTSV_NameService.publish(daq::rc::OnlineServices::instance().applicationName(), my_endpoint.port());
 
+    // restart handling, try to read old IS information and continue from there.
+    if(m_restarted) {
+        // This throws an exception, e.g. because the HLTSV information is not there
+        // we want to stop, since we have no idea with which event ID to recover. So let
+        // the IS exception just propagate.
+        HLTSV hltsv_info;
+        ISInfoDictionary dict(daq::rc::OnlineServices::instance().getIPCPartition());
+        dict.getValue("DF.HLTSV.Events",hltsv_info);
+
+        m_initial_event_id = hltsv_info.Recent_Global_ID + 10000000;
+
+        ERS_LOG("HLTSV has been restarted during run; starting with global event ID" << m_initial_event_id);
+    } else {
+        m_initial_event_id = 0;
+    }
+
+    // clear statistics, counters, event queues
+    m_event_sched->reset(m_initial_event_id);
+
+    m_initial_event_id = 0;
+
     //  HLTSVServer::start() calls Server::asyncAccept() which calls HLTSVServer::onAccept
     m_myServer->start();
 
@@ -174,22 +195,6 @@ namespace hltsv {
     // ROS_Clear with TCP will establish the connection
     m_ros_clear->connect();
 
-    if(m_restarted) {
-        // This throws an exception, e.g. because the HLTSV information is not there
-        // we want to stop, since we have no idea with which event ID to recover. So let
-        // the IS exception just propagate.
-        HLTSV hltsv_info;
-        ISInfoDictionary dict(daq::rc::OnlineServices::instance().getIPCPartition());
-        dict.getValue("DF.HLTSV.Events",hltsv_info);
-
-        m_initial_event_id = hltsv_info.Recent_Global_ID + 10000000;
-
-        ERS_LOG("HLTSV has been restarted during run; starting with global event ID" << m_initial_event_id);
-    } else {
-        m_initial_event_id = 0;
-    }
-
-    
     m_publisher->start_publishing();
     return;
   }
@@ -202,8 +207,6 @@ namespace hltsv {
 
     RunParamsNamed runparams(partition, "RunParams.SOR_RunParams");
     runparams.checkout();
-
-    m_event_sched->reset(m_initial_event_id);
 
     m_l1source->reset(runparams.run_number);
 
@@ -243,6 +246,8 @@ namespace hltsv {
 
   void Activity::stopRecording(const daq::rc::TransitionCmd& )
   {
+    // reset scheduler
+    m_event_sched->reset(0);
     m_ros_clear->flush();
   }
 
