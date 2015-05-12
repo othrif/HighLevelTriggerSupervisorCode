@@ -40,12 +40,10 @@ namespace hltsv {
             m_free_cores.push(dcm);
         }
 
-        auto n = m_free_cores.size();
         {
             std::lock_guard<monsvc::ptr<HLTSV> > lock(m_stats);
             auto hltsv = m_stats.get();
             hltsv->ProcessedEvents += finished_events;
-            hltsv->AvailableCores = n < 0 ? 0 : n;
         }
     }
 
@@ -54,8 +52,10 @@ namespace hltsv {
     // the re-assigned events.
     void EventScheduler::schedule_event(std::shared_ptr<LVL1Result> rois)
     {
-
-        // m_stats->LVL1Events++;
+        // There is only one input thread that calls this method, so
+        // we don't protect the counter updates.
+        auto hltsv = m_stats.get();
+        hltsv->LVL1Events++;
 
         std::weak_ptr<DCMSession> dcm;
         std::shared_ptr<DCMSession> real_dcm;
@@ -63,8 +63,8 @@ namespace hltsv {
         auto global_id = m_global_id++;
         rois->set_global_id(global_id);
 
-        // m_stats->Recent_Global_ID = global_id;
-        // m_stats->Recent_LVL1_ID = rois->l1_id();
+        hltsv->Recent_Global_ID = global_id;
+        hltsv->Recent_LVL1_ID = rois->l1_id();
 
         // First try to work on the re-assigned events if there are any
         push_events();
@@ -82,18 +82,7 @@ namespace hltsv {
             }
         } while(!real_dcm);        
 
-        auto n = m_free_cores.size();
-        // m_stats->AvailableCores = n < 0 ? 0 : n;
-
-        {
-            std::lock_guard<monsvc::ptr<HLTSV> > lock(m_stats);
-            auto hltsv = m_stats.get();
-            hltsv->LVL1Events++;
-            hltsv->Recent_Global_ID = global_id;
-            hltsv->Recent_LVL1_ID = rois->l1_id();
-            hltsv->AssignedEvents++;
-            hltsv->AvailableCores = n < 0 ? 0 : n;
-        }
+        hltsv->AssignedEvents++;
     }
 
     void EventScheduler::push_events()
@@ -146,18 +135,24 @@ namespace hltsv {
     {
         uint64_t last_count = m_stats->ProcessedEvents;
 
-        const int sleep_interval_secs = 5;
+        const int sleep_interval_secs = 2;
 
         while(m_update) {
             sleep(sleep_interval_secs);
             {
+                auto n = m_free_cores.size();
+
                 std::lock_guard<monsvc::ptr<HLTSV> > lock(m_stats);
                 auto hltsv = m_stats.get();
+
+                hltsv->AvailableCores = n < 0 ? 0 : n;
+
                 if(hltsv->ProcessedEvents >= last_count)  {
                     auto rate   = (double)(hltsv->ProcessedEvents - last_count)/(double)(sleep_interval_secs);
                     hltsv->Rate = rate;
                 }
                 last_count    = hltsv->ProcessedEvents;
+
             }
 
         }
