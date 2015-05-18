@@ -108,8 +108,7 @@ namespace hltsv {
             } while(!real_dcm);
         }
 
-        {
-            std::lock_guard<monsvc::ptr<HLTSV> > lock(m_stats);
+        if(events > 0) {
             auto hltsv = m_stats.get();
             hltsv->ReassignedEvents += events;;
         }
