@@ -20,6 +20,13 @@ use monsvc
 use asyncmsg
 use ROSfilar
 use ROSMemoryPool
+use ROSCore
+use ROSBufferManagement
+use ROSEventFragment
+use ROSUtilities
+use ROSRobinNP
+use ROSMemoryPoolNP
+use ROSDescriptorNP
 use RunControl
 use TriggerCommander
 use TTCInfo
@@ -48,7 +55,7 @@ document        generate-config DFdal                   -s=../schema/           
 
 macro           gdir                                    "$(bin)DFdal.tmp"
 
-library         daq-hltsv-dal                              "$(gdir)/*.cpp"
+library         daq-hltsv-dal                              "$(gdir)/*.cpp $(gdir)/*.cxx"
 
 macro daq-hltsv-dal_dependencies "DFdal"
 
@@ -94,15 +101,25 @@ library svl1filar L1FilarSource.cxx
 macro svl1filar_shlibflags "-leformat_write -leformat -lfilar -lROSMemoryPool"
 macro svl1filar_dependencies "daq-hltsv-dal"
 
+# read from RobinNP (aka RoIB software)
+library svl1robinnp L1RobinnpSource.cxx RoIBuilder.cxx RoIBuilder.h
+macro svl1robinnp_shlibflags "-leformat_write -leformat \
+      -lROSRobinNPReadoutModule -lROSCore -lROSUserActionScheduler \
+      -lrobinNP -lrobinNP_rol \
+      -lrobinNP_BIST -lrobinNP_monitoring -lNPDescriptor \
+      -lROSMemoryPoolNP \
+      -lROSMemoryPool"
+macro svl1robinnp_dependencies "daq-hltsv-dal"
+
 # read from TTC2LAN
 library svl1ttc2lan L1TTC2LANSource.cxx
 macro svl1ttc2lan_shlibflags "-leformat_write -leformat -lasyncmsg"
 macro svl1ttc2lan_dependencies "daq-hltsv-dal"
 
-macro constituents "hltsv hltsv_main svl1internal svl1preloaded svl1ttc2lan test_l1source testDCM testROS testTTC2LAN" \
+macro constituents "hltsv hltsv_main svl1internal svl1preloaded svl1ttc2lan test_l1source testDCM testROS testTTC2LAN svl1robinnp" \
       i686 "hltsv hltsv_main svl1internal svl1preloaded svl1filar svl1ttc2lan test_l1source testDCM testROS testTTC2LAN"
 
-macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc2lan.so libdaq-hltsv-dal.so" \
+macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc2lan.so libsvl1robinnp.so libdaq-hltsv-dal.so" \
       i686 "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1filar.so libsvl1ttc2lan.so libdaq-hltsv-dal.so" 
 
 #

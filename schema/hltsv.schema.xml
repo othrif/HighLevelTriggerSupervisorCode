@@ -125,6 +125,11 @@
   <attribute name="Links" description="A list of indexes specifying which channel on the Filar/Tilar card to read." type="u32" is-multi-value="yes" init-value="0" is-not-null="yes"/>
  </class>
 
+ <class name="RoIBPluginRobinnp" description="The RoIB plugin to read from the RobinNP (i.e. direct from LVL1 or the feeder)">
+  <superclass name="RoIBPlugin"/>
+  <attribute name="Links" description="A list of indexes specifying which channel on the RobinNP card to read." type="u32" is-multi-value="yes" init-value="0" is-not-null="yes"/>
+ </class>
+
  <class name="RoIBPluginInternal" description="The RoIB plugin to generate a CTP fragment internally.">
   <superclass name="RoIBMasterTriggerPlugin"/>
   <attribute name="FragmentSize" description="The fragment payload size in 32bit words." type="u32" init-value="250" is-not-null="yes"/>
