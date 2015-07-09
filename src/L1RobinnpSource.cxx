@@ -104,7 +104,10 @@ namespace hltsv {
     // length is the uint32_t length of fragments
     uint32_t lvl1_id, count=0, length=0;
     uint32_t * roi_data;
-    if(m_builder==0) return nullptr;
+    if(m_builder==0) {
+      ERS_LOG("no builder present");
+      return nullptr;
+    }
     if (m_builder->getNext(lvl1_id,count,roi_data,length)){
       if(DebugMe) ERS_LOG("processing event:"<<lvl1_id<<" fragment count:"<<
 			  count);
@@ -143,17 +146,24 @@ namespace hltsv {
 		      lvl1_id);
 	      ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
 	      for(uint32_t j=0;j<length;j++) 
-		ERS_LOG(j<<":"<<std::hex<<roi_data[j]);
+		ERS_LOG(std::dec<<j<<":"<<std::hex<<roi_data[j]<<" "<<std::dec);
 	      l1Result=nullptr;
 	    }
 	  } else {
-	  l1Result=nullptr;
-	  ERS_LOG(" failed to find any links from this data, lvl1id:"<<lvl1_id);
-	  if(DebugData) { 
-	    ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
-	    for(uint32_t j=0;j<length;j++) 
-	      ERS_LOG(j<<":"<<std::hex<<roi_data[j]);
-	  // this is a serious error and a memory leak
+	  try{
+	    l1Result=nullptr;
+	    ERS_LOG(" failed to find any links from this data, lvl1id:"<<lvl1_id);
+	    if(DebugData) { 
+	      ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
+	      // this is a serious error - likely the below is broken
+	      for(uint32_t j=0;j<length;j++) 
+		ERS_LOG(std::dec<<j<<":"<<std::hex<<roi_data[j]<<" "<<std::dec);
+	      m_builder->release(lvl1_id);
+	      delete roi_data;
+	    }
+	  }
+	  catch(...){
+	    ERS_LOG(" no links from lvl1id:"<<lvl1_id);
 	  }
 	}
       }
@@ -196,8 +206,8 @@ namespace hltsv {
   void
     L1RobinnpSource::reset(uint32_t /* run number */)
   {
-    // configure 
-    m_input->start();
+    // configure (with protection against doing this twice)
+    if( !m_builder->m_running) m_input->start();
     m_builder->m_running=true;
   }
 }
