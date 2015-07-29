@@ -114,6 +114,10 @@ namespace hltsv {
 
     // The initial event ID, usually 0 except in case of restart
     uint64_t                        m_initial_event_id;
+
+    // Maximum number of events (== 0 means no limit)
+    // Note: IS RunParams is a 32bit number only.
+    uint64_t                        m_max_events;
     
   };
 }

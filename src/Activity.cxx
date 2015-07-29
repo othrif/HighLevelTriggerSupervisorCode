@@ -209,6 +209,7 @@ namespace hltsv {
     runparams.checkout();
 
     m_l1source->reset(runparams.run_number);
+    m_max_events = runparams.max_events;
 
     // For the FILAR input we need a second reset after
     // a delay to make it *really* work.
@@ -327,6 +328,8 @@ namespace hltsv {
     // if it's too small, you won't have good average performance.
     const uint32_t MAXIMUM_TRIGGER_COUNT = 1e9; // 1e9 / 100kHz = 2.8 hrs.
 
+    uint64_t m_assigned = 0;   // counter of events from L1Source
+
     while(m_running) {
 
 	if(m_event_delay != 0) {
@@ -353,6 +356,11 @@ namespace hltsv {
             if(result) {
                 m_event_sched->schedule_event(result);
                 ERS_DEBUG(1,"L1ID #" << result->l1_id() << "  has been scheduled");
+                m_assigned++;
+                
+                if(m_cmdReceiver && m_max_events > 0 && m_assigned == m_max_events) {
+                    m_running = false;
+                }
             }
         } catch (ers::Issue& ex) {
             ers::error(ex);
