@@ -1,3 +1,6 @@
+// Othmane Rifki
+// othmane.rifki@cern.ch
+
 #ifndef _HLTSV_ROIB_H_
 #define _HLTSV_ROIB_H_
 #include <queue>
@@ -14,21 +17,22 @@ class builtEv
 {
  public:
   builtEv();
-~builtEv();
- std::chrono::time_point<std::chrono::high_resolution_clock> m_start;
- uint32_t * data() { return m_data;};
- uint32_t count() { return m_count;};
- uint32_t size() {return m_size;};
- std::vector<uint32_t> links() {return m_links;};
- void free() {if( m_data) delete m_data;m_data=0;return;};
- void add(uint32_t w,uint32_t *d,uint32_t l) {
-   memcpy(&m_data[m_size],d,sizeof(uint32_t)*(w>0&&w<maxSize?w-1:0));
-   m_size+=(w>0&&w<maxSize?w-1:0);if(w>0&&w<maxSize)m_count++;m_links.push_back(l);};
+  ~builtEv();
+  std::chrono::time_point<std::chrono::high_resolution_clock> m_start;
+  uint32_t * data() { return m_data;};
+  uint32_t count() { return m_count;};
+  uint32_t size() {return m_size;};
+  //change to ->  const std::vector<uint32_t>& links() {return m_links;} const;
+  std::vector<uint32_t> links() {return m_links;} ;
+  void free() {if( m_data) delete m_data;m_data=0;return;};
+  void add(uint32_t w,uint32_t *d,uint32_t link) {
+	memcpy(&m_data[m_size],d,sizeof(uint32_t)*(w>0&&w<maxSize?w-1:0));
+	m_size+=(w>0&&w<maxSize?w-1:0);if(w>0&&w<maxSize)m_count++;m_links.push_back(link);};
  private:
- uint32_t m_size;
- uint32_t m_count;
- uint32_t * m_data;
- std::vector<uint32_t> m_links;
+  uint32_t m_size;
+  uint32_t m_count;
+  uint32_t * m_data;
+  std::vector<uint32_t> m_links;
 };
 class RoIBuilder
 {
@@ -38,7 +42,7 @@ class RoIBuilder
   uint32_t m_nactive;
   std::set<uint32_t> m_active_chan;
   std::map<uint32_t,builtEv *> m_events;
-  std::set<uint32_t> m_l1ids;
+  std::map<uint32_t,builtEv *>::iterator m_eventsLocator;
   std::mutex m_mutex;
   std::vector<std::thread> m_rcv_threads;
   void m_rcv_proc();
