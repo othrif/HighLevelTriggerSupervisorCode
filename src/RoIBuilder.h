@@ -44,9 +44,10 @@ class RoIBuilder
   std::map<uint32_t,builtEv *> m_events;
   std::map<uint32_t,builtEv *>::iterator m_eventsLocator;
   std::mutex m_mutex;
+  std::mutex m_evmutex;
   std::vector<std::thread> m_rcv_threads;
   void m_rcv_proc();
-  std::queue<uint32_t> m_done;
+  std::queue<builtEv *> m_done;
  public:
   bool m_running;
   bool m_stop;
