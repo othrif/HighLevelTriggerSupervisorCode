@@ -14,7 +14,6 @@
 std::atomic<unsigned int> nThread(0);
 const bool DebugMe=false;
 const bool DebugData=false;
-// you need to update the locking if th number of threads>1
 const uint32_t n_rcv_threads=1;
 const uint32_t maxBacklog=50;
 const uint32_t minBacklog=25;
@@ -48,22 +47,21 @@ void  RoIBuilder::m_rcv_proc()
   // loop readng out until asked to stop
   builtEv * ev(0);
   uint32_t target=maxBacklog;
+  // if multithread start at different subrobs
+  auto chanVal=m_active_chan.find(subrob*6);
   while(!m_stop) {
 	if(m_module == 0 ) 
 	  return;
-
 	if( m_running && m_done.size()<target ) {
-
 	  target=maxBacklog;
-	  nreq=nreq%m_active_chan.size();
-	  subrob=nreq>5?1:0;
 	  if(DebugMe) 
 	    ERS_LOG(" thread "<<myThread<<" initiating getFragment("
 		    <<subrob<<")"); 
+	  if(chanVal==m_active_chan.end())chanVal=m_active_chan.begin();
+	  subrob=(*chanVal>5?1:0);
 	  auto fragment = m_module->getFragment(subrob);
+	  chanVal++;
 	  // sample subrobs according to link occupancy
-	  while ( m_active_chan.find(++nreq%m_active_chan.size())==
-		  m_active_chan.end() );
 	  // check that the fragment is okay
 	  if(fragment.page->virtualAddress() == 0) {
 	    ERS_LOG(" thread "<<myThread<<" invalid data from RobinNP");
@@ -104,6 +102,9 @@ void  RoIBuilder::m_rcv_proc()
 			
 		    // fragment is built for l1id	
 		    if(ev->count()==m_active_chan.size()) {
+		      if(DebugMe) 
+			ERS_LOG("thread "<<myThread<<
+				" built lvl1id:"<<l1id);
 		      m_mutex.lock();
 		      m_done.push(ev);
 		      m_mutex.unlock();
@@ -156,7 +157,8 @@ RoIBuilder::~RoIBuilder()
 void RoIBuilder::release(uint32_t lvl1id)
 {
   if(DebugMe) ERS_LOG(" erasing all traces of lvl1id:"<<lvl1id);
-  m_evmutex.lock();
+  // if this event is a timeout the ev mutex is already locked do not lock
+  if(m_events[lvl1id]->count() == m_nactive)  m_evmutex.lock();
   delete m_events[lvl1id];
   m_events.erase(lvl1id);
   m_evmutex.unlock();
@@ -165,39 +167,50 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
 {
   std::chrono::time_point<std::chrono::high_resolution_clock> thistime;
   const std::chrono::microseconds limit(10000000);
-  const uint32_t maxTot=100;
+  const uint32_t maxTot=1000;
+  const uint32_t maxCheck=10;
   bool timeout=false;
   static uint32_t ncheck=0;
   std::chrono::microseconds elapsed;
-  std::set<uint32_t>::iterator l1id_index;
+  std::vector<uint32_t> linkList;
   builtEv * ev;
   count=0;
-  if(!m_done.empty() &&  ncheck++ < maxTot) {
-    m_mutex.lock();
+  m_mutex.lock();
+  if(!m_done.empty() &&  (ncheck++ < maxTot || ncheck > maxTot+maxCheck)) {
     ev=m_done.front();
     m_done.pop();
     m_mutex.unlock();
     l1id=ev->data()[5];
     count=ev->count();
+    linkList=ev->links();
+    // if we already checked 10 wait for maxTot more events before checking
+    if(ncheck>=maxTot) ncheck=0;
   } else {
-    ncheck=0;
-    // check for stale entries every so often
-    thistime=
-      std::chrono::high_resolution_clock::now();
-    m_evmutex.lock();
-    for (const auto &myeventPair : m_events){
-      l1id = myeventPair.first;
-      ev = myeventPair.second;
-      elapsed=std::chrono::duration_cast<std::chrono::microseconds>
-	(thistime-ev->m_start);
-
-      if(elapsed>limit && ev->count()<m_nactive) {
-	timeout=true;
-	count=ev->count();
-	break;
+    m_mutex.unlock();  
+    if( ncheck>maxTot ){
+      // check for stale entries every so often
+      thistime=
+	std::chrono::high_resolution_clock::now();
+      m_evmutex.lock();
+      for (const auto &myeventPair : m_events){
+	l1id = myeventPair.first;
+	ev = myeventPair.second;
+	elapsed=std::chrono::duration_cast<std::chrono::microseconds>
+	  (thistime-ev->m_start);
+	
+	if(elapsed>limit && ev->count()<m_nactive) {
+	  timeout=true;
+	  count=ev->count();
+	  linkList=ev->links();
+	  break;
+	}
+      }
+      if(!timeout){
+	ncheck=0;
+	// do not unlock timed out events until they are processed    
+	m_evmutex.unlock();
       }
     }
-    m_evmutex.unlock();  
   }
   if( count == 0 ) {
     // no timeouts and no events
@@ -215,17 +228,17 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
 			elapsed.count());
 		ERS_LOG(" call to getnext returns true with " <<count << 
 				" fragments");
-		for (uint32_t i=0;i<(ev->links()).size();i++) 
+		for (uint32_t i=0;i<linkList.size();i++) 
 		  linksin+=
-			static_cast<std::ostringstream*>( &(std::ostringstream() << (ev->links()).at(i)))->str()+" ";
+			static_cast<std::ostringstream*>( &(std::ostringstream() << linkList.at(i)))->str()+" ";
 		ERS_LOG("links:"<<linksin.c_str()<<"reported"); 
 	  }
 	  if(DebugMe) 
 		{
 		  if(!timeout) {
-			for (uint32_t i=0;i<(ev->links()).size();i++) 
+			for (uint32_t i=0;i<linkList.size();i++) 
 			  linksin+=
-				static_cast<std::ostringstream*>( &(std::ostringstream() << (ev->links()).at(i)))->str()+" ";
+				static_cast<std::ostringstream*>( &(std::ostringstream() << linkList.at(i)))->str()+" ";
 			ERS_LOG("links:"<<linksin.c_str()<<"reported"); 
 		  }
 		  ERS_LOG(" received a complete event with lvl1id:"<<l1id);
