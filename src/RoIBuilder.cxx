@@ -51,7 +51,7 @@ void  RoIBuilder::m_rcv_proc()
   while(!m_stop) {
 	if(m_module == 0 ) 
 	  return;
-	if( m_running && m_done.size()<target ) {
+	if( m_running && m_done.unsafe_size()<target ) {
 	  target=maxBacklog;
 	  if(DebugMe) 
 	    ERS_LOG(" thread "<<myThread<<" initiating getFragment("
@@ -105,9 +105,9 @@ void  RoIBuilder::m_rcv_proc()
 		      if(DebugMe) 
 			ERS_LOG("thread "<<myThread<<
 				" built lvl1id:"<<l1id);
-		      m_mutex.lock();
+		      //		      m_mutex.lock();
 		      m_done.push(ev);
-		      m_mutex.unlock();
+		      //		      m_mutex.unlock();
 		    }
 		    
 		    //		    m_evmutex.unlock();
@@ -178,18 +178,19 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
   std::vector<uint32_t> linkList;
   builtEv * ev;
   count=0;
-  m_mutex.lock();
-  if(!m_done.empty() &&  (ncheck++ < maxTot || ncheck > maxTot+maxCheck)) {
-    ev=m_done.front();
-    m_done.pop();
-    m_mutex.unlock();
-    l1id=ev->data()[5];
-    count=ev->count();
-    linkList=ev->links();
+  //  m_mutex.lock();
+  if(!m_done.empty() && (ncheck++ < maxTot || ncheck > maxTot+maxCheck)){
+    if( m_done.try_pop(ev)) {
+      //    ev=m_done.front();
+      //    m_mutex.unlock();
+      l1id=ev->data()[5];
+      count=ev->count();
+      linkList=ev->links();
+    }
     // if we already checked 10 wait for maxTot more events before checking
     if(ncheck>=maxTot) ncheck=0;
   } else {
-    m_mutex.unlock();  
+    //    m_mutex.unlock();  
     if( ncheck>maxTot ){
       // check for stale entries every so often
       thistime=
