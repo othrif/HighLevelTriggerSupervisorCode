@@ -1,4 +1,4 @@
-// Othmane Rifki
+// Othmane Rifki & R. Blair
 // othmane.rifki@cern.ch
 
 #include "RoIBuilder.h"
@@ -14,7 +14,7 @@
 std::atomic<unsigned int> nThread(0);
 const bool DebugMe=false;
 const bool DebugData=false;
-const uint32_t n_rcv_threads=1;
+const uint32_t n_rcv_threads=2;
 const uint32_t maxBacklog=50;
 const uint32_t minBacklog=25;
 builtEv::builtEv() :m_size(0),m_count(0),m_data(0)
@@ -35,7 +35,6 @@ void  RoIBuilder::m_rcv_proc()
   nThread++;
 
   ///*
-  uint32_t nreq=0;
   uint32_t MaxSubrob=(m_active_chan.size()>6?1:0);
   uint32_t subrob=myThread;
   subrob=subrob%(MaxSubrob+1);
@@ -83,18 +82,19 @@ void  RoIBuilder::m_rcv_proc()
 			      std::hex << fragment.fragmentStatus << std::dec<<
 			      " link:"<<rolId<<
 			      " l1id:"<<l1id);
-		    m_evmutex.lock();		  
-		    m_eventsLocator=m_events.find(l1id);
-		    
-		    if( m_eventsLocator == m_events.end()  ) 
+		    //		    m_evmutex.lock();	
+		    EventList::accessor m_eventsLocator;
+		    if( !m_events.find(m_eventsLocator,l1id))
+		      //		    if( m_eventsLocator == m_events.end()  ) 
 		      {
 			if(DebugMe) 
 			  ERS_LOG("thread "<<myThread<<
 				  " starting to build lvl1id:"<<l1id);
 			ev=new builtEv;
-			m_events.insert(std::pair<uint32_t,builtEv *>(l1id,ev));
+			m_events.insert(m_eventsLocator,l1id);
+			m_eventsLocator->second=ev;
 		      } else { 
-			  ev=(m_events.find(l1id)->second);
+			  ev=(m_eventsLocator->second);
 		    }
 		    
 		    // Concatenate fragments with same l1id but different rols
@@ -110,7 +110,7 @@ void  RoIBuilder::m_rcv_proc()
 		      m_mutex.unlock();
 		    }
 		    
-		    m_evmutex.unlock();
+		    //		    m_evmutex.unlock();
 		    m_module->recyclePage(fragment);
 		    
 		  }  else {
@@ -152,22 +152,25 @@ RoIBuilder::~RoIBuilder()
   m_stop=true;
   for (uint32_t i=0;i<m_rcv_threads.size();i++) m_rcv_threads[i].join();
   if(DebugMe) ERS_LOG(" receive threads and their data cleaned up");
-  for (std::map<uint32_t,builtEv *>::iterator i=m_events.begin();i!=m_events.end();i++) delete i->second;
+  for (EventList::iterator i=m_events.begin();i!=m_events.end();i++) delete i->second;
 }
 void RoIBuilder::release(uint32_t lvl1id)
 {
   if(DebugMe) ERS_LOG(" erasing all traces of lvl1id:"<<lvl1id);
   // if this event is a timeout the ev mutex is already locked do not lock
-  if(m_events[lvl1id]->count() == m_nactive)  m_evmutex.lock();
-  delete m_events[lvl1id];
-  m_events.erase(lvl1id);
-  m_evmutex.unlock();
+  //  if(m_events[lvl1id]->count() == m_nactive)  m_evmutex.lock();
+  EventList::accessor m_eventsLocator;
+  if(m_events.find(m_eventsLocator,lvl1id)) {
+      delete m_eventsLocator->second;
+      m_events.erase(m_eventsLocator);
+    }
+    //  m_evmutex.unlock();
 }
 bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,uint32_t  & length)
 {
   std::chrono::time_point<std::chrono::high_resolution_clock> thistime;
-  const std::chrono::microseconds limit(10000000);
-  const uint32_t maxTot=1000;
+  const std::chrono::microseconds limit(100000);
+  const uint32_t maxTot=1000000;
   const uint32_t maxCheck=10;
   bool timeout=false;
   static uint32_t ncheck=0;
@@ -191,7 +194,7 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
       // check for stale entries every so often
       thistime=
 	std::chrono::high_resolution_clock::now();
-      m_evmutex.lock();
+      //      m_evmutex.lock();
       for (const auto &myeventPair : m_events){
 	l1id = myeventPair.first;
 	ev = myeventPair.second;
@@ -208,7 +211,7 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
       if(!timeout){
 	ncheck=0;
 	// do not unlock timed out events until they are processed    
-	m_evmutex.unlock();
+	//	m_evmutex.unlock();
       }
     }
   }

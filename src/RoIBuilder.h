@@ -10,6 +10,7 @@
 #include <chrono>
 #include "ROSRobinNP/RobinNPROIB.h"
 #include "ROSEventFragment/ROBFragment.h"
+#include "tbb/concurrent_hash_map.h"
 const uint  maxLinks=12;
 const uint maxSize=128;
 const uint maxEvWords=maxSize*maxLinks;
@@ -41,10 +42,11 @@ class RoIBuilder
   uint32_t m_nrols;
   uint32_t m_nactive;
   std::set<uint32_t> m_active_chan;
-  std::map<uint32_t,builtEv *> m_events;
-  std::map<uint32_t,builtEv *>::iterator m_eventsLocator;
+  typedef tbb::concurrent_hash_map<uint32_t,builtEv *> EventList;
+  EventList m_events;
+  //  std::map<uint32_t,builtEv *>::iterator m_eventsLocator;
   std::mutex m_mutex;
-  std::mutex m_evmutex;
+  //  std::mutex m_evmutex;
   std::vector<std::thread> m_rcv_threads;
   void m_rcv_proc();
   std::queue<builtEv *> m_done;
