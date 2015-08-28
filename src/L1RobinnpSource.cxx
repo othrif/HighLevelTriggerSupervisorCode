@@ -1,17 +1,16 @@
-//
-//  $Id: L1RobinnpSource.cxx,v 1.5 2015/07/01 13:11:12 reb Exp reb $
-//
+// Othmane Rifki & R. Blair
+// othmane.rifki@cern.ch
 
 #include <deque>
 #include <vector>
 #include <cstdlib>
 
-//#include "eformat/write/ROBFragment.h"
 #include "eformat/util.h"
 
 #include "eformat/eformat.h"
 #include "eformat/write/eformat.h"
-
+#include <sys/syscall.h>
+#include <sys/types.h>
 #include "ers/ers.h"
 #include "LVL1Result.h"
 #include "eformat/Issue.h"
@@ -56,7 +55,7 @@ namespace hltsv {
 
 extern "C" hltsv::L1Source *create_source(Configuration *config, const daq::df::RoIBPlugin *roib, const std::vector<std::string>& /* unused */)
 {
-  const daq::df::RoIBPluginRobinnp *my_config = config->cast<daq::df::RoIBPluginRobinnp>(roib);
+ const daq::df::RoIBPluginRobinnp *my_config = config->cast<daq::df::RoIBPluginRobinnp>(roib);
   if(my_config == nullptr) {
     throw hltsv::ConfigFailed(ERS_HERE, "Invalid type for configuration to L1RobinnpSource");
   }
@@ -71,6 +70,14 @@ namespace hltsv {
       m_input(0),
       m_builder(0)
   {
+
+  static bool once=false;
+  if(!once){
+  pid_t myID=syscall(SYS_gettid);
+  ERS_LOG(" L1RobinnpSource thread started with id:"<<myID);
+  once = true;
+  }
+
     m_active_chan=channels;
     m_rols=channels.size();
 
@@ -97,6 +104,21 @@ namespace hltsv {
   LVL1Result* L1RobinnpSource::getResult()
   {
 
+
+  // Thread and CPU Ids
+	unsigned int pa, pb, pc, pd, pbb;
+  __asm__("cpuid" : "=a" (pa), "=b" (pb), "=c" (pc), "=d" (pd) : "0" (1));
+  pbb = pb >> 24;
+  static bool once=false;
+  if(!once){
+  pid_t myID=syscall(SYS_gettid);
+  ERS_LOG(" getResult thread started with id:"<<myID << " in CPU with id:"
+		  << pbb );
+  once = true;
+  }
+
+
+
     LVL1Result* l1Result = nullptr;
     // lvl1_id is obvious
     // count is the number of fragments
@@ -114,9 +136,7 @@ namespace hltsv {
       if (count==m_rols ){
 	try {
 	  // make copies for processing so the input areas can be released
-	  //	l1Result = new LVL1Result(lvl1_id,count,data,lengths);    
 	  l1Result = new LVL1Result(roi_data,length);
-	  l1Result->create_rob_data();
 	  m_builder->release(lvl1_id);
 	} 
 	catch(...) {
@@ -133,7 +153,6 @@ namespace hltsv {
 		    lvl1_id);
 	    try {
 	      l1Result = new LVL1Result(roi_data,length);
-	      l1Result->create_rob_data();
 	      m_builder->release(lvl1_id);
 	      if(DebugData) {
 		ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
