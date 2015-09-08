@@ -55,7 +55,7 @@ void  RoIBuilder::m_rcv_proc()
   pbb = pb >> 24;
 
   uint32_t rolId;
-  uint32_t rolCnt[]={0,0,0,0,0,0,0,0,0,0,0,0};
+  uint64_t rolCnt[]={0,0,0,0,0,0,0,0,0,0,0,0};
   // Process Id
   pid_t myID=syscall(SYS_gettid);
   const uint32_t myThread=(uint32_t)nThread;
@@ -81,15 +81,19 @@ void  RoIBuilder::m_rcv_proc()
 	if(m_module == 0 ) 
 	  return;
 	if( m_running && m_done.size() < target ) {
+	  report=report>0?--report:0;
 	  if( m_events.size()>=maxPendEv && report <1 && myThread==0) {
 	    uint32_t counts[]={0,0,0,0,0,0,0,0,0,0,0,0};
-	    report++;
+	    report=100000;
 	    ERS_LOG( "Way too many pending fragments:"<<m_events.size());
+	    m_mutex.lock();
 	    for ( auto ipt=m_events.begin();ipt!=m_events.end();ipt++){
 	      for( auto jjj : (*ipt).second->links()) 
+
 		counts[jjj]++;
 	    }
 	    for ( auto jjj=0;jjj<12;jjj++) ERS_LOG( " link" <<jjj << " counts:"<<counts[jjj]);
+	    m_mutex.unlock();
 	  }
 	  target=maxBacklog;
 	  
@@ -107,7 +111,7 @@ void  RoIBuilder::m_rcv_proc()
 	  rolId=fragment.rolId;
 	  rolCnt[rolId]++;
 	  // next read is from the subrob with the lowest count in one of its links
-	  uint32_t minVal=0xFFFFFFFF;
+	  uint64_t minVal=0xFFFFFFFFFFFFFFFF;
 	  for( auto iLink=0;iLink<m_nrols;iLink++) if(rolCnt[iLink]<minVal){
 	      minVal=rolCnt[iLink];
 	      subrob=iLink>5?1:0;
@@ -130,7 +134,15 @@ void  RoIBuilder::m_rcv_proc()
 			    std::hex << fragment.fragmentStatus << std::dec<<
 			    " link:"<<rolId<<
 			    " l1id:"<<l1id);
-		  
+		  //check to see if the events list is locked by another thread
+		  // or a timeout check
+		  // this is a kluge to stall when others are accessing the full
+		  // list
+		  // this is also not air tight since changes might be
+		  // in progress when those routines start their event loop
+		  // but it avoids tying up the normal event processing
+		  while(!m_mutex.try_lock()) sched_yield();
+		  m_mutex.unlock();
 		  EventList::accessor m_eventsLocator;
 		  if (m_events.insert(m_eventsLocator, l1id)) {
 		    // A new element was inserted
@@ -199,7 +211,9 @@ RoIBuilder::~RoIBuilder()
   m_stop=true;
   for (uint32_t i=0;i<m_rcv_threads.size();i++) m_rcv_threads[i].join();
   if(DebugMe) ERS_LOG(" receive threads and their data cleaned up");
+  m_mutex.lock();
   for (EventList::iterator i=m_events.begin();i!=m_events.end();i++) delete i->second;
+  m_mutex.unlock();
 }
 
 void RoIBuilder::release(uint32_t lvl1id)
@@ -214,7 +228,7 @@ void RoIBuilder::release(uint32_t lvl1id)
 bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,uint32_t  & length)
 {
   std::chrono::time_point<std::chrono::high_resolution_clock> thistime;
-  const std::chrono::microseconds limit(100000);
+  const std::chrono::microseconds limit(1000);
   const uint32_t maxTot=1000000;
   const uint32_t maxCheck=10;
   bool timeout=false;
@@ -236,7 +250,7 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
       // check for stale entries every so often
       thistime=
 	std::chrono::high_resolution_clock::now();
-      //      m_evmutex.lock();
+      m_mutex.lock();
       for (const auto &myeventPair : m_events){
 	l1id = myeventPair.first;
 	ev = myeventPair.second;
@@ -250,6 +264,7 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
 	  break;
 	}
       }
+      m_mutex.unlock();
       if(!timeout){
 	ncheck=0;
       }

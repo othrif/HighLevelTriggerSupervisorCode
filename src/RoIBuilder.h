@@ -42,6 +42,7 @@ class RoIBuilder
   ROS::RobinNPROIB * m_module;
   uint32_t m_nrols;
   uint32_t m_nactive;
+  std::mutex m_mutex;
   std::set<uint32_t> m_active_chan;
   typedef tbb::concurrent_hash_map<uint32_t,builtEv *> EventList;
   EventList m_events;
