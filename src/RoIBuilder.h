@@ -21,8 +21,8 @@ class builtEv
  public:
   builtEv();
   ~builtEv();
- 
- std::chrono::time_point<std::chrono::high_resolution_clock> m_start;
+  std::chrono::time_point<std::chrono::high_resolution_clock> start() 
+    { return m_start;};
   uint32_t * data() { return m_data;};
   uint32_t count() { return m_count;};
   uint32_t size() {return m_size;};
@@ -31,8 +31,9 @@ class builtEv
   void free() {if( m_data) delete[] m_data;m_data=0;return;};
   void add(uint32_t w,uint32_t *d,uint32_t link);
  private:
-  uint32_t m_size;
-  uint32_t m_count;
+  std::chrono::time_point<std::chrono::high_resolution_clock> m_start;
+  std::atomic<uint32_t> m_size;
+  std::atomic<uint32_t> m_count;
   uint32_t * m_data;
   std::vector<uint32_t> m_links;
 };
@@ -42,7 +43,7 @@ class RoIBuilder
   ROS::RobinNPROIB * m_module;
   uint32_t m_nrols;
   uint32_t m_nactive;
-  std::mutex m_mutex;
+  tbb::concurrent_queue<uint32_t> m_l1ids;
   std::set<uint32_t> m_active_chan;
   typedef tbb::concurrent_hash_map<uint32_t,builtEv *> EventList;
   EventList m_events;

@@ -19,7 +19,7 @@ const bool DebugData=false;
 const uint32_t n_rcv_threads=2;
 const uint32_t maxBacklog=50;
 const uint32_t minBacklog=25;
-const uint32_t maxPendEv=200000;
+const uint32_t maxPendEv=1000000;
 
 builtEv::builtEv() :m_size(0),m_count(0),m_data(0)
 {
@@ -35,19 +35,16 @@ builtEv::~builtEv()
 void builtEv::add(uint32_t w,uint32_t *d,uint32_t link) {
 
   auto size = w < maxSize ? w-1: maxSize;
-
-  ::memcpy(&m_data[m_size], d, sizeof(uint32_t)*size);
-  
+  const uint32_t slot=m_size;
+  // move the size then copy the data
   m_size += size;
+  ::memcpy(&m_data[slot], d, sizeof(uint32_t)*size);
   m_count++;
   m_links.push_back(link);
 }
 
 void  RoIBuilder::m_rcv_proc()
 {
-
-  //  std::chrono::time_point<std::chrono::high_resolution_clock> thistime;
-  //  std::chrono::microseconds elapsed;
 
   // APIC CPU
   unsigned int pa, pb, pc, pd, pbb;
@@ -73,7 +70,6 @@ void  RoIBuilder::m_rcv_proc()
 	ERS_LOG(" Receive thread started");
 
   // loop reading out until asked to stop
-  builtEv * ev(0);
   uint32_t target=maxBacklog;
   uint32_t report=0;  
   while(!m_stop) {
@@ -83,24 +79,16 @@ void  RoIBuilder::m_rcv_proc()
 	if( m_running && m_done.size() < target ) {
 	  report=report>0?--report:0;
 	  if( m_events.size()>=maxPendEv && report <1 && myThread==0) {
-	    uint32_t counts[]={0,0,0,0,0,0,0,0,0,0,0,0};
 	    report=100000;
-	    ERS_LOG( "Way too many pending fragments:"<<m_events.size());
-	    m_mutex.lock();
-	    for ( auto ipt=m_events.begin();ipt!=m_events.end();ipt++){
-	      for( auto jjj : (*ipt).second->links()) 
-
-		counts[jjj]++;
-	    }
-	    for ( auto jjj=0;jjj<12;jjj++) ERS_LOG( " link" <<jjj << " counts:"<<counts[jjj]);
-	    m_mutex.unlock();
+	    ERS_LOG( "Way too many pending events:"<<m_events.size()<<
+		     " with "<<m_done.size() << " completed events");
 	  }
 	  target=maxBacklog;
 	  
 	  if(DebugMe) 
 	    ERS_LOG(" thread "<<myThread<<" initiating getFragment("
 		    <<subrob<<")"); 
-	  
+	  bool newL1id=false;
 	  auto fragment = m_module->getFragment(subrob);
 	  // check that the fragment is okay
 	  if(fragment.page->virtualAddress() == 0) {
@@ -134,36 +122,26 @@ void  RoIBuilder::m_rcv_proc()
 			    std::hex << fragment.fragmentStatus << std::dec<<
 			    " link:"<<rolId<<
 			    " l1id:"<<l1id);
-		  //check to see if the events list is locked by another thread
-		  // or a timeout check
-		  // this is a kluge to stall when others are accessing the full
-		  // list
-		  // this is also not air tight since changes might be
-		  // in progress when those routines start their event loop
-		  // but it avoids tying up the normal event processing
-		  while(!m_mutex.try_lock()) sched_yield();
-		  m_mutex.unlock();
 		  EventList::accessor m_eventsLocator;
 		  if (m_events.insert(m_eventsLocator, l1id)) {
 		    // A new element was inserted
-		    ev=new builtEv;
-		    m_eventsLocator->second=ev;
-		  } else {
-		    // The element existed already
-		    ev=(m_eventsLocator->second);
+		    m_eventsLocator->second=new builtEv;
+		    newL1id=true;
 		  }
+		  builtEv * & ev=m_eventsLocator->second;
 		  
 		  // Concatenate fragments with same l1id but different rols
 		  ev->add(fragment.dataSize,fragment.page->virtualAddress(),rolId);
 		  
 		  // fragment is built for l1id	
-		  if(ev->count()==m_active_chan.size()) {
+		  if(ev->count()==m_nactive) {
 		    if(DebugMe) 
 		      ERS_LOG("thread "<<myThread<<
 			      " built lvl1id:"<<l1id);
 		    m_done.push(ev);
 		  }
 		  
+		  if( newL1id) m_l1ids.push(l1id);
 		  m_module->recyclePage(fragment);
 		  
 	    }  else {
@@ -211,9 +189,7 @@ RoIBuilder::~RoIBuilder()
   m_stop=true;
   for (uint32_t i=0;i<m_rcv_threads.size();i++) m_rcv_threads[i].join();
   if(DebugMe) ERS_LOG(" receive threads and their data cleaned up");
-  m_mutex.lock();
   for (EventList::iterator i=m_events.begin();i!=m_events.end();i++) delete i->second;
-  m_mutex.unlock();
 }
 
 void RoIBuilder::release(uint32_t lvl1id)
@@ -223,94 +199,102 @@ void RoIBuilder::release(uint32_t lvl1id)
   if(m_events.find(m_eventsLocator,lvl1id)) {
 	delete m_eventsLocator->second;
 	m_events.erase(m_eventsLocator);
+  } else {
+    ERS_LOG(" could not find event:"<<lvl1id<<" for release");
   }
 }
 bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,uint32_t  & length)
 {
   std::chrono::time_point<std::chrono::high_resolution_clock> thistime;
-  const std::chrono::microseconds limit(1000);
+  const std::chrono::microseconds limit(30000000);
   const uint32_t maxTot=1000000;
   const uint32_t maxCheck=10;
   bool timeout=false;
   static uint32_t ncheck=0;
   std::chrono::microseconds elapsed;
   std::vector<uint32_t> linkList;
-  builtEv * ev;
+  builtEv * evdone;
+  uint32_t l1id_timedOut=0;
+  std::chrono::time_point<std::chrono::high_resolution_clock> time;
   count=0;
-  if(!m_done.empty() && (ncheck++ < maxTot || ncheck > maxTot+maxCheck)){
-    if( m_done.try_pop(ev)) {
-      l1id=ev->data()[5];
-      count=ev->count();
-      linkList=ev->links();
-    }
-    // if we already checked 10 wait for maxTot more events before checking
-    if(ncheck>=maxTot) ncheck=0;
-  } else {
-    if( ncheck>maxTot ){
-      // check for stale entries every so often
-      thistime=
-	std::chrono::high_resolution_clock::now();
-      m_mutex.lock();
-      for (const auto &myeventPair : m_events){
-	l1id = myeventPair.first;
-	ev = myeventPair.second;
-	elapsed=std::chrono::duration_cast<std::chrono::microseconds>
-	  (thistime-ev->m_start);
-	
-	if(elapsed>limit && ev->count()<m_nactive) {
-	  timeout=true;
-	  count=ev->count();
-	  linkList=ev->links();
-	  break;
-	}
-      }
-      m_mutex.unlock();
-      if(!timeout){
-	ncheck=0;
-      }
-    }
-  }
-  if( count == 0 ) {
-    // no timeouts and no events
-	return false;
-  }
-  length=ev->size();
-  roi_data=ev->data();
-  if(DebugMe) ERS_LOG(" lvl1id:"<<l1id<<" has "<<count<<" fragments"<<
+  // if we already checked 10 wait for maxTot more events before checking
+  if(ncheck>=maxTot+maxCheck) ncheck=0;
+  if(!m_done.empty() && ncheck++ < maxTot){
+    if( m_done.try_pop(evdone)) {
+      length=evdone->size();
+      count=evdone->count();
+      roi_data=evdone->data();
+      l1id=roi_data[5];
+      linkList=evdone->links();
+      if(DebugMe) ERS_LOG(" lvl1id:"<<l1id<<" has "<<count<<" fragments"<<
 					  " total size is "<< length << " in words");
-  if(count == m_nactive || timeout )
-	{ 
-	  std::string linksin;
-	  if(timeout) {
-		ERS_LOG(" event with lvl1id:"<<l1id<<" timed out "<<
-			elapsed.count());
-		ERS_LOG(" call to getnext returns true with " <<count << 
-				" fragments");
-		for (uint32_t i=0;i<linkList.size();i++) 
-		  linksin+=
-			static_cast<std::ostringstream*>( &(std::ostringstream() << linkList.at(i)))->str()+" ";
-		ERS_LOG("links:"<<linksin.c_str()<<"reported"); 
+      return true;
+      }
+  } else if( ncheck>=maxTot) {
+    // check for stale entries every so often
+    thistime=
+      std::chrono::high_resolution_clock::now();
+    std::queue<uint32_t>  restore;
+    while (m_l1ids.try_pop(l1id) ) {
+      EventList::accessor m_eventsLocator;
+      if(m_events.find(m_eventsLocator,l1id)) {
+	if( !timeout || m_events.size() >=maxPendEv) {
+	  builtEv * & ev=(m_eventsLocator)->second;
+	  time=ev->start();
+	  elapsed=std::chrono::duration_cast<std::chrono::microseconds>
+	    (thistime-time);
+	  if(m_events.size()>=maxPendEv) 
+	    ERS_LOG("l1id:"<<l1id<<" elapsed time:"<<elapsed.count());
+	  // check that this has timed out & has at least one link & less then
+	  //all links
+	  if((elapsed>limit && ev->count()<m_nactive && ev->count()>0)
+	     && !timeout) {
+	    timeout=true;
+	    l1id_timedOut=l1id;
 	  }
-	  if(DebugMe) 
-		{
-		  if(!timeout) {
-			for (uint32_t i=0;i<linkList.size();i++) 
-			  linksin+=
-				static_cast<std::ostringstream*>( &(std::ostringstream() << linkList.at(i)))->str()+" ";
-			ERS_LOG("links:"<<linksin.c_str()<<"reported"); 
-		  }
-		  ERS_LOG(" received a complete event with lvl1id:"<<l1id);
-		  if( !timeout) 
-			ERS_LOG(" call to getnext returns true with " <<count << 
-					" fragments");
-		  if( DebugData){
-			ERS_LOG(" data dump:");
-			for (uint32_t j=0;j<length;j++) 
-			  ERS_LOG(j<<":"<<std::hex<<roi_data[j]);
-		  }
-		}
-	  return true;
 	}
-  return false;
+	// save the order and all but the timedout l1id for restoring
+	if( l1id != l1id_timedOut || !timeout ) restore.push(l1id);
+      }
+    }
+    // put all but the ones cleared from the event list back
+    while (!restore.empty()){
+      m_l1ids.push(restore.front());
+      restore.pop();
+    }
+  }
+  // update the count in case a fragment came in on a timeout
+  EventList::accessor m_eventsLocator;
+  if(timeout && m_events.find(m_eventsLocator,l1id_timedOut)) {
+    builtEv * & ev=(m_eventsLocator)->second;
+    length=ev->size();
+    count=ev->count();
+    // make sure not to report a complete event here
+    if( count >= m_nactive ) return false;
+    timeout=count<m_nactive;
+    roi_data=ev->data();
+    l1id=roi_data[5];
+    linkList=ev->links();
+    time=ev->start();
+    elapsed=std::chrono::duration_cast<std::chrono::microseconds>
+      (thistime-time);
+    if(DebugMe) ERS_LOG(" lvl1id:"<<l1id<<" has "<<count<<" fragments"<<
+			" total size is "<< length << " in words");
+    ERS_LOG(" event with lvl1id:"<<l1id<<" timed out "<<
+	    elapsed.count());
+    ERS_LOG(" call to getnext returns true with " <<count << 
+	    " fragments");
+    std::string linksin;
+    for (uint32_t i=0;i<linkList.size();i++) 
+      linksin+=
+	static_cast<std::ostringstream*>( &(std::ostringstream() << linkList.at(i)))->str()+" ";
+    ERS_LOG("links:"<<linksin.c_str()<<"reported"); 
+    if( DebugData){
+      ERS_LOG(" data dump:");
+      for (uint32_t j=0;j<length;j++) 
+	ERS_LOG(j<<":"<<std::hex<<roi_data[j]);
+    }
+    return true;
+  } else return false;
 }
 

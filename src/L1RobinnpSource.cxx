@@ -171,14 +171,14 @@ namespace hltsv {
 	  } else {
 	  try{
 	    l1Result=nullptr;
+	    m_builder->release(lvl1_id);
+	    delete roi_data;
 	    ERS_LOG(" failed to find any links from this data, lvl1id:"<<lvl1_id);
 	    if(DebugData) { 
 	      ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
 	      // this is a serious error - likely the below is broken
 	      for(uint32_t j=0;j<length;j++) 
 		ERS_LOG(std::dec<<j<<":"<<std::hex<<roi_data[j]<<" "<<std::dec);
-	      m_builder->release(lvl1_id);
-	      delete roi_data;
 	    }
 	  }
 	  catch(...){
