@@ -27,6 +27,8 @@
 #include "DFdal/RoIBMasterTriggerPlugin.h"
 
 #include "RunControl/Common/OnlineServices.h"
+#include "RunControl/Common/RunControlCommands.h"
+#include "RunControl/FSM/FSMStates.h"
 
 #include "monsvc/MonitoringService.h"
 
@@ -42,6 +44,16 @@
 #include <algorithm>
 #include <chrono>
 #include <ctime>
+#include <boost/algorithm/string.hpp>
+
+namespace {
+  std::uint64_t ns()
+  {
+    timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return std::uint64_t(ts.tv_sec) * 1000000000 + std::uint64_t(ts.tv_nsec);
+  }
+}
 
 namespace hltsv {
 
@@ -301,56 +313,57 @@ namespace hltsv {
       return;
   }
 
+  void Activity::user(const daq::rc::UserCmd& cmd)
+  {
+    if (cmd.commandName() == "HLTSV_SET_DELAY") {
+      if (daq::rc::FSMStates::stringToState(cmd.currentFSMState()) < daq::rc::FSM_STATE::CONFIGURED) {
+        ERS_LOG("Received HLTSV_SET_DELAY command, but the application is not yet configured. Ignoring.");
+      } else if (cmd.commandParameters().size() != 1) {
+        ERS_LOG("Received HLTSV_SET_DELAY command with "
+                << cmd.commandParameters().size() <<
+                " parameters, but one parameter is needed. Ignoring.");
+      } else {
+        // Parse parameter
+        auto param = cmd.commandParameters().front();
+        if (param == "") {
+          // Read value from config
+          auto& conf = daq::rc::OnlineServices::instance().getConfiguration();
+          auto* self = conf.cast<daq::df::HLTSVApplication>(&daq::rc::OnlineServices::instance().getApplication());
+          m_event_delay = self->get_EventDelay();
+        } else {
+          // Parse value
+          try {
+            m_event_delay = boost::lexical_cast<unsigned int>(param);
+            ERS_LOG("Received HLTSV_SET_DELAY command with parameter "
+                    << cmd.commandParameters().front() <<
+                    ": target event delay updated to << "
+                    << m_event_delay << ".");
+          } catch (boost::bad_lexical_cast& ex) {
+            ERS_LOG("Received HLTSV_SET_DELAY command with parameter "
+                    << cmd.commandParameters().front() <<
+                    ", but could not parse parameter: " << ex.what()
+                    << ". Ignoring.");
+          }
+        }
+      }
+    } else {
+      ERS_LOG("Received unknown user command: " << cmd.commandName()
+              << ". Ignoring.");
+    }
+  }
 
   void Activity::l1_thread()
   {
     ERS_LOG("Starting l1 thread");
 
-    using namespace std::chrono;
-
-    const uint16_t target_delay = (m_event_delay & 0xFFFF0000) >> 16; // MSbits (first 16)
-    unsigned long ns_target_delay = target_delay*1e3; // target delay in ns  
-    nanoseconds t_target_delay = nanoseconds(ns_target_delay); // target_delay in count ticks
-
-    const uint16_t granularity = m_event_delay & 0x0000FFFF; //LSbits (last 16)
-    unsigned long us_granularity = granularity*1; // granularity in us
-    microseconds t_granularity = microseconds(us_granularity); // granularity in count ticks
-
-    uint32_t trigger_count = 0; // count when you should sleep
-    steady_clock::time_point t_last; // time since we started couting trigger_count
-
-    // # of events to skip between clock-checking
-    uint32_t correction_rate = t_granularity.count()/ ( (target_delay>0) ? target_delay : 1);
-    if(correction_rate == 0) correction_rate = 1; // 0 events does not make sense
-
-    // maximum number of trigger counts to average over.
-    // if this is too large, high frequency fluctuations may not be compensated.
-    // if it's too small, you won't have good average performance.
-    const uint32_t MAXIMUM_TRIGGER_COUNT = 1e9; // 1e9 / 100kHz = 2.8 hrs.
+    const std::uint64_t ms = 1000ull;
+    const std::uint64_t s = 1000ull * 1000ull;
+    std::uint64_t deadline = ns() + m_event_delay * ms;
 
     uint64_t m_assigned = 0;   // counter of events from L1Source
 
     while(m_running) {
 
-	if(m_event_delay != 0) {
-            
-            if ( (trigger_count == 0) || (trigger_count > MAXIMUM_TRIGGER_COUNT) ) {
-                t_last = steady_clock::now();
-                trigger_count = 0;
-            }
-            
-            if (trigger_count % correction_rate == 0) {
-                steady_clock::time_point now = steady_clock::now();
-                
-                duration<double> t_elapsed = duration_cast<duration<double>>(now - t_last);
-                auto t_delta = trigger_count * t_target_delay - t_elapsed;
-	    
-                std::this_thread::sleep_for(t_delta);
-                
-            }
-            trigger_count++;
-	}
-        
         try {
             std::shared_ptr<LVL1Result> result(m_l1source->getResult());
             if(result) {
@@ -370,6 +383,22 @@ namespace hltsv {
             ERS_LOG("Unknown exception thrown");
         }
         
+        std::uint64_t now = ns();
+        std::uint64_t period = m_event_delay * ms;
+        if (period != 0) {
+          if (now > deadline + 1 * s) {
+            // We overshot the deadline by more than 1 s. 
+            // Reset the next deadline
+            // and go immediately back to scheduling
+            deadline = now + period;
+          } else {
+            // Busy-wait until the deadline is reached.
+            while (now < deadline) {
+              now = ns();
+            }
+            deadline += period;
+          }
+        }
     }
 
     ERS_LOG("Finishing l1 thread");

@@ -17,6 +17,7 @@
 // for the io_service
 #include "HLTSVServer.h"
 
+#include <atomic>
 #include <vector>
 #include <thread>
 #include <memory>
@@ -54,6 +55,7 @@ namespace hltsv {
     void stopRecording(const daq::rc::TransitionCmd& ) override;
     void unconfigure(const daq::rc::TransitionCmd& ) override;
     void disconnect(const daq::rc::TransitionCmd& ) override;
+    void user(const daq::rc::UserCmd& cmd) override;
 
   private:
 
@@ -64,7 +66,7 @@ namespace hltsv {
     void l1_thread();
 
     // To delay events in SV
-    unsigned int                   m_event_delay;
+    std::atomic<unsigned int>                   m_event_delay;
     
     // To keep the io_service running.
     std::unique_ptr<std::vector<boost::asio::io_service::work>> m_work;
