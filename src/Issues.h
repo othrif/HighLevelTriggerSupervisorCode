@@ -53,51 +53,10 @@ ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
 			)
 
 ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
-			SlinkFailed, // issue class name
-			hltsv::Issue, //base class name
-			" Caught SLink Exception", //message
-                        ERS_EMPTY,
-                        ERS_EMPTY
-			)
-
-ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
-			ErrorRecovery, // issue class name
-			hltsv::Issue, //base class name
-			" Error Recovery"<<
-			what<<"\".", //message
-                        ERS_EMPTY,
-			((const char*) what )) //attribute of this class
-
-ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
-			InitialisationFailure, // issue class name
-			hltsv::Issue, //base class name
-			" Initialisation failed, "<<
-			what<<"\".", //message
-                        ERS_EMPTY,
-			((const char*) what )) //attribute of this class
-
-ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
 			ConfigFailed, // issue class name
 			hltsv::Issue, //base class name
 			" Configuration failed "<<
 			what<<"\".", //message
-                        ERS_EMPTY,
-			((const char*) what )) //attribute of this class
-
-
-ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
-			EventFailed, // issue class name
-			hltsv::Issue, //base class name
-			" Event Processing problem "<<
-			what << "\".", //message
-                        ERS_EMPTY,
-			((const char*) what )) //attribute of this class
-
-ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
-			MasterTriggerIssue, // issue class name
-			hltsv::Issue, //base class name
-			" Master Trigger Issue: "<<
-			what << "\".", //message
                         ERS_EMPTY,
 			((const char*) what )) //attribute of this class
 
