@@ -116,10 +116,10 @@ library svl1ttc2lan L1TTC2LANSource.cxx
 macro svl1ttc2lan_shlibflags "-leformat_write -leformat -lasyncmsg"
 macro svl1ttc2lan_dependencies "daq-hltsv-dal"
 
-macro constituents "hltsv hltsv_main svl1internal svl1preloaded svl1ttc2lan test_l1source testDCM testROS testTTC2LAN svl1robinnp" \
+macro constituents "hltsv hltsv_main svl1internal svl1preloaded svl1filar svl1ttc2lan test_l1source testDCM testROS testTTC2LAN svl1robinnp" \
       i686 "hltsv hltsv_main svl1internal svl1preloaded svl1filar svl1ttc2lan test_l1source testDCM testROS testTTC2LAN"
 
-macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1ttc2lan.so libsvl1robinnp.so libdaq-hltsv-dal.so" \
+macro to_install "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1filar.so libsvl1ttc2lan.so libsvl1robinnp.so libdaq-hltsv-dal.so" \
       i686 "libhltsv.so libsvl1internal.so libsvl1preloaded.so libsvl1filar.so libsvl1ttc2lan.so libdaq-hltsv-dal.so" 
 
 #
