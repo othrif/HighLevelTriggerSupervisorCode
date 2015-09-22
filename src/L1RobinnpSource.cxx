@@ -105,16 +105,16 @@ namespace hltsv {
   {
 
 
-  // Thread and CPU Ids
-	unsigned int pa, pb, pc, pd, pbb;
-  __asm__("cpuid" : "=a" (pa), "=b" (pb), "=c" (pc), "=d" (pd) : "0" (1));
-  pbb = pb >> 24;
   static bool once=false;
   if(!once){
-  pid_t myID=syscall(SYS_gettid);
-  ERS_LOG(" getResult thread started with id:"<<myID << " in CPU with id:"
-		  << pbb );
-  once = true;
+    pid_t myID=syscall(SYS_gettid);
+    // Thread and CPU Ids
+    unsigned int pa, pb, pc, pd, pbb;
+    __asm__("cpuid" : "=a" (pa), "=b" (pb), "=c" (pc), "=d" (pd) : "0" (1));
+    pbb = pb >> 24;
+    ERS_LOG(" getResult thread started with id:"<<myID << " in CPU with id:"
+	    << pbb );
+    once = true;
   }
 
 

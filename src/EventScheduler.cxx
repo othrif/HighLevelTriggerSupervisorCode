@@ -37,7 +37,7 @@ namespace hltsv {
         // m_stats->ProcessedEvents += finished_events;
 
         while(count-- > 0) {
-            m_free_cores.push(dcm);
+	    m_free_cores.push(dcm);
         }
 
         {
@@ -68,18 +68,17 @@ namespace hltsv {
 
         // First try to work on the re-assigned events if there are any
         push_events();
-
         // now handle the new event
         do {
             // might block
-            m_free_cores.pop(dcm);
-            real_dcm = dcm.lock();
-            if(real_dcm) {
-                if(!real_dcm->handle_event(rois)) {
-                    continue;
-                }
-                // m_stats->AssignedEvents++;
-            }
+	    m_free_cores.pop(dcm);
+	    real_dcm = dcm.lock();
+	    if(real_dcm) {
+		if(!real_dcm->handle_event(rois)) {
+		    continue;
+		}
+		// m_stats->AssignedEvents++;
+	    }
         } while(!real_dcm);        
 
         hltsv->AssignedEvents++;
@@ -93,11 +92,10 @@ namespace hltsv {
         std::shared_ptr<LVL1Result> revent;
 
         unsigned int events = 0;
-
         while(m_reassigned_events.try_pop(revent)) {
             do {
                 // might block
-                m_free_cores.pop(dcm);
+		m_free_cores.pop(dcm);
                 real_dcm = dcm.lock();
                 if(real_dcm) {
                     if(!real_dcm->handle_event(revent)) {

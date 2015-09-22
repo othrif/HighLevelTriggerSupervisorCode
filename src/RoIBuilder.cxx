@@ -14,11 +14,9 @@
 
 std::atomic<unsigned int> nThread(0);
 const bool DebugMe=false;
-const bool TimeMe=false;
 const bool DebugData=false;
 const uint32_t n_rcv_threads=2;
 const uint32_t maxBacklog=50;
-const uint32_t minBacklog=25;
 const uint32_t maxPendEv=1000000;
 
 builtEv::builtEv() :m_size(0),m_count(0),m_data(0)
@@ -70,20 +68,19 @@ void  RoIBuilder::m_rcv_proc()
 	ERS_LOG(" Receive thread started");
 
   // loop reading out until asked to stop
-  uint32_t target=maxBacklog;
   uint32_t report=0;  
   while(!m_stop) {
 
 	if(m_module == 0 ) 
 	  return;
-	if( m_running && m_done.size() < target ) {
+	if( m_running && m_done.size() < maxBacklog) {
+	  // report odd stuff but only every 10000'th time it happens
+	  if (report == 0 ) report=10000; 
 	  report=report>0?--report:0;
-	  if( m_events.size()>=maxPendEv && report <1 && myThread==0) {
-	    report=100000;
+	  if( m_events.size()>=maxPendEv && report == 0 && myThread==0) {
 	    ERS_LOG( "Way too many pending events:"<<m_events.size()<<
 		     " with "<<m_done.size() << " completed events");
 	  }
-	  target=maxBacklog;
 	  
 	  if(DebugMe) 
 	    ERS_LOG(" thread "<<myThread<<" initiating getFragment("
@@ -100,7 +97,7 @@ void  RoIBuilder::m_rcv_proc()
 	  rolCnt[rolId]++;
 	  // next read is from the subrob with the lowest count in one of its links
 	  uint64_t minVal=0xFFFFFFFFFFFFFFFF;
-	  for( auto iLink=0;iLink<m_nrols;iLink++) if(rolCnt[iLink]<minVal){
+	  for( auto iLink:m_active_chan) if(rolCnt[iLink]<minVal){
 	      minVal=rolCnt[iLink];
 	      subrob=iLink>5?1:0;
 	    }	  
@@ -117,7 +114,7 @@ void  RoIBuilder::m_rcv_proc()
 	      
 		  
 		  // Check status element
-		  if(fragment.fragmentStatus != 0 && DebugMe ) 
+		  if(fragment.fragmentStatus != 0 ) 
 		    ERS_LOG("Fragment status " << 
 			    std::hex << fragment.fragmentStatus << std::dec<<
 			    " link:"<<rolId<<
@@ -134,10 +131,12 @@ void  RoIBuilder::m_rcv_proc()
 		  ev->add(fragment.dataSize,fragment.page->virtualAddress(),rolId);
 		  
 		  // fragment is built for l1id	
-		  if(ev->count()==m_nactive) {
+		  if(ev->count()>=m_nactive) {
 		    if(DebugMe) 
 		      ERS_LOG("thread "<<myThread<<
 			      " built lvl1id:"<<l1id);
+		    // this will block until the list of done events drains
+		    // below maxBacklog
 		    m_done.push(ev);
 		  }
 		  
@@ -153,11 +152,9 @@ void  RoIBuilder::m_rcv_proc()
 	    
 	  }
 	} else {
-	  target=minBacklog;
-	  //ERS_LOG("thread "<<myThread<< " I'm in backpressure.");
+	  usleep(10);
 	  sched_yield();
 	}
-	continue;
   }
 }
 
@@ -211,6 +208,7 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
   const uint32_t maxCheck=10;
   bool timeout=false;
   static uint32_t ncheck=0;
+  static uint32_t lastId=0;
   std::chrono::microseconds elapsed;
   std::vector<uint32_t> linkList;
   builtEv * evdone;
@@ -218,44 +216,47 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
   std::chrono::time_point<std::chrono::high_resolution_clock> time;
   count=0;
   // if we already checked 10 wait for maxTot more events before checking
-  if(ncheck>=maxTot+maxCheck) ncheck=0;
-  if(!m_done.empty() && ncheck++ < maxTot){
+  if(++ncheck>maxTot+maxCheck) ncheck=0;
+  if( ncheck < maxTot){
     if( m_done.try_pop(evdone)) {
       length=evdone->size();
       count=evdone->count();
       roi_data=evdone->data();
       l1id=roi_data[5];
-      linkList=evdone->links();
       if(DebugMe) ERS_LOG(" lvl1id:"<<l1id<<" has "<<count<<" fragments"<<
 					  " total size is "<< length << " in words");
+      lastId=l1id;
       return true;
-      }
-  } else if( ncheck>=maxTot) {
+    } else return false;
+  } else {
     // check for stale entries every so often
     thistime=
       std::chrono::high_resolution_clock::now();
     std::queue<uint32_t>  restore;
     while (m_l1ids.try_pop(l1id) ) {
-      EventList::accessor m_eventsLocator;
-      if(m_events.find(m_eventsLocator,l1id)) {
-	if( !timeout || m_events.size() >=maxPendEv) {
-	  builtEv * & ev=(m_eventsLocator)->second;
-	  time=ev->start();
-	  elapsed=std::chrono::duration_cast<std::chrono::microseconds>
-	    (thistime-time);
-	  if(m_events.size()>=maxPendEv) 
-	    ERS_LOG("l1id:"<<l1id<<" elapsed time:"<<elapsed.count());
-	  // check that this has timed out & has at least one link & less then
-	  //all links
-	  if((elapsed>limit && ev->count()<m_nactive && ev->count()>0)
-	     && !timeout) {
-	    timeout=true;
-	    l1id_timedOut=l1id;
+      // don't consider an event timed out unless it is prior to
+      // a completed event since long term buffering occurs in the
+      // robinnp
+      if( l1id < lastId) {
+	EventList::const_accessor m_eventsLocator;
+	if(m_events.find(m_eventsLocator,l1id)) {
+	  if( !timeout ) {
+	    builtEv * const & ev=(m_eventsLocator)->second;
+	    time=ev->start();
+	    elapsed=std::chrono::duration_cast<std::chrono::microseconds>
+	      (thistime-time);
+	    // check that this has timed out & has at least one link & less then
+	    //all links
+	    if((elapsed>limit && ev->count()<m_nactive && ev->count()>0)
+	       && !timeout) {
+	      timeout=true;
+	      l1id_timedOut=l1id;
+	    }
 	  }
+	  // save the order and all but the timedout l1id for restoring
+	  if( l1id != l1id_timedOut || !timeout ) restore.push(l1id);
 	}
-	// save the order and all but the timedout l1id for restoring
-	if( l1id != l1id_timedOut || !timeout ) restore.push(l1id);
-      }
+      } else restore.push(l1id);
     }
     // put all but the ones cleared from the event list back
     while (!restore.empty()){
@@ -270,16 +271,16 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
     length=ev->size();
     count=ev->count();
     // make sure not to report a complete event here
-    if( count >= m_nactive ) return false;
-    timeout=count<m_nactive;
+    if( count >= m_nactive ){
+      if(DebugMe) ERS_LOG(" event completed while processing timeout");
+      return false;
+    }
     roi_data=ev->data();
     l1id=roi_data[5];
     linkList=ev->links();
     time=ev->start();
     elapsed=std::chrono::duration_cast<std::chrono::microseconds>
       (thistime-time);
-    if(DebugMe) ERS_LOG(" lvl1id:"<<l1id<<" has "<<count<<" fragments"<<
-			" total size is "<< length << " in words");
     ERS_LOG(" event with lvl1id:"<<l1id<<" timed out "<<
 	    elapsed.count());
     ERS_LOG(" call to getnext returns true with " <<count << 

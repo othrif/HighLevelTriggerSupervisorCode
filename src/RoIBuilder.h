@@ -12,6 +12,7 @@
 #include "ROSEventFragment/ROBFragment.h"
 #include "tbb/concurrent_hash_map.h"
 #include "tbb/concurrent_queue.h"
+#include <unistd.h>
 
 const uint  maxLinks=12;
 const uint maxSize=128;
