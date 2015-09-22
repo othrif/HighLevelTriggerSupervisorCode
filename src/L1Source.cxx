@@ -51,7 +51,7 @@ namespace hltsv {
         m_hlt_prescale = hltp;
         m_hlt_counter = m_lb + 1;
         m_cond.notify_one();
-        ERS_LOG("Set prescales: " << l1p << ' ' << hltp)
+        ERS_LOG("Set prescales: " << l1p << ' ' << hltp);
     }
 
     void L1Source::setL1Prescales(uint32_t l1p) 
