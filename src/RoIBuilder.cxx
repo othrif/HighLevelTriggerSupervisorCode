@@ -18,6 +18,8 @@ const bool DebugData=false;
 const uint32_t n_rcv_threads=2;
 const uint32_t maxBacklog=50;
 const uint32_t maxPendEv=1000000;
+std::string dir="/DEBUG/RoIBHistograms/";
+std::set<std::string> hist_names;
 
 builtEv::builtEv() :m_size(0),m_count(0),m_data(0)
 {
@@ -40,7 +42,9 @@ void builtEv::add(uint32_t w,uint32_t *d,uint32_t link) {
   m_count++;
   m_links.push_back(link);
 }
-
+void builtEv::finish() {
+  m_complete=std::chrono::high_resolution_clock::now();
+}
 void  RoIBuilder::m_rcv_proc()
 {
 
@@ -137,6 +141,7 @@ void  RoIBuilder::m_rcv_proc()
 			      " built lvl1id:"<<l1id);
 		    // this will block until the list of done events drains
 		    // below maxBacklog
+		    ev->finish();
 		    m_done.push(ev);
 		  }
 		  
@@ -176,6 +181,37 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
 	if(m_active_chan.find(i) != m_active_chan.end() )
 	  if(DebugMe) ERS_LOG(" ROL "<<i<<" interogated and enabled");
   }
+  // set up histograms
+  std::string name="Time to complete";
+  m_timeComplete_hist=
+    new TH1F(name.c_str(),"assembly time;microseconds;",
+	     100,0,1000000);
+  monsvc::MonitoringService::instance().register_object(dir+name,m_timeComplete_hist);
+  hist_names.insert(name);
+  name="Time to process";
+  m_timeProcess_hist=
+    new TH1F(name.c_str(),"total processing time;microseconds;",100,0,1000000);
+  monsvc::MonitoringService::instance().register_object(dir+name,m_timeProcess_hist);
+  hist_names.insert(name);
+  name="Fragment count";
+  m_nFrags_hist=new TH1F(name.c_str(),"number of fragments;;",12,0,12);
+  monsvc::MonitoringService::instance().register_object(dir+name,m_nFrags_hist);
+  hist_names.insert(name);
+  name="Pending event count";
+  m_NPending_hist=new TH1F(name.c_str(),"number of pending events;;",
+			   100,0,100000);
+  monsvc::MonitoringService::instance().register_object(dir+name,m_NPending_hist);
+  hist_names.insert(name);
+  name="time elapsed for timeouts";
+  m_timeout_hist= new TH1F(name.c_str(),"elapsed time;microseconds;",
+			   100,0,100000);
+  monsvc::MonitoringService::instance().register_object(dir+name,m_timeout_hist);
+  hist_names.insert(name);
+  name="link missed";
+  m_missedLink_hist=new TH1F(name.c_str(),"missing links in timeouts;;",
+			     12,0,12);
+  monsvc::MonitoringService::instance().register_object(dir+name,m_missedLink_hist);
+  hist_names.insert(name);
   // for now we spawn readout threads
   for (uint32_t i=0;i<n_rcv_threads;i++) m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this));
 }
@@ -187,6 +223,9 @@ RoIBuilder::~RoIBuilder()
   for (uint32_t i=0;i<m_rcv_threads.size();i++) m_rcv_threads[i].join();
   if(DebugMe) ERS_LOG(" receive threads and their data cleaned up");
   for (EventList::iterator i=m_events.begin();i!=m_events.end();i++) delete i->second;
+  for (auto name:hist_names)
+  monsvc::MonitoringService::instance().remove_object(dir+name);
+
 }
 
 void RoIBuilder::release(uint32_t lvl1id)
@@ -225,7 +264,25 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
       l1id=roi_data[5];
       if(DebugMe) ERS_LOG(" lvl1id:"<<l1id<<" has "<<count<<" fragments"<<
 					  " total size is "<< length << " in words");
+      // check for wrapping of the l1id's (since the receive threads
+      // act independently make sure it is not just one getting there early
+      // the 128 is absolutely arbitrary
+      if( l1id+128<lastId ) ERS_LOG(" lvl1id has wrapped.  This id:"<<l1id<<
+				" previous lvl1id was:"<<lastId);
       lastId=l1id;
+      time=evdone->start();
+      thistime=evdone->complete();
+      // the time for the event to be fully collected
+      elapsed=std::chrono::duration_cast<std::chrono::microseconds>
+	(thistime-time);
+      m_timeComplete_hist->Fill(elapsed.count());
+      thistime=
+	std::chrono::high_resolution_clock::now();
+      // the time for the event to be fully processed
+      elapsed=std::chrono::duration_cast<std::chrono::microseconds>
+	(thistime-time);
+      m_timeProcess_hist->Fill(elapsed.count());
+      m_nFrags_hist->Fill(count);
       return true;
     } else return false;
   } else {
@@ -233,6 +290,7 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
     thistime=
       std::chrono::high_resolution_clock::now();
     std::queue<uint32_t>  restore;
+    m_NPending_hist->Fill(m_events.size());
     while (m_l1ids.try_pop(l1id) ) {
       // don't consider an event timed out unless it is prior to
       // a completed event since long term buffering occurs in the
@@ -285,6 +343,15 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
 	    elapsed.count());
     ERS_LOG(" call to getnext returns true with " <<count << 
 	    " fragments");
+    m_nFrags_hist->Fill(count);
+    m_timeout_hist->Fill(elapsed.count());
+    std::set<uint32_t> missingLinks=m_active_chan;
+    for (auto i:linkList) 
+      {
+	auto loc=missingLinks.find(i);
+	if(loc != missingLinks.end() ) missingLinks.erase(loc);
+      }
+    for( auto i:missingLinks) m_missedLink_hist->Fill(i);
     std::string linksin;
     for (uint32_t i=0;i<linkList.size();i++) 
       linksin+=

@@ -8,11 +8,14 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
+#include <string>
 #include "ROSRobinNP/RobinNPROIB.h"
 #include "ROSEventFragment/ROBFragment.h"
 #include "tbb/concurrent_hash_map.h"
 #include "tbb/concurrent_queue.h"
 #include <unistd.h>
+#include "monsvc/MonitoringService.h"
+#include <TH1F.h>
 
 const uint  maxLinks=12;
 const uint maxSize=128;
@@ -24,6 +27,8 @@ class builtEv
   ~builtEv();
   std::chrono::time_point<std::chrono::high_resolution_clock> start() 
     { return m_start;};
+  std::chrono::time_point<std::chrono::high_resolution_clock> complete() 
+    { return m_complete;};
   uint32_t * data() { return m_data;};
   uint32_t count() { return m_count;};
   uint32_t size() {return m_size;};
@@ -31,8 +36,10 @@ class builtEv
   std::vector<uint32_t> links() {return m_links;} ;
   void free() {if( m_data) delete[] m_data;m_data=0;return;};
   void add(uint32_t w,uint32_t *d,uint32_t link);
+  void finish();
  private:
   std::chrono::time_point<std::chrono::high_resolution_clock> m_start;
+  std::chrono::time_point<std::chrono::high_resolution_clock> m_complete;
   std::atomic<uint32_t> m_size;
   std::atomic<uint32_t> m_count;
   uint32_t * m_data;
@@ -41,6 +48,12 @@ class builtEv
 class RoIBuilder
 {
  private:
+  TH1F * m_timeComplete_hist;
+  TH1F *m_timeProcess_hist;
+  TH1F *m_nFrags_hist;
+  TH1F * m_NPending_hist;
+  TH1F * m_timeout_hist;
+  TH1F * m_missedLink_hist;
   ROS::RobinNPROIB * m_module;
   uint32_t m_nrols;
   uint32_t m_nactive;
