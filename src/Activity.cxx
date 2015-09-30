@@ -119,8 +119,8 @@ namespace hltsv {
         m_cmdReceiver = new daq::trigger::CommandedTrigger(part, daq::rc::OnlineServices::instance().applicationName(), m_l1source);
     }
 
-    m_publisher.reset(new monsvc::PublishingController(part,daq::rc::OnlineServices::instance().applicationName()));
-    m_publisher->add_configuration_rules(conf);
+    m_publisher.reset(new monsvc::PublishingController(part,"HLTSV"));
+    m_publisher->add_configuration_rules(conf, self);
 
     m_io_services.reset(new std::vector<boost::asio::io_service>(self->get_NumberOfAssignThreads()));
 
