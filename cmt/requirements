@@ -27,6 +27,7 @@ use ROSUtilities
 use ROSRobinNP
 use ROSMemoryPoolNP
 use ROSDescriptorNP
+use ROSModulesNP
 use RunControl
 use TriggerCommander
 use TTCInfo
