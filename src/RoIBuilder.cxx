@@ -12,20 +12,17 @@
 #include <sstream>
 #include <ostream>
 
-std::atomic<unsigned int> nThread(0);
 const bool DebugMe=false;
 const bool DebugData=false;
-const uint32_t n_rcv_threads=2;
-const uint32_t maxBacklog=50;
-const uint32_t maxPendEv=1000000;
 std::string dir="/DEBUG/RoIBHistograms/";
 std::set<std::string> hist_names;
 
-builtEv::builtEv() :m_size(0),m_count(0),m_data(0)
+builtEv::builtEv(uint64_t l1id64) :
+  m_size(0),m_count(0),m_data(0),m_l1id64(l1id64)
 {
   m_start=std::chrono::high_resolution_clock::now();
   m_data=new uint32_t[maxEvWords];
-  for (uint i=0;i<maxEvWords;i++)m_data[i]=0;
+  memset(m_data,0,sizeof(uint32_t)*maxEvWords);
 }
 
 builtEv::~builtEv()
@@ -39,58 +36,41 @@ void builtEv::add(uint32_t w,uint32_t *d,uint32_t link) {
   // move the size then copy the data
   m_size += size;
   ::memcpy(&m_data[slot], d, sizeof(uint32_t)*size);
+  m_links[m_count]=link;
   m_count++;
-  m_links.push_back(link);
 }
 void builtEv::finish() {
   m_complete=std::chrono::high_resolution_clock::now();
 }
-void  RoIBuilder::m_rcv_proc()
+void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 {
-
-  // APIC CPU
-  unsigned int pa, pb, pc, pd, pbb;
-  __asm__("cpuid" : "=a" (pa), "=b" (pb), "=c" (pc), "=d" (pd) : "0" (1)); 
-  pbb = pb >> 24;
-
+  uint32_t Nwrap[]={0,0,0,0,0,0,0,0,0,0,0,0};
+  uint32_t lastId[]={0,0,0,0,0,0,0,0,0,0,0,0};  
   uint32_t rolId;
   uint64_t rolCnt[]={0,0,0,0,0,0,0,0,0,0,0,0};
-  // Process Id
-  pid_t myID=syscall(SYS_gettid);
-  const uint32_t myThread=(uint32_t)nThread;
-  nThread++;
-
   uint32_t MaxSubrob=(m_active_chan.size()>6?1:0);
   uint32_t subrob=myThread;
+  uint64_t el1id;
   subrob=subrob%(MaxSubrob+1);
-
+  pid_t myID=syscall(SYS_gettid);
   ERS_LOG(" Receive thread "<<myThread<<" started with id:"<<myID << 
-		  " in CPU with id:"<< pbb<<
 		  " MaxSubrob="<<MaxSubrob<<" starting subrob:"<<subrob);
 
   if(DebugMe ) 
 	ERS_LOG(" Receive thread started");
 
   // loop reading out until asked to stop
-  uint32_t report=0;  
   while(!m_stop) {
 
 	if(m_module == 0 ) 
 	  return;
-	if( m_running && m_done.size() < maxBacklog) {
-	  // report odd stuff but only every 10000'th time it happens
-	  if (report == 0 ) report=10000; 
-	  report=report>0?--report:0;
-	  if( m_events.size()>=maxPendEv && report == 0 && myThread==0) {
-	    ERS_LOG( "Way too many pending events:"<<m_events.size()<<
-		     " with "<<m_done.size() << " completed events");
-	  }
-	  
+	if( m_running ) {
 	  if(DebugMe) 
 	    ERS_LOG(" thread "<<myThread<<" initiating getFragment("
 		    <<subrob<<")"); 
 	  bool newL1id=false;
 	  auto fragment = m_module->getFragment(subrob);
+	  m_subrobReq_hist[myThread]->Fill(subrob);
 	  // check that the fragment is okay
 	  if(fragment.page->virtualAddress() == 0) {
 	    ERS_LOG(" thread "<<myThread<<" invalid data from RobinNP");
@@ -98,6 +78,7 @@ void  RoIBuilder::m_rcv_proc()
 	  }
 	  
 	  rolId=fragment.rolId;
+	  m_readLink_hist[myThread]->Fill(rolId);
 	  rolCnt[rolId]++;
 	  // next read is from the subrob with the lowest count in one of its links
 	  uint64_t minVal=0xFFFFFFFFFFFFFFFF;
@@ -111,8 +92,13 @@ void  RoIBuilder::m_rcv_proc()
 	      
 	      
 	      uint32_t l1id=*(fragment.page->virtualAddress()+5);
-	      
-	      
+	      //check for ID wrap around
+	      if( (0xFFF00000&l1id)<(0xFFF00000&lastId[rolId])) {
+		ERS_LOG("l1id has wrapped, this l1id:"<<l1id<<" previous id:"
+			<<lastId <<" link:"<<rolId);
+		Nwrap[rolId]++;
+	      }
+	      lastId[rolId]=l1id;
 	      if(DebugMe ) 
 		ERS_LOG("thread "<<myThread<<" Processing fragment with l1id " << l1id << " from ROL " << rolId);
 	      
@@ -124,9 +110,10 @@ void  RoIBuilder::m_rcv_proc()
 			    " link:"<<rolId<<
 			    " l1id:"<<l1id);
 		  EventList::accessor m_eventsLocator;
-		  if (m_events.insert(m_eventsLocator, l1id)) {
+		  el1id=(uint64_t)l1id|(uint64_t)Nwrap[rolId]<<32;
+		  if (m_events.insert(m_eventsLocator, el1id)) {
 		    // A new element was inserted
-		    m_eventsLocator->second=new builtEv;
+		    m_eventsLocator->second=new builtEv(el1id);
 		    newL1id=true;
 		  }
 		  builtEv * & ev=m_eventsLocator->second;
@@ -145,7 +132,7 @@ void  RoIBuilder::m_rcv_proc()
 		    m_done.push(ev);
 		  }
 		  
-		  if( newL1id) m_l1ids.push(l1id);
+		  if( newL1id) m_l1ids.push(el1id);
 		  m_module->recyclePage(fragment);
 		  
 	    }  else {
@@ -156,9 +143,6 @@ void  RoIBuilder::m_rcv_proc()
 	    m_module->recyclePage(fragment);
 	    
 	  }
-	} else {
-	  usleep(10);
-	  sched_yield();
 	}
   }
 }
@@ -169,6 +153,8 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
    m_running(false),
    m_nrols(nrols)
 {
+  const uint32_t n_rcv_threads=2;
+  const uint32_t maxBacklog=50;
   // stop reading once you reach the maximum number of events
   m_done.set_capacity(maxBacklog);
   m_nactive=0;
@@ -194,7 +180,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   monsvc::MonitoringService::instance().register_object(dir+name,m_timeProcess_hist);
   hist_names.insert(name);
   name="Fragment count";
-  m_nFrags_hist=new TH1F(name.c_str(),"number of fragments;;",12,0,12);
+  m_nFrags_hist=new TH1F(name.c_str(),"number of fragments;;",13,-.5,12.5);
   monsvc::MonitoringService::instance().register_object(dir+name,m_nFrags_hist);
   hist_names.insert(name);
   name="Pending event count";
@@ -213,7 +199,23 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   monsvc::MonitoringService::instance().register_object(dir+name,m_missedLink_hist);
   hist_names.insert(name);
   // for now we spawn readout threads
-  for (uint32_t i=0;i<n_rcv_threads;i++) m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this));
+  for (uint32_t i=0;i<n_rcv_threads;i++) {
+    m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this,i));
+    char histname[50];
+    sprintf(histname,"links read by thread %d",i);
+    name =std::string(histname);
+    m_readLink_hist[i]=new TH1F(histname,"channels read;;",
+				maxLinks,-.5,maxLinks-.5);
+    monsvc::MonitoringService::instance().register_object(dir+name,
+							  m_readLink_hist[i]);
+    hist_names.insert(name);
+    sprintf(histname,"subrobs read by thread %d",i);
+    name =std::string(histname);
+    m_subrobReq_hist[i]=new TH1F(histname,"subrob requests;;",2,-.5,1.5);
+    monsvc::MonitoringService::instance().register_object(dir+name,
+							  m_subrobReq_hist[i]);
+    hist_names.insert(name);
+  }
 }
 
 RoIBuilder::~RoIBuilder()
@@ -247,11 +249,12 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
   const uint32_t maxCheck=10;
   bool timeout=false;
   static uint32_t ncheck=0;
-  static uint32_t lastId=0;
+  static uint64_t lastId=0;
   std::chrono::microseconds elapsed;
-  std::vector<uint32_t> linkList;
+  const uint32_t * linkList;
   builtEv * evdone;
-  uint32_t l1id_timedOut=0;
+  uint64_t l1id_timedOut=0;
+  uint64_t el1id;
   std::chrono::time_point<std::chrono::high_resolution_clock> time;
   count=0;
   // if we already checked 10 wait for maxTot more events before checking
@@ -262,14 +265,10 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
       count=evdone->count();
       roi_data=evdone->data();
       l1id=roi_data[5];
+      el1id=evdone->l1id64();
       if(DebugMe) ERS_LOG(" lvl1id:"<<l1id<<" has "<<count<<" fragments"<<
-					  " total size is "<< length << " in words");
-      // check for wrapping of the l1id's (since the receive threads
-      // act independently make sure it is not just one getting there early
-      // the 128 is absolutely arbitrary
-      if( l1id+128<lastId ) ERS_LOG(" lvl1id has wrapped.  This id:"<<l1id<<
-				" previous lvl1id was:"<<lastId);
-      lastId=l1id;
+			  " total size is "<< length << " in words");
+      if( lastId<el1id ) lastId=el1id;
       time=evdone->start();
       thistime=evdone->complete();
       // the time for the event to be fully collected
@@ -289,15 +288,15 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
     // check for stale entries every so often
     thistime=
       std::chrono::high_resolution_clock::now();
-    std::queue<uint32_t>  restore;
+    std::queue<uint64_t>  restore;
     m_NPending_hist->Fill(m_events.size());
-    while (m_l1ids.try_pop(l1id) ) {
+    while (m_l1ids.try_pop(el1id) ) {
       // don't consider an event timed out unless it is prior to
       // a completed event since long term buffering occurs in the
       // robinnp
-      if( l1id < lastId) {
+      if( el1id < lastId) {
 	EventList::const_accessor m_eventsLocator;
-	if(m_events.find(m_eventsLocator,l1id)) {
+	if(m_events.find(m_eventsLocator,el1id)) {
 	  if( !timeout ) {
 	    builtEv * const & ev=(m_eventsLocator)->second;
 	    time=ev->start();
@@ -308,13 +307,13 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
 	    if((elapsed>limit && ev->count()<m_nactive && ev->count()>0)
 	       && !timeout) {
 	      timeout=true;
-	      l1id_timedOut=l1id;
+	      l1id_timedOut=el1id;
 	    }
 	  }
 	  // save the order and all but the timedout l1id for restoring
-	  if( l1id != l1id_timedOut || !timeout ) restore.push(l1id);
+	  if( l1id != l1id_timedOut || !timeout ) restore.push(el1id);
 	}
-      } else restore.push(l1id);
+      } else restore.push(el1id);
     }
     // put all but the ones cleared from the event list back
     while (!restore.empty()){
@@ -346,16 +345,17 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
     m_nFrags_hist->Fill(count);
     m_timeout_hist->Fill(elapsed.count());
     std::set<uint32_t> missingLinks=m_active_chan;
-    for (auto i:linkList) 
+    for (uint32_t k=0;k<count;k++) 
       {
+	auto i=linkList[k];
 	auto loc=missingLinks.find(i);
 	if(loc != missingLinks.end() ) missingLinks.erase(loc);
       }
     for( auto i:missingLinks) m_missedLink_hist->Fill(i);
     std::string linksin;
-    for (uint32_t i=0;i<linkList.size();i++) 
+    for (uint32_t i=0;i<count;i++) 
       linksin+=
-	static_cast<std::ostringstream*>( &(std::ostringstream() << linkList.at(i)))->str()+" ";
+	static_cast<std::ostringstream*>( &(std::ostringstream() << linkList[i]))->str()+" ";
     ERS_LOG("links:"<<linksin.c_str()<<"reported"); 
     if( DebugData){
       ERS_LOG(" data dump:");

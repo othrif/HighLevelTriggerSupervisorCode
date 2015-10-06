@@ -70,17 +70,11 @@ namespace hltsv {
       m_input(0),
       m_builder(0)
   {
-
-  static bool once=false;
-  if(!once){
-  pid_t myID=syscall(SYS_gettid);
-  ERS_LOG(" L1RobinnpSource thread started with id:"<<myID);
-  once = true;
-  }
-
-    m_active_chan=channels;
-    m_rols=channels.size();
-
+      pid_t myID=syscall(SYS_gettid);
+      ERS_LOG(" L1RobinnpSource thread started with id:"<<myID);
+      m_active_chan=channels;
+      m_rols=channels.size();
+      
   }
   //____________________________________________
   L1RobinnpSource::~L1RobinnpSource()
@@ -104,19 +98,14 @@ namespace hltsv {
   LVL1Result* L1RobinnpSource::getResult()
   {
 
-
+    /*
   static bool once=false;
   if(!once){
     pid_t myID=syscall(SYS_gettid);
-    // Thread and CPU Ids
-    unsigned int pa, pb, pc, pd, pbb;
-    __asm__("cpuid" : "=a" (pa), "=b" (pb), "=c" (pc), "=d" (pd) : "0" (1));
-    pbb = pb >> 24;
-    ERS_LOG(" getResult thread started with id:"<<myID << " in CPU with id:"
-	    << pbb );
+    ERS_LOG(" getResult thread started with id:"<<myID);
     once = true;
   }
-
+    */
 
 
     LVL1Result* l1Result = nullptr;
