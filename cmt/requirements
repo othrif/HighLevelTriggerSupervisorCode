@@ -27,7 +27,6 @@ use ROSUtilities
 use ROSRobinNP
 use ROSMemoryPoolNP
 use ROSDescriptorNP
-use ROSModulesNP
 use RunControl
 use TriggerCommander
 use TTCInfo
@@ -105,7 +104,7 @@ macro svl1filar_dependencies "daq-hltsv-dal"
 # read from RobinNP (aka RoIB software)
 library svl1robinnp L1RobinnpSource.cxx RoIBuilder.cxx RoIBuilder.h
 macro svl1robinnp_shlibflags "-leformat_write -leformat \
-      -lROSRobinNPReadoutModule -lROSCore -lROSUserActionScheduler \
+      -lROSCore -lROSUserActionScheduler \
       -lrobinNP -lrobinNP_rol \
       -lrobinNP_BIST -lrobinNP_monitoring -lNPDescriptor \
       -lROSMemoryPoolNP \
