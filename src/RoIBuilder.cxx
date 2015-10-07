@@ -16,6 +16,7 @@ const bool DebugMe=false;
 const bool DebugData=false;
 std::string dir="/DEBUG/RoIBHistograms/";
 std::set<std::string> hist_names;
+const uint32_t maxBacklog=50;
 
 builtEv::builtEv(uint64_t l1id64) :
   m_size(0),m_count(0),m_l1id64(l1id64),m_data(0)
@@ -64,7 +65,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 
 	if(m_module == 0 ) 
 	  return;
-	if( m_running ) {
+	if( m_running && m_done.size()<maxBacklog) {
 	  if(DebugMe) 
 	    ERS_LOG(" thread "<<myThread<<" initiating getFragment("
 		    <<subrob<<")"); 
@@ -143,7 +144,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	    m_module->recyclePage(fragment);
 	    
 	  }
-	}
+	} else usleep(250);
   }
 }
 
@@ -154,7 +155,6 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
    m_stop(false)
 {
   const uint32_t n_rcv_threads=2;
-  const uint32_t maxBacklog=50;
   // stop reading once you reach the maximum number of events
   m_done.set_capacity(maxBacklog);
   m_nactive=0;
@@ -216,6 +216,9 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
 							  m_subrobReq_hist[i]);
     hist_names.insert(name);
   }
+  name="Events complete and waiting for DAQ";
+  m_backlog_hist=new TH1F(name.c_str(),"events in queue;;",51,-.5,50.5);
+  monsvc::MonitoringService::instance().register_object(dir+name,m_backlog_hist);
 }
 
 RoIBuilder::~RoIBuilder()
@@ -257,6 +260,7 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
   uint64_t el1id;
   std::chrono::time_point<std::chrono::high_resolution_clock> time;
   count=0;
+  m_backlog_hist->Fill(m_done.size());
   // if we already checked 10 wait for maxTot more events before checking
   if(++ncheck>maxTot+maxCheck) ncheck=0;
   if( ncheck < maxTot){

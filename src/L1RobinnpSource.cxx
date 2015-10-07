@@ -66,9 +66,9 @@ namespace hltsv {
 
   //______________________________________________________________________________
   L1RobinnpSource::L1RobinnpSource(const std::vector<uint32_t>& channels)
-    : m_rols(0),
-      m_input(0),
-      m_builder(0)
+    :m_input(0),
+     m_rols(0),
+     m_builder(0)
   {
       pid_t myID=syscall(SYS_gettid);
       ERS_LOG(" L1RobinnpSource thread started with id:"<<myID);

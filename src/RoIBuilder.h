@@ -53,13 +53,14 @@ class RoIBuilder
 {
  private:
   TH1F * m_timeComplete_hist;
-  TH1F *m_timeProcess_hist;
-  TH1F *m_nFrags_hist;
+  TH1F * m_timeProcess_hist;
+  TH1F * m_nFrags_hist;
   TH1F * m_NPending_hist;
   TH1F * m_timeout_hist;
   TH1F * m_missedLink_hist;
   TH1F * m_readLink_hist[maxThreads];
   TH1F * m_subrobReq_hist[maxThreads];
+  TH1F * m_backlog_hist;
   ROS::RobinNPROIB * m_module;
   uint32_t m_nrols;
   uint32_t m_nactive;
