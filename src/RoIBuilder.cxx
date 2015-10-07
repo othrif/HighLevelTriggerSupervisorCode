@@ -18,7 +18,7 @@ std::string dir="/DEBUG/RoIBHistograms/";
 std::set<std::string> hist_names;
 
 builtEv::builtEv(uint64_t l1id64) :
-  m_size(0),m_count(0),m_data(0),m_l1id64(l1id64)
+  m_size(0),m_count(0),m_l1id64(l1id64),m_data(0)
 {
   m_start=std::chrono::high_resolution_clock::now();
   m_data=new uint32_t[maxEvWords];
@@ -149,9 +149,9 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 
   
 RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uint32_t nrols)
-  :m_stop(false),
+  :m_nrols(nrols),
    m_running(false),
-   m_nrols(nrols)
+   m_stop(false)
 {
   const uint32_t n_rcv_threads=2;
   const uint32_t maxBacklog=50;
