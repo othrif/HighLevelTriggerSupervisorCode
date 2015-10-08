@@ -115,18 +115,19 @@ namespace hltsv {
     // length is the uint32_t length of fragments
     uint32_t lvl1_id, count=0, length=0;
     uint32_t * roi_data;
+    uint64_t elvl1id;
     if(m_builder==0) {
       ERS_LOG("no builder present");
       return nullptr;
     }
-    if (m_builder->getNext(lvl1_id,count,roi_data,length)){
+    if (m_builder->getNext(lvl1_id,count,roi_data,length,elvl1id)){
       if(DebugMe) ERS_LOG("processing event:"<<lvl1_id<<" fragment count:"<<
 			  count);
       if (count==m_rols ){
 	try {
 	  // make copies for processing so the input areas can be released
 	  l1Result = new LVL1Result(roi_data,length);
-	  m_builder->release(lvl1_id);
+	  m_builder->release(elvl1id);
 	} 
 	catch(...) {
 	  ERS_LOG(" failed to create LVL1Result from this data");
@@ -142,7 +143,7 @@ namespace hltsv {
 		    lvl1_id);
 	    try {
 	      l1Result = new LVL1Result(roi_data,length);
-	      m_builder->release(lvl1_id);
+	      m_builder->release(elvl1id);
 	      if(DebugData) {
 		ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
 		for(uint32_t j=0;j<length;j++) 
@@ -160,7 +161,7 @@ namespace hltsv {
 	  } else {
 	  try{
 	    l1Result=nullptr;
-	    m_builder->release(lvl1_id);
+	    m_builder->release(elvl1id);
 	    delete roi_data;
 	    ERS_LOG(" failed to find any links from this data, lvl1id:"<<lvl1_id);
 	    if(DebugData) { 

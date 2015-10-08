@@ -233,7 +233,7 @@ RoIBuilder::~RoIBuilder()
 
 }
 
-void RoIBuilder::release(uint32_t lvl1id)
+void RoIBuilder::release(uint64_t lvl1id)
 {
   if(DebugMe) ERS_LOG(" erasing all traces of lvl1id:"<<lvl1id);
   EventList::accessor m_eventsLocator;
@@ -244,7 +244,7 @@ void RoIBuilder::release(uint32_t lvl1id)
     ERS_LOG(" could not find event:"<<lvl1id<<" for release");
   }
 }
-bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,uint32_t  & length)
+bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,uint32_t  & length, uint64_t & el1id)
 {
   std::chrono::time_point<std::chrono::high_resolution_clock> thistime;
   const std::chrono::microseconds limit(30000000);
@@ -257,7 +257,6 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
   const uint32_t * linkList;
   builtEv * evdone;
   uint64_t l1id_timedOut=0;
-  uint64_t el1id;
   std::chrono::time_point<std::chrono::high_resolution_clock> time;
   count=0;
   m_backlog_hist->Fill(m_done.size());

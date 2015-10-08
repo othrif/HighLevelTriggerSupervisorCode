@@ -76,7 +76,7 @@ class RoIBuilder
   bool m_stop;
   RoIBuilder(ROS::RobinNPROIB *,std::vector<uint32_t>,uint32_t);
   ~RoIBuilder();
-  bool getNext(uint32_t &,uint32_t &,uint32_t * &,uint32_t &);
-  void release(uint32_t);
+  bool getNext(uint32_t &,uint32_t &,uint32_t * &,uint32_t &,uint64_t &);
+  void release(uint64_t);
 };
 #endif
