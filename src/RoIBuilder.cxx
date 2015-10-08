@@ -200,7 +200,6 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   hist_names.insert(name);
   // for now we spawn readout threads
   for (uint32_t i=0;i<n_rcv_threads;i++) {
-    m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this,i));
     char histname[50];
     sprintf(histname,"links read by thread %d",i);
     name =std::string(histname);
@@ -215,6 +214,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
     monsvc::MonitoringService::instance().register_object(dir+name,
 							  m_subrobReq_hist[i]);
     hist_names.insert(name);
+    m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this,i));
   }
   name="Events complete and waiting for DAQ";
   m_backlog_hist=new TH1F(name.c_str(),"events in queue;;",51,-.5,50.5);
@@ -314,7 +314,7 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
 	    }
 	  }
 	  // save the order and all but the timedout l1id for restoring
-	  if( l1id != l1id_timedOut || !timeout ) restore.push(el1id);
+	  if( el1id != l1id_timedOut || !timeout ) restore.push(el1id);
 	}
       } else restore.push(el1id);
     }
