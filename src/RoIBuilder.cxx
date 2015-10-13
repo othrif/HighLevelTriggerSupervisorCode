@@ -16,8 +16,8 @@ const bool DebugMe=false;
 const bool DebugData=false;
 std::string dir="/DEBUG/RoIBHistograms/";
 std::set<std::string> hist_names;
-const uint32_t maxBacklog=50;
-
+const uint32_t maxBacklog=10000;
+uint64_t myReads[]={0,0};
 builtEv::builtEv(uint64_t l1id64) :
   m_size(0),m_count(0),m_l1id64(l1id64),m_data(0)
 {
@@ -52,11 +52,17 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
   uint32_t MaxSubrob=(m_active_chan.size()>6?1:0);
   uint32_t subrob=myThread;
   uint64_t el1id;
+  float myFraction;
+  uint64_t chanCount=0;
+  const uint64_t limitFrac=1000;
   subrob=subrob%(MaxSubrob+1);
   pid_t myID=syscall(SYS_gettid);
   ERS_LOG(" Receive thread "<<myThread<<" started with id:"<<myID << 
 		  " MaxSubrob="<<MaxSubrob<<" starting subrob:"<<subrob);
-
+  for (auto i:m_active_chan ) 
+    if( (i>5 && subrob == 1) || (i<6 && subrob ==0))  chanCount++;
+  myFraction=(float)chanCount/(float)m_active_chan.size();
+  ERS_LOG(" Thread "<<myThread<<" expects "<<myFraction<<" of the events");
   if(DebugMe ) 
 	ERS_LOG(" Receive thread started");
 
@@ -65,7 +71,11 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 
 	if(m_module == 0 ) 
 	  return;
-	if( m_running && m_done.size()<maxBacklog) {
+	if( m_running && m_done.size()<maxBacklog && 
+	    myReads[subrob]<
+	    chanCount*(limitFrac+
+		       (uint64_t)(myFraction*(float)
+				  (myReads[0]+myReads[1])))) {
 	  if(DebugMe) 
 	    ERS_LOG(" thread "<<myThread<<" initiating getFragment("
 		    <<subrob<<")"); 
@@ -80,18 +90,19 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	  
 	  rolId=fragment.rolId;
 	  m_readLink_hist[myThread]->Fill(rolId);
-	  rolCnt[rolId]++;
+	  /*
 	  // next read is from the subrob with the lowest count in one of its links
 	  uint64_t minVal=0xFFFFFFFFFFFFFFFF;
 	  for( auto iLink:m_active_chan) if(rolCnt[iLink]<minVal){
 	      minVal=rolCnt[iLink];
 	      subrob=iLink>5?1:0;
-	    }	  
+	    }
+	  */	  
 	  // If this is from an active channel add it to a map indexed by l1id
 	  if(m_active_chan.find(rolId) != m_active_chan.end())
 	    { 
-	      
-	      
+	      rolCnt[rolId]++;
+	      myReads[subrob]++;
 	      uint32_t l1id=*(fragment.page->virtualAddress()+5);
 	      //check for ID wrap around
 	      if( (0xFFF00000&l1id)<(0xFFF00000&lastId[rolId])) {
@@ -156,6 +167,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
    m_running(false),
    m_stop(false)
 {
+  //the current code requires n_rcv_threads to be set to two=# subrobs
   const uint32_t n_rcv_threads=2;
   // stop reading once you reach the maximum number of events
   m_done.set_capacity(maxBacklog);
@@ -219,7 +231,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
     m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this,i));
   }
   name="Events complete and waiting for DAQ";
-  m_backlog_hist=new TH1F(name.c_str(),"events in queue;;",100,-.5,99.5);
+  m_backlog_hist=new TH1F(name.c_str(),"events in queue;;",110,0,11000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_backlog_hist);
 }
 
