@@ -95,9 +95,11 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	      uint32_t l1id=*(fragment.page->virtualAddress()+5);
 	      //check for ID wrap around
 	      if( (0xFFF00000&l1id)<(0xFFF00000&lastId[rolId])) {
-		ERS_LOG("l1id has wrapped, this l1id:"<<l1id<<" previous id:"
-			<<lastId <<" link:"<<rolId);
-		Nwrap[rolId]++;
+		ERS_LOG("thread "<<myThread<<" l1id has wrapped, this l1id:"
+			<<l1id<<" previous id:"
+			<<lastId[rolId] <<" link:"<<rolId);
+		// exempt a wrap as the first event comes in
+		if( lastId[rolId]!=0)Nwrap[rolId]++;
 	      }
 	      lastId[rolId]=l1id;
 	      if(DebugMe ) 
@@ -171,12 +173,12 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   std::string name="Time to complete";
   m_timeComplete_hist=
     new TH1F(name.c_str(),"assembly time;microseconds;",
-	     100,0,1000000);
+	     100,0,10000000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_timeComplete_hist);
   hist_names.insert(name);
   name="Time to process";
   m_timeProcess_hist=
-    new TH1F(name.c_str(),"total processing time;microseconds;",100,0,1000000);
+    new TH1F(name.c_str(),"total processing time;microseconds;",100,0,10000000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_timeProcess_hist);
   hist_names.insert(name);
   name="Fragment count";
@@ -190,7 +192,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   hist_names.insert(name);
   name="time elapsed for timeouts";
   m_timeout_hist= new TH1F(name.c_str(),"elapsed time;microseconds;",
-			   100,0,100000);
+			   100,0,1000000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_timeout_hist);
   hist_names.insert(name);
   name="link missed";
@@ -217,7 +219,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
     m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this,i));
   }
   name="Events complete and waiting for DAQ";
-  m_backlog_hist=new TH1F(name.c_str(),"events in queue;;",51,-.5,50.5);
+  m_backlog_hist=new TH1F(name.c_str(),"events in queue;;",100,-.5,99.5);
   monsvc::MonitoringService::instance().register_object(dir+name,m_backlog_hist);
 }
 
