@@ -381,7 +381,7 @@ namespace hltsv {
         const uint32_t bc_id	 = 0x1;
         const uint32_t lvl1_type = 0xff;
   
-        const uint32_t event_type = 0x0; 
+        const uint32_t event_type = 0x1; 
 
         eformat::helper::SourceIdentifier src(eformat::TDAQ_CTP, 1);
 

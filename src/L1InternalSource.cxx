@@ -63,7 +63,7 @@ namespace hltsv {
         //create the ROB fragment 
         const uint32_t lvl1_type = 0xff;
   
-        const uint32_t event_type = 0x0; // params->getLumiBlock(); ?????
+        const uint32_t event_type = 0x1; // params->getLumiBlock(); ?????
 
         eformat::helper::SourceIdentifier src(eformat::TDAQ_CTP, 1);
 
