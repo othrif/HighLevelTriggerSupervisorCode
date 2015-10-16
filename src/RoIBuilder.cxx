@@ -95,6 +95,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	    ERS_LOG(" thread "<<myThread<<" invalid data from RobinNP");
 	    continue;
 	  }
+	  myReads[subrob]++;//Just read a fragment.
 	  
 	  rolId=fragment.rolId;
 	  m_readLink_hist[myThread]->Fill(rolId);
@@ -111,7 +112,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	  if(m_active_chan.find(rolId) != m_active_chan.end())
 	    { 
 	      rolCnt[rolId]++;
-	      myReads[subrob]++;
+	      //myReads[subrob]++;
 	      uint32_t l1id=*(fragment.page->virtualAddress()+5);
 	      //check for ID wrap around
 	      if( (0xFFF00000&l1id)<(0xFFF00000&lastId[rolId])) {
