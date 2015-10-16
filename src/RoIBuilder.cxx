@@ -64,7 +64,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
   ERS_LOG(" Receive thread "<<myThread<<" started with id:"<<myID << 
 		  " MaxSubrob="<<MaxSubrob<<" starting subrob:"<<subrob);
   for (auto i:m_active_chan ) {
-    if((i>5 && subrob == 1)) chanCount[0]++;
+    if((i>5 && subrob == 1)) chanCount[1]++;
     if((i<6 && subrob ==0))  chanCount[0]++;
   }
   
