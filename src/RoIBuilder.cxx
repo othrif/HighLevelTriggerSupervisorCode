@@ -1,5 +1,5 @@
-// Othmane Rifki & R. Blair
-// othmane.rifki@cern.ch
+// Othmane Rifki, R. Blair, J. Love
+// othmane.rifki@cern.ch, jeremy.love@cern.ch
 
 #include "RoIBuilder.h"
 #include <utility>
@@ -16,8 +16,10 @@ const bool DebugMe=false;
 const bool DebugData=false;
 std::string dir="/DEBUG/RoIBHistograms/";
 std::set<std::string> hist_names;
-const uint32_t maxBacklog=10000;
+const uint32_t maxBacklog=100000;
+const uint32_t minBacklog=25000;
 uint64_t myReads[]={0,0};
+
 builtEv::builtEv(uint64_t l1id64) :
   m_size(0),m_count(0),m_l1id64(l1id64),m_data(0)
 {
@@ -51,18 +53,24 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
   uint64_t rolCnt[]={0,0,0,0,0,0,0,0,0,0,0,0};
   uint32_t MaxSubrob=(m_active_chan.size()>6?1:0);
   uint32_t subrob=myThread;
+  uint32_t otherrob=((subrob==1)?1:0);	
   uint64_t el1id;
-  float myFraction;
-  uint64_t chanCount=0;
-  const uint64_t limitFrac=1000;
+  uint32_t target=maxBacklog;
+  float chanFrac[]={0,0};
+  uint64_t chanCount[]={0,0};
+  const uint64_t diffLimit=600;
   subrob=subrob%(MaxSubrob+1);
   pid_t myID=syscall(SYS_gettid);
   ERS_LOG(" Receive thread "<<myThread<<" started with id:"<<myID << 
 		  " MaxSubrob="<<MaxSubrob<<" starting subrob:"<<subrob);
-  for (auto i:m_active_chan ) 
-    if( (i>5 && subrob == 1) || (i<6 && subrob ==0))  chanCount++;
-  myFraction=(float)chanCount/(float)m_active_chan.size();
-  ERS_LOG(" Thread "<<myThread<<" expects "<<myFraction<<" of the events");
+  for (auto i:m_active_chan ) {
+    if((i>5 && subrob == 1)) chanCount[0]++;
+    if((i<6 && subrob ==0))  chanCount[0]++;
+  }
+  
+  if(chanCount[0]!=0 ) chanFrac[0]=1./(float)chanCount[0];
+  if(chanCount[1]!=0 ) chanFrac[1]=1./(float)chanCount[1];
+
   if(DebugMe ) 
 	ERS_LOG(" Receive thread started");
 
@@ -71,15 +79,15 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 
 	if(m_module == 0 ) 
 	  return;
-	if( m_running && m_done.size()<maxBacklog && 
-	    myReads[subrob]<
-	    chanCount*(limitFrac+
-		       (uint64_t)(myFraction*(float)
-				  (myReads[0]+myReads[1])))) {
+
+	if( m_running && m_done.size()<target && 
+	    (myReads[subrob]*chanFrac[subrob]) -
+	    (myReads[otherrob]*chanFrac[otherrob]) < diffLimit) {
 	  if(DebugMe) 
 	    ERS_LOG(" thread "<<myThread<<" initiating getFragment("
 		    <<subrob<<")"); 
 	  bool newL1id=false;
+	  target=maxBacklog;
 	  auto fragment = m_module->getFragment(subrob);
 	  m_subrobReq_hist[myThread]->Fill(subrob);
 	  // check that the fragment is okay
@@ -98,6 +106,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	      subrob=iLink>5?1:0;
 	    }
 	  */	  
+
 	  // If this is from an active channel add it to a map indexed by l1id
 	  if(m_active_chan.find(rolId) != m_active_chan.end())
 	    { 
@@ -157,7 +166,8 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	    m_module->recyclePage(fragment);
 	    
 	  }
-	} else usleep(250);
+	}
+	else target=minBacklog;
   }
 }
 
@@ -199,7 +209,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   hist_names.insert(name);
   name="Pending event count";
   m_NPending_hist=new TH1F(name.c_str(),"number of pending events;;",
-			   100,0,100000);
+			   100,0,500000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_NPending_hist);
   hist_names.insert(name);
   name="time elapsed for timeouts";
@@ -231,7 +241,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
     m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this,i));
   }
   name="Events complete and waiting for DAQ";
-  m_backlog_hist=new TH1F(name.c_str(),"events in queue;;",110,0,11000);
+  m_backlog_hist=new TH1F(name.c_str(),"events in queue;;",110,0,110000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_backlog_hist);
 }
 
@@ -263,7 +273,7 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
   std::chrono::time_point<std::chrono::high_resolution_clock> thistime;
   const std::chrono::microseconds limit(30000000);
   const uint32_t maxTot=1000000;
-  const uint32_t maxCheck=10;
+  const uint32_t maxCheck=0;
   bool timeout=false;
   static uint32_t ncheck=0;
   static uint64_t lastId=0;
@@ -324,6 +334,7 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
 	    if((elapsed>limit && ev->count()<m_nactive && ev->count()>0)
 	       && !timeout) {
 	      timeout=true;
+	      ncheck--;//keep checking until all timed out events are cleared.
 	      l1id_timedOut=el1id;
 	    }
 	  }
