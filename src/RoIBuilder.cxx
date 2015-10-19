@@ -57,7 +57,8 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
   uint32_t target=maxBacklog;
   float chanFrac[]={0,0};
   uint64_t chanCount[]={0,0};
-  const uint64_t diffLimit=1800000;
+  const uint64_t pendingLimit=360000;
+  const uint64_t chanLimit=60000;
   subrob=subrob%(MaxSubrob+1);
   uint32_t otherrob=((subrob==1)?0:1);	
   pid_t myID=syscall(SYS_gettid);
@@ -80,10 +81,12 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 
 	if(m_module == 0 ) 
 	  return;
-
+	
 	if( m_running && m_done.size()<target && 
-	    (myReads[subrob]*chanFrac[subrob]) -
-	    (myReads[otherrob]*chanFrac[otherrob]) < diffLimit) {
+	    (m_events.size() < pendingLimit ||
+	     (myReads[subrob]*chanFrac[subrob]) <
+	     (myReads[otherrob]*chanFrac[otherrob])+chanLimit) )
+	  {
 	  if(DebugMe) 
 	    ERS_LOG(" thread "<<myThread<<" initiating getFragment("
 		    <<subrob<<")"); 
