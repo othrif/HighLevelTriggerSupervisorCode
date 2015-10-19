@@ -53,19 +53,20 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
   uint64_t rolCnt[]={0,0,0,0,0,0,0,0,0,0,0,0};
   uint32_t MaxSubrob=(m_active_chan.size()>6?1:0);
   uint32_t subrob=myThread;
-  uint32_t otherrob=((subrob==1)?1:0);	
   uint64_t el1id;
   uint32_t target=maxBacklog;
   float chanFrac[]={0,0};
   uint64_t chanCount[]={0,0};
-  const uint64_t diffLimit=600;
+  const uint64_t diffLimit=1800000;
   subrob=subrob%(MaxSubrob+1);
+  uint32_t otherrob=((subrob==1)?0:1);	
   pid_t myID=syscall(SYS_gettid);
   ERS_LOG(" Receive thread "<<myThread<<" started with id:"<<myID << 
 		  " MaxSubrob="<<MaxSubrob<<" starting subrob:"<<subrob);
+
   for (auto i:m_active_chan ) {
-    if((i>5 && subrob == 1)) chanCount[1]++;
-    if((i<6 && subrob ==0))  chanCount[0]++;
+    if((i>5 )) chanCount[1]++;
+    if((i<6 )) chanCount[0]++;
   }
   
   if(chanCount[0]!=0 ) chanFrac[0]=1./(float)chanCount[0];
@@ -114,6 +115,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	      rolCnt[rolId]++;
 	      //myReads[subrob]++;
 	      uint32_t l1id=*(fragment.page->virtualAddress()+5);
+	      
 	      //check for ID wrap around
 	      if( (0xFFF00000&l1id)<(0xFFF00000&lastId[rolId])) {
 		ERS_LOG("thread "<<myThread<<" l1id has wrapped, this l1id:"
