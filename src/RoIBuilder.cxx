@@ -57,7 +57,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
   uint32_t target=maxBacklog;
   float chanFrac[]={0,0};
   uint64_t chanCount[]={0,0};
-  const uint64_t pendingLimit=360000;
+  const uint64_t pendingLimit=400000;
   const uint64_t chanLimit=60000;
   subrob=subrob%(MaxSubrob+1);
   uint32_t otherrob=((subrob==1)?0:1);	
@@ -277,7 +277,7 @@ void RoIBuilder::release(uint64_t lvl1id)
 bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,uint32_t  & length, uint64_t & el1id)
 {
   std::chrono::time_point<std::chrono::high_resolution_clock> thistime;
-  const std::chrono::microseconds limit(30000000);
+  const std::chrono::microseconds limit(4500000);
   const uint32_t maxTot=1000000;
   const uint32_t maxCheck=0;
   bool timeout=false;
