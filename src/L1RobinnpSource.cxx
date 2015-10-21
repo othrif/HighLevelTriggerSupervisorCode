@@ -91,7 +91,9 @@ namespace hltsv {
 	m_input=0;
       } else ERS_LOG(" no input present");
     }
-    catch(...) ERS_LOG(" failed in delete of L1RobinnpSource"<<std::endl);
+    catch(...) {
+       ERS_LOG(" failed in delete of L1RobinnpSource"<<std::endl);
+    }
   }
 
   //______________________________________________________________________________
