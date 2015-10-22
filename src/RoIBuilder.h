@@ -1,5 +1,5 @@
-// Othmane Rifki & R. Blair
-// othmane.rifki@cern.ch
+// Othmane Rifki, R. Blair, & J. Love
+// othmane.rifki@cern.ch, jeremy.love@cern.ch
 
 #ifndef _HLTSV_ROIB_H_
 #define _HLTSV_ROIB_H_
@@ -7,12 +7,12 @@
 #include <vector>
 #include <thread>
 #include <mutex>
-#include <chrono>
 #include <string>
 #include "ROSRobinNP/RobinNPROIB.h"
 #include "ROSEventFragment/ROBFragment.h"
 #include "tbb/concurrent_hash_map.h"
 #include "tbb/concurrent_queue.h"
+#include "tbb/tick_count.h"
 #include <unistd.h>
 #include "monsvc/MonitoringService.h"
 #include <TH1F.h>
@@ -27,9 +27,9 @@ class builtEv
  public:
   builtEv(uint64_t);
   ~builtEv();
-  std::chrono::time_point<std::chrono::high_resolution_clock> start() 
+  tbb::tick_count start() 
     { return m_start;};
-  std::chrono::time_point<std::chrono::high_resolution_clock> complete() 
+  tbb::tick_count complete() 
     { return m_complete;};
   uint32_t * data() { return m_data;};
   uint32_t count() { return m_count;};
@@ -41,8 +41,8 @@ class builtEv
   void add(uint32_t w,uint32_t *d,uint32_t link);
   void finish();
  private:
-  std::chrono::time_point<std::chrono::high_resolution_clock> m_start;
-  std::chrono::time_point<std::chrono::high_resolution_clock> m_complete;
+  tbb::tick_count m_start;
+  tbb::tick_count m_complete;
   uint32_t m_size;
   uint32_t m_count;
   uint64_t m_l1id64;

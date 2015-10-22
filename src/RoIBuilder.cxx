@@ -18,12 +18,13 @@ std::string dir="/DEBUG/RoIBHistograms/";
 std::set<std::string> hist_names;
 const uint32_t maxBacklog=100000;
 const uint32_t minBacklog=25000;
+uint64_t rolCnt[]={0,0,0,0,0,0,0,0,0,0,0,0};
 uint64_t myReads[]={0,0};
 
 builtEv::builtEv(uint64_t l1id64) :
   m_size(0),m_count(0),m_l1id64(l1id64),m_data(0)
 {
-  m_start=std::chrono::high_resolution_clock::now();
+  m_start=tbb::tick_count::now();
   m_data=new uint32_t[maxEvWords];
   memset(m_data,0,sizeof(uint32_t)*maxEvWords);
 }
@@ -43,21 +44,22 @@ void builtEv::add(uint32_t w,uint32_t *d,uint32_t link) {
   m_count++;
 }
 void builtEv::finish() {
-  m_complete=std::chrono::high_resolution_clock::now();
+  m_complete=tbb::tick_count::now();
 }
 void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 {
   uint32_t Nwrap[]={0,0,0,0,0,0,0,0,0,0,0,0};
   uint32_t lastId[]={0,0,0,0,0,0,0,0,0,0,0,0};  
   uint32_t rolId;
-  uint64_t rolCnt[]={0,0,0,0,0,0,0,0,0,0,0,0};
   uint32_t MaxSubrob=(m_active_chan.size()>6?1:0);
   uint32_t subrob=myThread;
   uint64_t el1id;
   uint32_t target=maxBacklog;
   float chanFrac[]={0,0};
   uint64_t chanCount[]={0,0};
-  const uint64_t pendingLimit=400000;
+  const uint64_t pendingUpperLimit=400000;
+  const uint64_t pendingLowerLimit=200000;
+  uint64_t targetPending = pendingUpperLimit;
   const uint64_t chanLimit=60000;
   subrob=subrob%(MaxSubrob+1);
   uint32_t otherrob=((subrob==1)?0:1);	
@@ -78,25 +80,33 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 
   // loop reading out until asked to stop
   while(!m_stop) {
+    
+    if(m_module == 0 ) 
+      return;
+    
+    if( m_running && m_done.size()<target){ 
+      target=maxBacklog;	  
 
-	if(m_module == 0 ) 
-	  return;
-	
-	if( m_running && m_done.size()<target && 
-	    (m_events.size() < pendingLimit ||
-	     (myReads[subrob]*chanFrac[subrob]) <
-	     (myReads[otherrob]*chanFrac[otherrob])+chanLimit) )
-	  {
-	  if(DebugMe) 
-	    ERS_LOG(" thread "<<myThread<<" initiating getFragment("
-		    <<subrob<<")"); 
-	  bool newL1id=false;
-	  target=maxBacklog;
-	  auto fragment = m_module->getFragment(subrob);
-	  m_subrobReq_hist[myThread]->Fill(subrob);
-	  // check that the fragment is okay
-	  if(fragment.page->virtualAddress() == 0) {
-	    ERS_LOG(" thread "<<myThread<<" invalid data from RobinNP");
+      // next read is from the subrob with the lowest count in one of its links
+      uint32_t minVal=0xFFFFFFFF;
+      for( auto iLink:m_active_chan) if(rolCnt[iLink]<minVal){
+	  minVal=iLink>5?1:0;
+	}
+      
+      if(subrob==minVal||
+	 m_events.size() < targetPending ||
+	 ((myReads[subrob]*chanFrac[subrob]) <
+	  ((myReads[otherrob]*chanFrac[otherrob])+chanLimit))){
+	if(DebugMe) 
+	  ERS_LOG(" thread "<<myThread<<" initiating getFragment("
+		  <<subrob<<")"); 
+	bool newL1id=false;
+	targetPending=pendingUpperLimit;
+	auto fragment = m_module->getFragment(subrob);
+	m_subrobReq_hist[myThread]->Fill(subrob);
+	// check that the fragment is okay
+	if(fragment.page->virtualAddress() == 0) {
+	  ERS_LOG(" thread "<<myThread<<" invalid data from RobinNP");
 	    continue;
 	  }
 	  myReads[subrob]++;//Just read a fragment.
@@ -116,7 +126,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	  if(m_active_chan.find(rolId) != m_active_chan.end())
 	    { 
 	      rolCnt[rolId]++;
-	      //myReads[subrob]++;
+	      myReads[subrob]++;
 	      uint32_t l1id=*(fragment.page->virtualAddress()+5);
 	      
 	      //check for ID wrap around
@@ -172,8 +182,11 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	    m_module->recyclePage(fragment);
 	    
 	  }
-	}
-	else target=minBacklog;
+      }
+      else if( m_events.size() > targetPending)
+	targetPending=pendingLowerLimit;
+    }
+    else target=minBacklog;
   }
 }
 
@@ -276,18 +289,19 @@ void RoIBuilder::release(uint64_t lvl1id)
 }
 bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,uint32_t  & length, uint64_t & el1id)
 {
-  std::chrono::time_point<std::chrono::high_resolution_clock> thistime;
-  const std::chrono::microseconds limit(4500000);
+  tbb::tick_count thistime;
+  const double limit = 4500000;
+  const double sectomicro = 1000000.;
   const uint32_t maxTot=1000000;
   const uint32_t maxCheck=0;
   bool timeout=false;
   static uint32_t ncheck=0;
   static uint64_t lastId=0;
-  std::chrono::microseconds elapsed;
+  tbb::tick_count::interval_t elapsed;
   const uint32_t * linkList;
   builtEv * evdone;
   uint64_t l1id_timedOut=0;
-  std::chrono::time_point<std::chrono::high_resolution_clock> time;
+  tbb::tick_count time;
   count=0;
   m_backlog_hist->Fill(m_done.size());
   // if we already checked 10 wait for maxTot more events before checking
@@ -305,22 +319,18 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
       time=evdone->start();
       thistime=evdone->complete();
       // the time for the event to be fully collected
-      elapsed=std::chrono::duration_cast<std::chrono::microseconds>
-	(thistime-time);
-      m_timeComplete_hist->Fill(elapsed.count());
-      thistime=
-	std::chrono::high_resolution_clock::now();
+      elapsed=(thistime-time);
+      m_timeComplete_hist->Fill(elapsed.seconds()*sectomicro);
+      thistime=tbb::tick_count::now();
       // the time for the event to be fully processed
-      elapsed=std::chrono::duration_cast<std::chrono::microseconds>
-	(thistime-time);
-      m_timeProcess_hist->Fill(elapsed.count());
+      elapsed=(thistime-time);
+      m_timeProcess_hist->Fill(elapsed.seconds()*sectomicro);
       m_nFrags_hist->Fill(count);
       return true;
     } else return false;
   } else {
     // check for stale entries every so often
-    thistime=
-      std::chrono::high_resolution_clock::now();
+    thistime=tbb::tick_count::now();
     std::queue<uint64_t>  restore;
     m_NPending_hist->Fill(m_events.size());
     while (m_l1ids.try_pop(el1id) ) {
@@ -333,11 +343,10 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
 	  if( !timeout ) {
 	    builtEv * const & ev=(m_eventsLocator)->second;
 	    time=ev->start();
-	    elapsed=std::chrono::duration_cast<std::chrono::microseconds>
-	      (thistime-time);
+	    elapsed=(thistime-time);
 	    // check that this has timed out & has at least one link & less then
 	    //all links
-	    if((elapsed>limit && ev->count()<m_nactive && ev->count()>0)
+	    if((elapsed.seconds()*sectomicro>limit && ev->count()<m_nactive && ev->count()>0)
 	       && !timeout) {
 	      timeout=true;
 	      ncheck--;//keep checking until all timed out events are cleared.
@@ -370,14 +379,13 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
     l1id=roi_data[5];
     linkList=ev->links();
     time=ev->start();
-    elapsed=std::chrono::duration_cast<std::chrono::microseconds>
-      (thistime-time);
+    elapsed= (thistime-time);
     ERS_LOG(" event with lvl1id:"<<l1id<<" timed out "<<
-	    elapsed.count());
+	    elapsed.seconds()*sectomicro);
     ERS_LOG(" call to getnext returns true with " <<count << 
 	    " fragments");
     m_nFrags_hist->Fill(count);
-    m_timeout_hist->Fill(elapsed.count());
+    m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
     std::set<uint32_t> missingLinks=m_active_chan;
     for (uint32_t k=0;k<count;k++) 
       {
