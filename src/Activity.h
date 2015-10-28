@@ -67,7 +67,7 @@ namespace hltsv {
     void l1_thread();
 
     // Callback for monsvc to update HLTSV object.
-    void update_monitoring(HLTSV *info);
+    void update_monitoring(const std::string& name, HLTSV *info);
 
     // To delay events in SV
     std::atomic<unsigned int>                   m_event_delay;

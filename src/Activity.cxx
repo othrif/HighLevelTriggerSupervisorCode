@@ -158,7 +158,7 @@ namespace hltsv {
     m_network = true;
 
     ERS_LOG(" *** Start HLTSVServer ***");
-    m_stats = monsvc::MonitoringService::instance().register_object("Events",new HLTSV(), true);
+    m_stats = monsvc::MonitoringService::instance().register_object("Events",new HLTSV(), true, std::bind(&Activity::update_monitoring, this, std::placeholders::_1,  std::placeholders::_2));
     m_event_sched = std::make_shared<EventScheduler>(m_stats);
     m_myServer = std::make_shared<HLTSVServer> (*m_io_services, m_event_sched, m_ros_clear, self->get_Timeout(), m_stats);
 
@@ -418,7 +418,7 @@ namespace hltsv {
       };
   }
 
-  void Activity::update_monitoring(HLTSV *info) 
+  void Activity::update_monitoring(const std::string& /* name */, HLTSV *info) 
   {
       if(m_l1source) {
           m_l1source->getMonitoringInfo(info);
