@@ -71,7 +71,7 @@ namespace hltsv {
          *  The default implementation does nothing.
          *  Extend the schema/hltsv_is.schema.xml class with appropriate
          *  attributes for the plugin and fill them inside this method.
-         *  This method is called from a separated monitoring thread.
+         *  This method is called from a separate monitoring thread.
          */
         virtual void                    getMonitoringInfo(HLTSV *info);
 
