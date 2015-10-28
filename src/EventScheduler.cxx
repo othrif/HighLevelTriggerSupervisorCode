@@ -155,4 +155,9 @@ namespace hltsv {
         }
     }
 
+    monsvc::ptr<HLTSV> EventScheduler::stats() const
+    {
+        return m_stats;
+    }
+
 }

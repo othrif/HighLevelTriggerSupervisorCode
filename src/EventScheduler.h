@@ -70,6 +70,11 @@ namespace hltsv {
        */
       void push_events();
 
+      /**
+       * \brief Return a pointer to the IS counters object.
+       */
+      monsvc::ptr<HLTSV> stats() const;
+
     private: // implementation
 
       // Internal routine to update the instantaneous rate.

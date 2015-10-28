@@ -46,6 +46,7 @@ namespace hltsv {
                                          // conversion error, error message has been sent
                                          // Note that event won't be cleared because we
                                          // may not be able to get the LVL1 ID.
+                                         m_scheduler->stats()->LVL1DecodingErrors++;
                                          return;
                                      }
                                      
