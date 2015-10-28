@@ -8,9 +8,9 @@
 
 namespace hltsv {
 
-    EventScheduler::EventScheduler() :
+    EventScheduler::EventScheduler(monsvc::ptr<HLTSV> stats) :
         m_free_cores(),
-        m_stats(monsvc::MonitoringService::instance().register_object("Events",new HLTSV(), true)),
+        m_stats(stats),
         m_update(true),
         m_rate_thread(&EventScheduler::update_instantaneous_rate, this)
     {
@@ -25,8 +25,6 @@ namespace hltsv {
 
         m_update = false;
         m_rate_thread.join();
-
-        monsvc::MonitoringService::instance().remove_object(std::string("Events"));
 
     }
 
@@ -153,11 +151,6 @@ namespace hltsv {
             }
 
         }
-    }
-
-    monsvc::ptr<HLTSV> EventScheduler::stats() const
-    {
-        return m_stats;
     }
 
 }

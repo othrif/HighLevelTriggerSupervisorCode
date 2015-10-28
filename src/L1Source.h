@@ -23,6 +23,7 @@ namespace daq {
 namespace hltsv {
 
     class LVL1Result;
+    class HLTSV;
 
     /// The maximum number of possible RODs in the RoIB data.
     static const size_t MAXLVL1RODS = 12;
@@ -64,6 +65,15 @@ namespace hltsv {
         
         /** Executed in Configure */
         virtual void                    preset();
+
+        /** Fill in monitoring information on demand.
+         * 
+         *  The default implementation does nothing.
+         *  Extend the schema/hltsv_is.schema.xml class with appropriate
+         *  attributes for the plugin and fill them inside this method.
+         *  This method is called from a separated monitoring thread.
+         */
+        virtual void                    getMonitoringInfo(HLTSV *info);
 
         /** MasterTrigger interface.
          *

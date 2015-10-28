@@ -24,6 +24,9 @@ namespace hltsv {
     // The scheduler interface.
     class EventScheduler;
 
+    // The IS object.
+    class HLTSV;
+
     /**
      * \brief The Session object representing a single DCM. 
      *
@@ -41,7 +44,8 @@ namespace hltsv {
                    std::shared_ptr<EventScheduler> scheduler,
                    std::shared_ptr<ROSClear> clear,
                    unsigned int timeout_in_ms,
-                   monsvc::ptr<TH1F> time_histo);
+                   monsvc::ptr<TH1F> time_histo,
+                   monsvc::ptr<HLTSV> stats);
 
         ~DCMSession();
 
@@ -94,6 +98,9 @@ namespace hltsv {
 
         // A shared reference to the 'ProcessingTime' histogram.
         monsvc::ptr<TH1F>                      m_time_histo;
+
+        // The IS object for counters.
+        monsvc::ptr<HLTSV>                     m_stats;
     };
 
 }

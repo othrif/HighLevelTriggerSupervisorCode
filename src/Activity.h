@@ -34,6 +34,7 @@ namespace hltsv {
   class L1Source;
   class EventScheduler;
   class ROSClear;
+  class HLTSV;
 
   /**
    * \brief Main application functionality of HLTSV.
@@ -64,6 +65,9 @@ namespace hltsv {
 
     // The internal thread for reading the RoIB
     void l1_thread();
+
+    // Callback for monsvc to update HLTSV object.
+    void update_monitoring(HLTSV *info);
 
     // To delay events in SV
     std::atomic<unsigned int>                   m_event_delay;
@@ -120,6 +124,9 @@ namespace hltsv {
     // Maximum number of events (== 0 means no limit)
     // Note: IS RunParams is a 32bit number only.
     uint64_t                        m_max_events;
+
+    // The HLTSV statistics and counters.
+    monsvc::ptr<HLTSV>              m_stats;
     
   };
 }

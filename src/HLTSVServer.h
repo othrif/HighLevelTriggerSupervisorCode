@@ -15,6 +15,7 @@ namespace hltsv {
     class EventScheduler;
     class ROSClear;
     class DCMSession;
+    class HLTSV;
 
     /**
      * \brief The asyncmsg server object dealing with DCMs.
@@ -28,7 +29,8 @@ namespace hltsv {
         HLTSVServer(std::vector<boost::asio::io_service>& services,
                     std::shared_ptr<EventScheduler> scheduler,
                     std::shared_ptr<ROSClear> clear,
-                    unsigned int timeout_in_ms);
+                    unsigned int timeout_in_ms,
+                    monsvc::ptr<HLTSV> stats);
         ~HLTSVServer();
 
         // Start and stop the server, i.e. accepting connections.
@@ -54,6 +56,9 @@ namespace hltsv {
         // A reference to the ProcessingTime histogram. 
         // It is create internally and passed to all DCMSessions.
         monsvc::ptr<TH1F>               m_time_histo;
+
+        // A reference to the IS information object.
+        monsvc::ptr<HLTSV>              m_stats;
     };
 
 }

@@ -14,7 +14,8 @@ namespace hltsv {
     HLTSVServer::HLTSVServer(std::vector<boost::asio::io_service>& services,
                              std::shared_ptr<EventScheduler> scheduler,
                              std::shared_ptr<ROSClear> clear,
-                             unsigned int timeout_in_ms)
+                             unsigned int timeout_in_ms,
+                             monsvc::ptr<HLTSV> stats)
         : daq::asyncmsg::Server(services[0]),
           m_services(services),
           m_next_service(0),
@@ -23,7 +24,8 @@ namespace hltsv {
           m_timeout_in_ms(timeout_in_ms),
           m_time_histo(monsvc::MonitoringService::instance().register_object("ProcessingTime", 
                                                                              new TH1F("Event Processing Time", "Event Processing Time", 1000, 0., 1000.),
-                                                                             true))
+                                                                             true)),
+          m_stats(stats)
     {
     }
 
@@ -41,7 +43,8 @@ namespace hltsv {
                                                     m_scheduler,
                                                     m_ros_clear,
                                                     m_timeout_in_ms,
-                                                    m_time_histo);
+                                                    m_time_histo,
+                                                    m_stats);
 
         m_next_service = (m_next_service + 1) % m_services.size();
 
@@ -90,7 +93,8 @@ namespace hltsv {
                                                         m_scheduler,
                                                         m_ros_clear,
                                                         m_timeout_in_ms,
-                                                        m_time_histo);
+                                                        m_time_histo,
+                                                        m_stats);
 
         m_next_service = (m_next_service + 1) % m_services.size();
 

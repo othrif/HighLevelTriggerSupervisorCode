@@ -30,6 +30,10 @@ namespace hltsv {
     {
     }
 
+    void L1Source::getMonitoringInfo(HLTSV  * /* info */)
+    {
+    }
+
     uint32_t L1Source::hold(const std::string& )
     {
         m_hold += 1;

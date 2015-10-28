@@ -28,7 +28,7 @@ namespace hltsv {
     class EventScheduler {
     public:
 
-      EventScheduler();
+      EventScheduler(monsvc::ptr<HLTSV> stats);
       EventScheduler(const EventScheduler& ) = delete;
       EventScheduler& operator=(const EventScheduler& ) = delete;
       
@@ -69,11 +69,6 @@ namespace hltsv {
        * This is called at the end of a run.
        */
       void push_events();
-
-      /**
-       * \brief Return a pointer to the IS counters object.
-       */
-      monsvc::ptr<HLTSV> stats() const;
 
     private: // implementation
 

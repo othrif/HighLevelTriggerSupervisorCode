@@ -158,8 +158,9 @@ namespace hltsv {
     m_network = true;
 
     ERS_LOG(" *** Start HLTSVServer ***");
-    m_event_sched = std::make_shared<EventScheduler>();
-    m_myServer = std::make_shared<HLTSVServer> (*m_io_services, m_event_sched, m_ros_clear, self->get_Timeout());
+    m_stats = monsvc::MonitoringService::instance().register_object("Events",new HLTSV(), true);
+    m_event_sched = std::make_shared<EventScheduler>(m_stats);
+    m_myServer = std::make_shared<HLTSVServer> (*m_io_services, m_event_sched, m_ros_clear, self->get_Timeout(), m_stats);
 
     m_myServer->listen(daq::rc::OnlineServices::instance().applicationName());
 
@@ -187,6 +188,7 @@ namespace hltsv {
 
     // clear statistics, counters, event queues
     m_event_sched->reset(m_initial_event_id);
+    m_stats->reset();
 
     m_initial_event_id = 0;
 
@@ -279,6 +281,8 @@ namespace hltsv {
     m_event_sched.reset();
     m_ros_clear.reset();
     m_myServer.reset();
+
+    monsvc::MonitoringService::instance().remove_object(std::string("Events"));
 
     for(auto& thr : m_io_threads) {
         thr.join();
@@ -412,6 +416,13 @@ namespace hltsv {
           service.run(); 
           ERS_LOG(" *** io_service End ***");
       };
+  }
+
+  void Activity::update_monitoring(HLTSV *info) 
+  {
+      if(m_l1source) {
+          m_l1source->getMonitoringInfo(info);
+      }
   }
 
 }
