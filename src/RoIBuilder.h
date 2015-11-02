@@ -10,8 +10,10 @@
 #include <string>
 #include "ROSRobinNP/RobinNPROIB.h"
 #include "ROSEventFragment/ROBFragment.h"
+#include "ROSDescriptorNP/DataPage.h"
 #include "tbb/concurrent_hash_map.h"
 #include "tbb/concurrent_queue.h"
+#include "tbb/concurrent_vector.h"
 #include "tbb/tick_count.h"
 #include <unistd.h>
 #include "monsvc/MonitoringService.h"
@@ -40,7 +42,8 @@ class builtEv
   //change to ->  const std::vector<uint32_t>& links() {return m_links;} const;
   const uint32_t * links() {return m_links;} ;
   void free() {if( m_data) delete[] m_data;m_data=0;return;};
-  void add(uint32_t w,uint32_t *d,uint32_t link);
+  void add(uint32_t w,uint32_t *d,uint32_t link,ROS::ROIBOutputElement &fragment);
+  tbb::concurrent_vector<ROS::ROIBOutputElement> associatedPages(){return pages;}
   void finish();
  private:
   tbb::tick_count m_start;
@@ -50,6 +53,7 @@ class builtEv
   uint64_t m_l1id64;
   uint32_t * m_data;
   uint32_t m_links[maxLinks];
+  tbb::concurrent_vector<ROS::ROIBOutputElement> pages;
 };
 class RoIBuilder
 {

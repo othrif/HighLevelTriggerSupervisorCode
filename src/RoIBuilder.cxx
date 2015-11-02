@@ -17,9 +17,6 @@ const bool DebugData=false;
 std::string dir="/DEBUG/RoIBHistograms/";
 std::set<std::string> hist_names;
 const uint32_t maxBacklog=100000;
-const uint32_t minBacklog=25000;
-uint64_t rolCnt[]={0,0,0,0,0,0,0,0,0,0,0,0};
-uint64_t myReads[]={0,0};
 
 builtEv::builtEv(uint64_t l1id64) :
   m_size(0),m_count(0),m_l1id64(l1id64),m_data(0)
@@ -33,7 +30,7 @@ builtEv::~builtEv()
 {
 }
 
-void builtEv::add(uint32_t w,uint32_t *d,uint32_t link) {
+void builtEv::add(uint32_t w,uint32_t *d,uint32_t link,ROS::ROIBOutputElement &fragment) {
 
   auto size = w < maxSize ? w-1: maxSize;
   const uint32_t slot=m_size;
@@ -41,6 +38,7 @@ void builtEv::add(uint32_t w,uint32_t *d,uint32_t link) {
   m_size += size;
   ::memcpy(&m_data[slot], d, sizeof(uint32_t)*size);
   m_links[m_count]=link;
+  pages.push_back(fragment);
   m_count++;
 }
 void builtEv::finish() {
@@ -54,26 +52,12 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
   uint32_t MaxSubrob=(m_active_chan.size()>6?1:0);
   uint32_t subrob=myThread;
   uint64_t el1id;
-  uint32_t target=maxBacklog;
-  float chanFrac[]={0,0};
-  uint64_t chanCount[]={0,0};
-  const uint64_t pendingUpperLimit=400000;
-  const uint64_t pendingLowerLimit=200000;
-  uint64_t targetPending = pendingUpperLimit;
-  const uint64_t chanLimit=60000;
+
   subrob=subrob%(MaxSubrob+1);
-  uint32_t otherrob=((subrob==1)?0:1);	
+
   pid_t myID=syscall(SYS_gettid);
   ERS_LOG(" Receive thread "<<myThread<<" started with id:"<<myID << 
 		  " MaxSubrob="<<MaxSubrob<<" starting subrob:"<<subrob);
-
-  for (auto i:m_active_chan ) {
-    if((i>5 )) chanCount[1]++;
-    if((i<6 )) chanCount[0]++;
-  }
-  
-  if(chanCount[0]!=0 ) chanFrac[0]=1./(float)chanCount[0];
-  if(chanCount[1]!=0 ) chanFrac[1]=1./(float)chanCount[1];
 
   if(DebugMe ) 
 	ERS_LOG(" Receive thread started");
@@ -84,113 +68,88 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
     if(m_module == 0 ) 
       return;
     
-    if( m_running && m_done.size()<target){ 
-      target=maxBacklog;	  
-
-      // next read is from the subrob with the lowest count in one of its links
-      uint32_t minVal=0xFFFFFFFF;
-      for( auto iLink:m_active_chan) if(rolCnt[iLink]<minVal){
-	  minVal=iLink>5?1:0;
-	}
-      
-      if(subrob==minVal||
-	 m_events.size() < targetPending ||
-	 ((myReads[subrob]*chanFrac[subrob]) <
-	  ((myReads[otherrob]*chanFrac[otherrob])+chanLimit))){
-	if(DebugMe) 
-	  ERS_LOG(" thread "<<myThread<<" initiating getFragment("
-		  <<subrob<<")"); 
-	bool newL1id=false;
-	targetPending=pendingUpperLimit;
-	auto fragment = m_module->getFragment(subrob);
-	m_subrobReq_hist[myThread]->Fill(subrob);
-	// check that the fragment is okay
-	if(fragment.page->virtualAddress() == 0) {
-	  ERS_LOG(" thread "<<myThread<<" invalid data from RobinNP");
-	    continue;
-	  }
-	  myReads[subrob]++;//Just read a fragment.
-	  
-	  rolId=fragment.rolId;
-	  m_readLink_hist[myThread]->Fill(rolId);
-	  /*
-	  // next read is from the subrob with the lowest count in one of its links
-	  uint64_t minVal=0xFFFFFFFFFFFFFFFF;
-	  for( auto iLink:m_active_chan) if(rolCnt[iLink]<minVal){
-	      minVal=rolCnt[iLink];
-	      subrob=iLink>5?1:0;
-	    }
-	  */	  
-
-	  // If this is from an active channel add it to a map indexed by l1id
-	  if(m_active_chan.find(rolId) != m_active_chan.end())
-	    { 
-	      rolCnt[rolId]++;
-	      myReads[subrob]++;
-	      uint32_t l1id=*(fragment.page->virtualAddress()+5);
-	      
-	      //check for ID wrap around
-	      if( (0xFFF00000&l1id)<(0xFFF00000&lastId[rolId])) {
-		ERS_LOG("thread "<<myThread<<" l1id has wrapped, this l1id:"
-			<<l1id<<" previous id:"
-			<<lastId[rolId] <<" link:"<<rolId);
-		// exempt a wrap as the first event comes in
-		if( lastId[rolId]!=0)Nwrap[rolId]++;
-	      }
-	      lastId[rolId]=l1id;
-	      if(DebugMe ) 
-		ERS_LOG("thread "<<myThread<<" Processing fragment with l1id " << l1id << " from ROL " << rolId);
-	      
-		  
-		  // Check status element
-		  if(fragment.fragmentStatus != 0 ) 
-		    ERS_LOG("Fragment status " << 
-			    std::hex << fragment.fragmentStatus << std::dec<<
-			    " link:"<<rolId<<
-			    " l1id:"<<l1id);
-		  EventList::accessor m_eventsLocator;
-		  el1id=(uint64_t)l1id|(uint64_t)Nwrap[rolId]<<32;
-		  if (m_events.insert(m_eventsLocator, el1id)) {
-		    // A new element was inserted
-		    m_eventsLocator->second=new builtEv(el1id);
-		    newL1id=true;
-		  }
-		  builtEv * & ev=m_eventsLocator->second;
-		  
-		  // Concatenate fragments with same l1id but different rols
-		  ev->add(fragment.dataSize,fragment.page->virtualAddress(),rolId);
-		  
-		  // fragment is built for l1id	
-		  if(ev->count()>=m_nactive) {
-		    if(DebugMe) 
-		      ERS_LOG("thread "<<myThread<<
-			      " built lvl1id:"<<l1id);
-		    // this will block until the list of done events drains
-		    // below maxBacklog
-		    ev->finish();
-		    m_done.push(ev);
-		  }
-		  
-		  if( newL1id) m_l1ids.push(el1id);
-		  m_module->recyclePage(fragment);
-		  
-	    }  else {
-		
-	    // if data comes in for links not in use throw it away 
-	    ERS_LOG("thread "<<myThread<<
-		    " received data on unused link:"<<rolId);
-	    m_module->recyclePage(fragment);
-	    
-	  }
-      }
-      else if( m_events.size() > targetPending)
-	targetPending=pendingLowerLimit;
+    if(DebugMe) 
+      ERS_LOG(" thread "<<myThread<<" initiating getFragment("
+	      <<subrob<<")"); 
+    bool newL1id=false;
+    auto fragment = m_module->getFragment(subrob);
+    m_subrobReq_hist[myThread]->Fill(subrob);
+    // check that the fragment is okay
+    if(fragment.page->virtualAddress() == 0) {
+      ERS_LOG(" thread "<<myThread<<" invalid data from RobinNP");
+      continue;
     }
-    else target=minBacklog;
+    
+    rolId=fragment.rolId;
+    m_readLink_hist[myThread]->Fill(rolId);
+    
+    // If this is from an active channel add it to a map indexed by l1id
+    if(m_active_chan.find(rolId) != m_active_chan.end())
+      { 
+	uint32_t l1id=*(fragment.page->virtualAddress()+5);
+	
+	//check for ID wrap around
+	if( (0xFFF00000&l1id)<(0xFFF00000&lastId[rolId])) {
+	  ERS_LOG("thread "<<myThread<<" l1id has wrapped, this l1id:"
+		  <<l1id<<" previous id:"
+		  <<lastId[rolId] <<" link:"<<rolId);
+	  // exempt a wrap as the first event comes in
+	  if( lastId[rolId]!=0)Nwrap[rolId]++;
+	}
+	lastId[rolId]=l1id;
+	if(DebugMe ) 
+	  ERS_LOG("thread "<<myThread<<" Processing fragment with l1id " << l1id << " from ROL " << rolId);
+	
+	
+	// Check status element
+	if(fragment.fragmentStatus != 0 ) 
+	  ERS_LOG("Fragment status " << 
+		  std::hex << fragment.fragmentStatus << std::dec<<
+		  " link:"<<rolId<<
+		  " l1id:"<<l1id);
+	EventList::accessor m_eventsLocator;
+	el1id=(uint64_t)l1id|(uint64_t)Nwrap[rolId]<<32;
+	if (m_events.insert(m_eventsLocator, el1id)) {
+	  // A new element was inserted
+	  m_eventsLocator->second=new builtEv(el1id);
+	  newL1id=true;
+	}
+	builtEv * & ev=m_eventsLocator->second;
+	
+	// Concatenate fragments with same l1id but different rols
+	ev->add(fragment.dataSize,fragment.page->virtualAddress(),rolId, fragment);
+	
+	// fragment is built for l1id	
+	if(ev->count()>=m_nactive) {
+	  if(DebugMe) 
+	    ERS_LOG("thread "<<myThread<<
+		    " built lvl1id:"<<l1id);
+	  // this will block until the list of done events drains
+	  // below maxBacklog
+	  ev->finish();
+	  m_done.push(ev);
+	  tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
+	  tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
+	  
+	  for(; ipages!= evPages.end();++ipages){
+	    m_module->recyclePage(*ipages);
+	  }
+	}
+	
+	if( newL1id) m_l1ids.push(el1id);
+	
+      }  else {
+      
+      // if data comes in for links not in use throw it away 
+      ERS_LOG("thread "<<myThread<<
+	      " received data on unused link:"<<rolId);
+      m_module->recyclePage(fragment);
+      std::cout<<"I have a non-active channel recycling page!"<<std::endl;
+    }
   }
 }
 
-  
+
 RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uint32_t nrols)
   :m_nrols(nrols),
    m_running(false),
@@ -228,7 +187,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   hist_names.insert(name);
   name="Pending event count";
   m_NPending_hist=new TH1F(name.c_str(),"number of pending events;;",
-			   100,0,500000);
+			   100,0,600000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_NPending_hist);
   hist_names.insert(name);
   name="time elapsed for timeouts";
@@ -289,6 +248,10 @@ void RoIBuilder::release(uint64_t lvl1id)
 }
 bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,uint32_t  & length, uint64_t & el1id)
 {
+  for(int i=0;i<12;i++)
+    m_module->getRolStatistics(i);
+
+  
   tbb::tick_count thistime;
   const double limit = 4500000;
   const double sectomicro = 1000000.;
