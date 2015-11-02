@@ -20,7 +20,7 @@
 #include "L1Source.h"
 
 #include "RoIBuilder.h"
-
+#include "HLTSV.h"
 
 #include "DFdal/RoIBPluginRobinnp.h"
 #include "RunControl/FSM/FSMCommands.h"
@@ -44,6 +44,7 @@ namespace hltsv {
     virtual void        reset(uint32_t run_number) override;
     virtual void        preset() override;
     ROS::RobinNPROIB * m_input;
+	virtual void getMonitoringInfo(HLTSV *info) override;
 
   private:
 
@@ -210,7 +211,7 @@ namespace hltsv {
       delete m_input;
       m_input=0;
     } else ERS_LOG(" no input present");
-    m_input=new ROS::RobinNPROIB(0,m_maxchan+1,false,0);
+	m_input=new ROS::RobinNPROIB(0,4095,false,0);
     m_builder=new RoIBuilder(m_input,m_active_chan,m_maxchan+1);
   }
   //______________________________________________________________________________
@@ -221,4 +222,12 @@ namespace hltsv {
     if( !m_builder->m_running) m_input->start();
     m_builder->m_running=true;
   }
+  //______________________________________________________________________________
+  void L1RobinnpSource::getMonitoringInfo(HLTSV *info)
+  {
+	m_builder->getISInfo(info);
+  }
+
+
+
 }

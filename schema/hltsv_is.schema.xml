@@ -100,6 +100,15 @@
   <attribute name="Recent_Global_ID" description="Recent Global Event ID" type="u64" init-value="0" is-not-null="yes"/>
   <attribute name="Busy" description="Busy Rate" type="float" init-value="0.0" is-not-null="yes"/>  
   <attribute name="LVL1DecodingErrors" description="Number of failed LVL1 decodings" type="u64" init-value="0" is-not-null="yes"/>  
+  <attribute name="RNP_Free_pages" description="RobinNP free pages" format="dec" type="u64" init-value="0" is-multi-value="yes"/>
+  <attribute name="RNP_Used_pages" description="RobinNP used pages" format="dec" type="u64" init-value="0" is-multi-value="yes"/>
+  <attribute name="RNP_Most_Recent_ID" description="RobinNP most recent ID" format="hex" type="u32" init-value="0" is-multi-value="yes"/>
+  <attribute name="RNP_XOFF_state" description="RobinNP XOFF state" format="dec" type="u32" init-value="0" is-multi-value="yes"/>
+  <attribute name="RNP_XOFF_per" description="RobinNP XOFF percentage (%)" format="dec" type="double" init-value="0" is-multi-value="yes"/>
+  <attribute name="RNP_XOFF_count" description="RobinNP XOFF count" format="dec" type="u64" init-value="0" is-multi-value="yes"/>
+  <attribute name="RNP_Down_stat" description="RobinNP current status of ROL-down" format="dec" type="u32" init-value="0" is-multi-value="yes"/>
+  <attribute name="RNP_bufferFull" description="Current status of bufferFull" format="dec" type="u32" is-multi-value="yes"/>
+  <attribute name="RNP_numberOfLdowns" description="# of ROL Link-Down events" format="dec" type="u16" is-multi-value="yes"/> 
   <method name="reset" description="Reset all counters to default values.">
    <method-implementation language="C++" prototype="void reset()" body="
 initialize();"/>

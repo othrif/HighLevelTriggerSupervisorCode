@@ -16,8 +16,10 @@
 #include <unistd.h>
 #include "monsvc/MonitoringService.h"
 #include <TH1F.h>
+#include "HLTSV.h"
 
 const uint  maxLinks=12;
+const int  maxLINKS=12;
 // one beyond because the robinnp adds one
 const uint maxSize=129;
 const uint maxEvWords=maxSize*maxLinks;
@@ -62,6 +64,7 @@ class RoIBuilder
   TH1F * m_subrobReq_hist[maxThreads];
   TH1F * m_backlog_hist;
   ROS::RobinNPROIB * m_module;
+  ROS::RobinNPROLStats * m_rolStats;
   uint32_t m_nrols;
   uint32_t m_nactive;
   tbb::concurrent_queue<uint64_t> m_l1ids;
@@ -78,5 +81,6 @@ class RoIBuilder
   ~RoIBuilder();
   bool getNext(uint32_t &,uint32_t &,uint32_t * &,uint32_t &,uint64_t &);
   void release(uint64_t);
+  void getISInfo( hltsv::HLTSV * info);
 };
 #endif

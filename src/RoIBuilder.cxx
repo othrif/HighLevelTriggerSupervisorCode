@@ -408,3 +408,32 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
   } else return false;
 }
 
+
+void RoIBuilder::getISInfo(hltsv::HLTSV * info)
+{
+ info->RNP_Most_Recent_ID.resize(maxLINKS);
+ info->RNP_Free_pages.resize(maxLINKS);
+ info->RNP_Used_pages.resize(maxLINKS);
+ info->RNP_Most_Recent_ID.resize(maxLINKS);
+ info->RNP_XOFF_state.resize(maxLINKS);
+ info->RNP_XOFF_per.resize(maxLINKS);
+ info->RNP_XOFF_count.resize(maxLINKS);
+ info->RNP_Down_stat.resize(maxLINKS);
+ info->RNP_bufferFull.resize(maxLINKS);
+ info->RNP_numberOfLdowns.resize(maxLINKS);
+
+  for(int i=0;i<maxLINKS;i++){
+    m_rolStats = m_module->getRolStatistics(i);
+	info->RNP_Most_Recent_ID[i] = m_rolStats->m_mostRecentId;
+	info->RNP_Free_pages[i] = m_rolStats->m_pagesFree;
+    info->RNP_Used_pages[i] = m_rolStats->m_pagesInUse;
+    info->RNP_Most_Recent_ID[i] = m_rolStats->m_mostRecentId;
+    info->RNP_XOFF_state[i] = m_rolStats->m_rolXoffStat;
+    info->RNP_XOFF_per[i] = m_rolStats->m_xoffpercentage;
+    info->RNP_XOFF_count[i] = m_rolStats->m_xoffcount;
+    info->RNP_Down_stat[i] = m_rolStats->m_rolDownStat;
+    info->RNP_bufferFull[i] = m_rolStats->m_bufferFull;
+    info->RNP_numberOfLdowns[i] = m_rolStats->m_ldowncount;
+		}
+}
+
