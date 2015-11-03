@@ -16,7 +16,7 @@ const bool DebugMe=false;
 const bool DebugData=false;
 std::string dir="/DEBUG/RoIBHistograms/";
 std::set<std::string> hist_names;
-const uint32_t maxBacklog=100000;
+const uint32_t maxBacklog=10000;
 
 builtEv::builtEv(uint64_t l1id64) :
   m_size(0),m_count(0),m_l1id64(l1id64),m_data(0)
@@ -67,7 +67,8 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
     
     if(m_module == 0 ) 
       return;
-    
+    // the below is needed to avoid hanging on unconfig
+    if( m_done.size()>=maxBacklog ) continue;
     if(DebugMe) 
       ERS_LOG(" thread "<<myThread<<" initiating getFragment("
 	      <<subrob<<")"); 
@@ -248,15 +249,16 @@ void RoIBuilder::release(uint64_t lvl1id)
 }
 bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,uint32_t  & length, uint64_t & el1id)
 {
+  /*
   for(int i=0;i<12;i++)
     m_module->getRolStatistics(i);
-
+  */
   
   tbb::tick_count thistime;
   const double limit = 4500000;
   const double sectomicro = 1000000.;
   const uint32_t maxTot=1000000;
-  const uint32_t maxCheck=0;
+  const uint32_t maxCheck=10;
   bool timeout=false;
   static uint32_t ncheck=0;
   static uint64_t lastId=0;
@@ -387,8 +389,8 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
 
   for(int i=0;i<maxLINKS;i++){
     m_rolStats = m_module->getRolStatistics(i);
-	info->RNP_Most_Recent_ID[i] = m_rolStats->m_mostRecentId;
-	info->RNP_Free_pages[i] = m_rolStats->m_pagesFree;
+    info->RNP_Most_Recent_ID[i] = m_rolStats->m_mostRecentId;
+    info->RNP_Free_pages[i] = m_rolStats->m_pagesFree;
     info->RNP_Used_pages[i] = m_rolStats->m_pagesInUse;
     info->RNP_Most_Recent_ID[i] = m_rolStats->m_mostRecentId;
     info->RNP_XOFF_state[i] = m_rolStats->m_rolXoffStat;
@@ -397,6 +399,6 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
     info->RNP_Down_stat[i] = m_rolStats->m_rolDownStat;
     info->RNP_bufferFull[i] = m_rolStats->m_bufferFull;
     info->RNP_numberOfLdowns[i] = m_rolStats->m_ldowncount;
-		}
+  }
 }
 
