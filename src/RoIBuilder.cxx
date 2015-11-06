@@ -129,16 +129,16 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	  // below maxBacklog
 	  ev->finish();
 	  m_done.push(ev);
-	  tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
+	   tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
 	  tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
 	  
 	  for(; ipages!= evPages.end();++ipages){
 	    m_module->recyclePage(*ipages);
-	  }
+		}
 	}
 	
 	if( newL1id) m_l1ids.push(el1id);
-	
+	//	m_module->recyclePage(fragment);
       }  else {
       
       // if data comes in for links not in use throw it away 
@@ -174,12 +174,12 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   std::string name="Time to complete";
   m_timeComplete_hist=
     new TH1F(name.c_str(),"assembly time;microseconds;",
-	     100,0,10000000);
+	     100,0,10000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_timeComplete_hist);
   hist_names.insert(name);
   name="Time to process";
   m_timeProcess_hist=
-    new TH1F(name.c_str(),"total processing time;microseconds;",100,0,10000000);
+    new TH1F(name.c_str(),"total processing time;microseconds;",100,0,10000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_timeProcess_hist);
   hist_names.insert(name);
   name="Fragment count";
@@ -188,7 +188,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   hist_names.insert(name);
   name="Pending event count";
   m_NPending_hist=new TH1F(name.c_str(),"number of pending events;;",
-			   100,0,600000);
+			   100,0,200000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_NPending_hist);
   hist_names.insert(name);
   name="time elapsed for timeouts";
@@ -250,10 +250,28 @@ void RoIBuilder::release(uint64_t lvl1id)
 bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,uint32_t  & length, uint64_t & el1id)
 {
   /*
+  builtEv * evdone;
+  m_done.pop(evdone);
+  length=evdone->size();
+  count=evdone->count();
+  roi_data=evdone->data();
+  l1id=roi_data[5];
+  el1id=evdone->l1id64();
+ 
+
+  if(count == 0)
+	return false;
+
+  if(count >= m_nactive)
+	return true;
+
+  return false;
+*/
+  /*
   for(int i=0;i<12;i++)
     m_module->getRolStatistics(i);
   */
-  
+    
   tbb::tick_count thistime;
   const double limit = 4500000;
   const double sectomicro = 1000000.;
@@ -371,6 +389,7 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
     }
     return true;
   } else return false;
+  
 }
 
 

@@ -211,7 +211,15 @@ namespace hltsv {
       delete m_input;
       m_input=0;
     } else ERS_LOG(" no input present");
-	m_input=new ROS::RobinNPROIB(0,4095,false,0);
+
+	uint32_t linkMask = 0;
+	for(auto ch : m_active_chan) {
+	  linkMask |= (1 << ch);
+	}
+	ERS_LOG("Mask of active channels: " << linkMask);
+
+	m_input=new ROS::RobinNPROIB(0,linkMask,false,0);
+
     m_builder=new RoIBuilder(m_input,m_active_chan,m_maxchan+1);
   }
   //______________________________________________________________________________

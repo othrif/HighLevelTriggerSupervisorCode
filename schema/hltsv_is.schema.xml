@@ -105,7 +105,7 @@
   <attribute name="RNP_Most_Recent_ID" description="RobinNP most recent ID" format="hex" type="u32" init-value="0" is-multi-value="yes"/>
   <attribute name="RNP_XOFF_state" description="RobinNP XOFF state" format="dec" type="u32" init-value="0" is-multi-value="yes"/>
   <attribute name="RNP_XOFF_per" description="RobinNP XOFF percentage (%)" format="dec" type="double" init-value="0" is-multi-value="yes"/>
-  <attribute name="RNP_XOFF_count" description="RobinNP XOFF count" format="dec" type="u64" init-value="0" is-multi-value="yes"/>
+  <attribute name="RNP_XOFF_count" description="RobinNP XOFF count" format="dec" type="u16" init-value="0" is-multi-value="yes"/>
   <attribute name="RNP_Down_stat" description="RobinNP current status of ROL-down" format="dec" type="u32" init-value="0" is-multi-value="yes"/>
   <attribute name="RNP_bufferFull" description="Current status of bufferFull" format="dec" type="u32" is-multi-value="yes"/>
   <attribute name="RNP_numberOfLdowns" description="# of ROL Link-Down events" format="dec" type="u16" is-multi-value="yes"/> 
