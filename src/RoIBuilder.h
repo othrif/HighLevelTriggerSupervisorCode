@@ -26,6 +26,9 @@ const int  maxLINKS=12;
 const uint maxSize=129;
 const uint maxEvWords=maxSize*maxLinks;
 const uint maxThreads=12;
+const uint NUMBER_OF_SUBROBS=2;
+const double sectomicro = 1000000.;
+
 class builtEv
 {
  public:
@@ -71,13 +74,22 @@ class RoIBuilder
   ROS::RobinNPROLStats * m_rolStats;
   uint32_t m_nrols;
   uint32_t m_nactive;
+  uint32_t m_timeout;
+  uint32_t m_time_Build;
+  uint32_t m_time_Process;
+  uint32_t m_NPending;
+  uint32_t m_backlog;
   tbb::concurrent_queue<uint64_t> m_l1ids;
   std::set<uint32_t> m_active_chan;
   typedef tbb::concurrent_hash_map<uint64_t,builtEv *> EventList;
   EventList m_events;
   std::vector<std::thread> m_rcv_threads;
+  std::thread m_timeout_thread;
   void m_rcv_proc(uint32_t);
   tbb::concurrent_bounded_queue<builtEv *> m_done;
+  std::list<uint64_t> m_timeout_lists[NUMBER_OF_SUBROBS];
+  std::mutex          m_timeout_mutex[NUMBER_OF_SUBROBS];
+  void check_timeouts( );
  public:
   bool m_running;
   bool m_stop;

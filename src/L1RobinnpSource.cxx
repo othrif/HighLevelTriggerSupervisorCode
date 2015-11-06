@@ -56,7 +56,7 @@ namespace hltsv {
 
 extern "C" hltsv::L1Source *create_source(Configuration *config, const daq::df::RoIBPlugin *roib, const std::vector<std::string>& /* unused */)
 {
- const daq::df::RoIBPluginRobinnp *my_config = config->cast<daq::df::RoIBPluginRobinnp>(roib);
+  const daq::df::RoIBPluginRobinnp *my_config = config->cast<daq::df::RoIBPluginRobinnp>(roib);
   if(my_config == nullptr) {
     throw hltsv::ConfigFailed(ERS_HERE, "Invalid type for configuration to L1RobinnpSource");
   }
@@ -71,10 +71,10 @@ namespace hltsv {
      m_rols(0),
      m_builder(0)
   {
-      pid_t myID=syscall(SYS_gettid);
-      ERS_LOG(" L1RobinnpSource thread started with id:"<<myID);
-      m_active_chan=channels;
-      m_rols=channels.size();
+	pid_t myID=syscall(SYS_gettid);
+	ERS_LOG(" L1RobinnpSource thread started with id:"<<myID);
+	m_active_chan=channels;
+	m_rols=channels.size();
       
   }
   //____________________________________________
@@ -82,18 +82,18 @@ namespace hltsv {
   {
     try{
       if ( m_builder ) {
-	delete m_builder;
-	m_builder=0;
+		delete m_builder;
+		m_builder=0;
       } else ERS_LOG(" no builder present");
       if( m_input ) {
-	m_input->abort();
-	m_input->stop();
-	delete m_input;
-	m_input=0;
+		m_input->abort();
+		m_input->stop();
+		delete m_input;
+		m_input=0;
       } else ERS_LOG(" no input present");
     }
     catch(...) {
-       ERS_LOG(" failed in delete of L1RobinnpSource"<<std::endl);
+	  ERS_LOG(" failed in delete of L1RobinnpSource"<<std::endl);
     }
   }
 
@@ -102,19 +102,19 @@ namespace hltsv {
   {
 
     /*
-  static bool once=false;
-  if(!once){
-    pid_t myID=syscall(SYS_gettid);
-    ERS_LOG(" getResult thread started with id:"<<myID);
-    once = true;
-  }
+	  static bool once=false;
+	  if(!once){
+	  pid_t myID=syscall(SYS_gettid);
+	  ERS_LOG(" getResult thread started with id:"<<myID);
+	  once = true;
+	  }
     */
 
 
     LVL1Result* l1Result = nullptr;
     // lvl1_id is obvious
     // count is the number of fragments
-    // roi_data is a pointer to the concatinated fragments
+    // roi_data is a pointer to the concatenated fragments
     // length is the uint32_t length of fragments
     uint32_t lvl1_id, count=0, length=0;
     uint32_t * roi_data;
@@ -125,59 +125,59 @@ namespace hltsv {
     }
     if (m_builder->getNext(lvl1_id,count,roi_data,length,elvl1id)){
       if(DebugMe) ERS_LOG("processing event:"<<lvl1_id<<" fragment count:"<<
-			  count);
+						  count);
       if (count==m_rols ){
-	try {
-	  // make copies for processing so the input areas can be released
-	  l1Result = new LVL1Result(roi_data,length);
-	  m_builder->release(elvl1id);
-	} 
-	catch(...) {
-	  ERS_LOG(" failed to create LVL1Result from this data");
-	  ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
-	  for(uint32_t j=0;j<length;j++) ERS_LOG(j<<":"<<std::hex<<roi_data[j]);
-	  l1Result=nullptr;
-	}
+		try {
+		  // make copies for processing so the input areas can be released
+		  l1Result = new LVL1Result(roi_data,length);
+		  m_builder->release(elvl1id);
+		} 
+		catch(...) {
+		  ERS_LOG(" failed to create LVL1Result from this data");
+		  ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
+		  for(uint32_t j=0;j<length;j++) ERS_LOG(j<<":"<<std::hex<<roi_data[j]);
+		  l1Result=nullptr;
+		}
       } else {
-	// here we have timeouts and maybe other potential screwups
-	if( count >0 )
-	  {
-	    ERS_LOG("found only "<<count<<" RoI links for this event, lvl1id:"<<
-		    lvl1_id);
-	    try {
-	      l1Result = new LVL1Result(roi_data,length);
-	      m_builder->release(elvl1id);
-	      if(DebugData) {
-		ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
-		for(uint32_t j=0;j<length;j++) 
-		  ERS_LOG(j<<":"<<std::hex<<roi_data[j]);
-	      }
-	    }
-	    catch(...) {
-	      ERS_LOG(" failed to create LVL1Result from this data, LVL1ID:"<<
-		      lvl1_id);
-	      ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
-	      for(uint32_t j=0;j<length;j++) 
-		ERS_LOG(std::dec<<j<<":"<<std::hex<<roi_data[j]<<" "<<std::dec);
-	      l1Result=nullptr;
-	    }
-	  } else {
-	  try{
-	    l1Result=nullptr;
-	    m_builder->release(elvl1id);
-	    delete roi_data;
-	    ERS_LOG(" failed to find any links from this data, lvl1id:"<<lvl1_id);
-	    if(DebugData) { 
-	      ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
-	      // this is a serious error - likely the below is broken
-	      for(uint32_t j=0;j<length;j++) 
-		ERS_LOG(std::dec<<j<<":"<<std::hex<<roi_data[j]<<" "<<std::dec);
-	    }
-	  }
-	  catch(...){
-	    ERS_LOG(" no links from lvl1id:"<<lvl1_id);
-	  }
-	}
+		// here we have timeouts and maybe other potential screwups
+		if( count >0 )
+		  {
+			ERS_LOG("found only "<<count<<" RoI links for this event, lvl1id:"<<
+					lvl1_id);
+			try {
+			  l1Result = new LVL1Result(roi_data,length);
+			  m_builder->release(elvl1id);
+			  if(DebugData) {
+				ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
+				for(uint32_t j=0;j<length;j++) 
+				  ERS_LOG(j<<":"<<std::hex<<roi_data[j]);
+			  }
+			}
+			catch(...) {
+			  ERS_LOG(" failed to create LVL1Result from this data, LVL1ID:"<<
+					  lvl1_id);
+			  ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
+			  for(uint32_t j=0;j<length;j++) 
+				ERS_LOG(std::dec<<j<<":"<<std::hex<<roi_data[j]<<" "<<std::dec);
+			  l1Result=nullptr;
+			}
+		  } else {
+		  try{
+			l1Result=nullptr;
+			m_builder->release(elvl1id);
+			delete roi_data;
+			ERS_LOG(" failed to find any links from this data, lvl1id:"<<lvl1_id);
+			if(DebugData) { 
+			  ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
+			  // this is a serious error - likely the below is broken
+			  for(uint32_t j=0;j<length;j++) 
+				ERS_LOG(std::dec<<j<<":"<<std::hex<<roi_data[j]<<" "<<std::dec);
+			}
+		  }
+		  catch(...){
+			ERS_LOG(" no links from lvl1id:"<<lvl1_id);
+		  }
+		}
       }
     } else {
       l1Result=nullptr;
@@ -194,13 +194,13 @@ namespace hltsv {
     
     for(auto ch : m_active_chan) {
       if((uint)ch >= maxLinks) {
-	throw ConfigFailed(ERS_HERE, "Invalid RobinNP channel");
+		throw ConfigFailed(ERS_HERE, "Invalid RobinNP channel");
       }
     }
     uint32_t m_maxchan=0;
     for ( auto i:m_active_chan ) m_maxchan=i>m_maxchan?i:m_maxchan;
     if(DebugMe) ERS_LOG(" running externally with "<<m_maxchan+1<<
-			" channels");
+						" channels");
     if ( m_builder ) {
       delete m_builder;
       m_builder=0;
@@ -224,7 +224,7 @@ namespace hltsv {
   }
   //______________________________________________________________________________
   void
-    L1RobinnpSource::reset(uint32_t /* run number */)
+  L1RobinnpSource::reset(uint32_t /* run number */)
   {
     // configure (with protection against doing this twice)
     if( !m_builder->m_running) m_input->start();
