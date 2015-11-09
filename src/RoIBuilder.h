@@ -84,12 +84,12 @@ class RoIBuilder
   typedef tbb::concurrent_hash_map<uint64_t,builtEv *> EventList;
   EventList m_events;
   std::vector<std::thread> m_rcv_threads;
-  std::thread m_timeout_thread;
+  std::thread m_result_thread;
   void m_rcv_proc(uint32_t);
   tbb::concurrent_bounded_queue<builtEv *> m_done;
-  std::list<uint64_t> m_timeout_lists[NUMBER_OF_SUBROBS];
-  std::mutex          m_timeout_mutex[NUMBER_OF_SUBROBS];
-  void check_timeouts( );
+  std::list<uint64_t> m_result_lists[NUMBER_OF_SUBROBS];
+  std::mutex          m_result_mutex[NUMBER_OF_SUBROBS];
+  void check_results( );
  public:
   bool m_running;
   bool m_stop;

@@ -66,11 +66,14 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
     
     if(m_module == 0 ) 
       return;
-    // the below is needed to avoid hanging on unconfig
-    if( m_done.size()>=maxBacklog ) continue;
+
+    // the below is needed to avoid hanging on unconfig, no longer sufficient
+    //possibly because m_done is also now accessed by the results handling thread?
+    if( m_done.size()>=maxBacklog ) continue; 
+
     if(DebugMe) 
       ERS_LOG(" thread "<<myThread<<" initiating getFragment("
-			  <<subrob<<")"); 
+	      <<subrob<<")"); 
     bool newL1id=false;
     auto fragment = m_module->getFragment(subrob);
     m_subrobReq_hist[myThread]->Fill(subrob);
@@ -86,67 +89,72 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
     // If this is from an active channel add it to a map indexed by l1id
     if(m_active_chan.find(rolId) != m_active_chan.end())
       { 
-		uint32_t l1id=*(fragment.page->virtualAddress()+5);
+	uint32_t l1id=*(fragment.page->virtualAddress()+5);
 	
-		//check for ID wrap around
-		if( (0xFFF00000&l1id)<(0xFFF00000&lastId[rolId])) {
-		  ERS_LOG("thread "<<myThread<<" l1id has wrapped, this l1id:"
-				  <<l1id<<" previous id:"
-				  <<lastId[rolId] <<" link:"<<rolId);
-		  // exempt a wrap as the first event comes in
-		  if( lastId[rolId]!=0)Nwrap[rolId]++;
-		}
-		lastId[rolId]=l1id;
-		if(DebugMe ) 
-		  ERS_LOG("thread "<<myThread<<" Processing fragment with l1id " << l1id << " from ROL " << rolId);
+	//check for ID wrap around
+	if( (0xFFF00000&l1id)<(0xFFF00000&lastId[rolId])) {
+	  ERS_LOG("thread "<<myThread<<" l1id has wrapped, this l1id:"
+		  <<l1id<<" previous id:"
+		  <<lastId[rolId] <<" link:"<<rolId);
+	  // exempt a wrap as the first event comes in
+	  if( lastId[rolId]!=0)Nwrap[rolId]++;
+	}
+	lastId[rolId]=l1id;
+	if(DebugMe ) 
+	  ERS_LOG("thread "<<myThread<<" Processing fragment with l1id " << l1id << " from ROL " << rolId);
 	
 	
-		// Check status element
-		if(fragment.fragmentStatus != 0 ) 
-		  ERS_LOG("Fragment status " << 
-				  std::hex << fragment.fragmentStatus << std::dec<<
-				  " link:"<<rolId<<
-				  " l1id:"<<l1id);
-		EventList::accessor m_eventsLocator;
-		el1id=(uint64_t)l1id|(uint64_t)Nwrap[rolId]<<32;
-		if (m_events.insert(m_eventsLocator, el1id)) {
-		  // A new element was inserted
-		  m_eventsLocator->second=new builtEv(el1id);
-		  newL1id=true;
-		}
-		builtEv * & ev=m_eventsLocator->second;
+	// Check status element
+	if(fragment.fragmentStatus != 0 ) 
+	  ERS_LOG("Fragment status " << 
+		  std::hex << fragment.fragmentStatus << std::dec<<
+		  " link:"<<rolId<<
+		  " l1id:"<<l1id);
+	EventList::accessor m_eventsLocator;
+	el1id=(uint64_t)l1id|(uint64_t)Nwrap[rolId]<<32;
+	if (m_events.insert(m_eventsLocator, el1id)) {
+	  // A new element was inserted
+	  m_eventsLocator->second=new builtEv(el1id);
+	  newL1id=true;
+	}
+	builtEv * & ev=m_eventsLocator->second;
 	
-		// Concatenate fragments with same l1id but different rols
-		ev->add(fragment.dataSize,fragment.page->virtualAddress(),rolId, fragment);
-	
-		// fragment is built for l1id	
-		if(ev->count()>=m_nactive) {
-		  if(DebugMe) 
-			ERS_LOG("thread "<<myThread<<
-					" built lvl1id:"<<l1id);
-		  // this will block until the list of done events drains
-		  // below maxBacklog
-		  ev->finish();
-		  m_done.push(ev);
-		  tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
-		  tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
+	// Concatenate fragments with same l1id but different rols
+	ev->add(fragment.dataSize,fragment.page->virtualAddress(),rolId, fragment);
+
+	//...// 
+	//...//WITH NEW TIME OUT SCHEME NO LONGER NECESSARY HANDLE BUILT EVENTS IN READ-IN THREAD
+	//...//
+	/*
+	// fragment is built for l1id	
+	if(ev->count()>=m_nactive) {
+	  if(DebugMe) 
+	    ERS_LOG("thread "<<myThread<<
+		    " built lvl1id:"<<l1id);
+	  // this will block until the list of done events drains
+	  // below maxBacklog
+	  ev->finish();
+	  m_done.push(ev);
+	  tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
+	  tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
 	  
-		  for(; ipages!= evPages.end();++ipages){
-			m_module->recyclePage(*ipages);
-		  }
-		}
-	
-		if(newL1id) {
-		  std::lock_guard<std::mutex> lock(m_timeout_mutex[subrob]); 
-		  m_timeout_lists[subrob].push_back(el1id);
-		}
-		//		if( newL1id) m_l1ids.push(el1id);
-		//	m_module->recyclePage(fragment);
+	  for(; ipages!= evPages.end();++ipages){
+	    m_module->recyclePage(*ipages);
+	  }
+	}//END BUILT EVENT HANDLING.
+	*/
+
+	if(newL1id) {
+	  std::lock_guard<std::mutex> lock(m_result_mutex[subrob]); 
+	  m_result_lists[subrob].push_back(el1id);
+	}
+	//		if( newL1id) m_l1ids.push(el1id);
+	//	m_module->recyclePage(fragment);
       }  else {
       
       // if data comes in for links not in use throw it away 
       ERS_LOG("thread "<<myThread<<
-			  " received data on unused link:"<<rolId);
+	      " received data on unused link:"<<rolId);
       m_module->recyclePage(fragment);
       std::cout<<"I have a non-active channel recycling page!"<<std::endl;
     }
@@ -167,22 +175,22 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   m_module=module;
   m_nactive=chans.size();
   if(DebugMe) 
-	ERS_LOG("m_nactive:"<<m_nactive<<" nrols:"<<nrols);
+    ERS_LOG("m_nactive:"<<m_nactive<<" nrols:"<<nrols);
   for (auto j:chans) m_active_chan.insert(j);
   for (uint32_t i=0;i<nrols;i++) {
-	if(m_active_chan.find(i) != m_active_chan.end() )
-	  if(DebugMe) ERS_LOG(" ROL "<<i<<" interogated and enabled");
+    if(m_active_chan.find(i) != m_active_chan.end() )
+      if(DebugMe) ERS_LOG(" ROL "<<i<<" interogated and enabled");
   }
   // set up histograms
   std::string name="time_Build"; //"Time to complete";
   m_timeComplete_hist=
     new TH1F(name.c_str(),"assembly time;microseconds;",
-			 100,0,10000);
+	     100,0,50000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_timeComplete_hist);
   hist_names.insert(name);
   name="time_Process"; //"Time to process";
   m_timeProcess_hist=
-    new TH1F(name.c_str(),"total processing time;microseconds;",100,0,10000);
+    new TH1F(name.c_str(),"total processing time;microseconds;",100,0,50000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_timeProcess_hist);
   hist_names.insert(name);
   name="fragment_Count"; //"Fragment count";
@@ -191,17 +199,17 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   hist_names.insert(name);
   name="Pending_RNP"; //"Pending event count";
   m_NPending_hist=new TH1F(name.c_str(),"number of pending events;;",
-						   100,0,200000);
+			   100,0,4000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_NPending_hist);
   hist_names.insert(name);
   name="timeout"; //"time elapsed for timeouts";
   m_timeout_hist= new TH1F(name.c_str(),"elapsed time;microseconds;",
-						   100,0,1000000);
+			   100,0,1000000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_timeout_hist);
   hist_names.insert(name);
   name="link_Missed"; //"link missed";
   m_missedLink_hist=new TH1F(name.c_str(),"missing links in timeouts;;",
-							 12,0,12);
+			     12,0,12);
   monsvc::MonitoringService::instance().register_object(dir+name,m_missedLink_hist);
   hist_names.insert(name);
   // for now we spawn readout threads
@@ -210,24 +218,24 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
     sprintf(histname,"links_read_thread%d",i); //"links read by thread %d"
     name =std::string(histname);
     m_readLink_hist[i]=new TH1F(histname,"channels read;;",
-								maxLinks,-.5,maxLinks-.5);
+				maxLinks,-.5,maxLinks-.5);
     monsvc::MonitoringService::instance().register_object(dir+name,
-														  m_readLink_hist[i]);
+							  m_readLink_hist[i]);
     hist_names.insert(name);
     sprintf(histname,"subrobs_read_thread%d",i); //"subrobs read by thread %d"
     name =std::string(histname);
     m_subrobReq_hist[i]=new TH1F(histname,"subrob requests;;",2,-.5,1.5);
     monsvc::MonitoringService::instance().register_object(dir+name,
-														  m_subrobReq_hist[i]);
+							  m_subrobReq_hist[i]);
     hist_names.insert(name);
     m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this,i));
   }
-
-  // spawn timeout checking thread
-  m_timeout_thread =  std::thread(&RoIBuilder::check_timeouts,this);
-
-  name="Pending_DAQ";//"Events complete and waiting for DAQ";
-  m_backlog_hist=new TH1F(name.c_str(),"events in queue;;",110,0,110000);
+  
+  // spawn result checking thread
+  m_result_thread =  std::thread(&RoIBuilder::check_results,this);
+  
+  name="Built_DAQ";//"Events complete and waiting for DAQ";
+  m_backlog_hist=new TH1F(name.c_str(),"events in queue;;",110,0,10000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_backlog_hist);
 }
 
@@ -236,11 +244,11 @@ RoIBuilder::~RoIBuilder()
   m_running=false;
   m_stop=true;
   for (uint32_t i=0;i<m_rcv_threads.size();i++) m_rcv_threads[i].join();
-  m_timeout_thread.join();
+  m_result_thread.join();
   if(DebugMe) ERS_LOG(" receive threads and their data cleaned up");
   for (EventList::iterator i=m_events.begin();i!=m_events.end();i++) delete i->second;
   for (auto name:hist_names)
-	monsvc::MonitoringService::instance().remove_object(dir+name);
+    monsvc::MonitoringService::instance().remove_object(dir+name);
 }
 
 void RoIBuilder::release(uint64_t lvl1id)
@@ -248,8 +256,8 @@ void RoIBuilder::release(uint64_t lvl1id)
   if(DebugMe) ERS_LOG(" erasing all traces of lvl1id:"<<lvl1id);
   EventList::accessor m_eventsLocator;
   if(m_events.find(m_eventsLocator,lvl1id)) {
-	delete m_eventsLocator->second;
-	m_events.erase(m_eventsLocator);
+    delete m_eventsLocator->second;
+    m_events.erase(m_eventsLocator);
   } else {
     ERS_LOG(" could not find event:"<<lvl1id<<" for release");
   }
@@ -260,216 +268,96 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
   tbb::tick_count time;
   tbb::tick_count thistime;
   tbb::tick_count::interval_t elapsed;
-
+  
   m_backlog_hist->Fill(m_done.size());
   m_backlog = m_done.size();
   builtEv * evdone;
   if(m_done.try_pop(evdone)){
-	length=evdone->size();
-	count=evdone->count();
-	roi_data=evdone->data();
-	l1id=roi_data[5];
-	el1id=evdone->l1id64();
-	time=evdone->start();
-	thistime=evdone->complete();
-	// the time for the event to be fully collected
-	elapsed=(thistime-time);
-	m_timeComplete_hist->Fill(elapsed.seconds()*sectomicro);
-	m_time_Build = elapsed.seconds()*sectomicro;
-	thistime=tbb::tick_count::now();
-	// the time for the event to be fully processed
-	elapsed=(thistime-time);
-	m_timeProcess_hist->Fill(elapsed.seconds()*sectomicro);
-	m_time_Process = elapsed.seconds()*sectomicro;
-	m_nFrags_hist->Fill(count);
-	return true;
+    length=evdone->size();
+    count=evdone->count();
+    roi_data=evdone->data();
+    l1id=roi_data[5];
+    el1id=evdone->l1id64();
+    time=evdone->start();
+    thistime=evdone->complete();
+    // the time for the event to be fully collected
+    elapsed=(thistime-time);
+    m_timeComplete_hist->Fill(elapsed.seconds()*sectomicro);
+    m_time_Build = elapsed.seconds()*sectomicro;
+    thistime=tbb::tick_count::now();
+    // the time for the event to be fully processed
+    elapsed=(thistime-time);
+    m_timeProcess_hist->Fill(elapsed.seconds()*sectomicro);
+    m_time_Process = elapsed.seconds()*sectomicro;
+    m_nFrags_hist->Fill(count);
+    return true;
   }
   else
-	return false;
+    return false;
   
-  /*
-	for(int i=0;i<12;i++)
-    m_module->getRolStatistics(i);
-  */
-  /*   
-	   tbb::tick_count thistime;
-	   const double limit = 4500000;
-	   const double sectomicro = 1000000.;
-	   const uint32_t maxTot=1000000;
-	   const uint32_t maxCheck=10;
-	   bool timeout=false;
-	   static uint32_t ncheck=0;
-	   static uint64_t lastId=0;
-	   tbb::tick_count::interval_t elapsed;
-	   const uint32_t * linkList;
-	   builtEv * evdone;
-	   uint64_t l1id_timedOut=0;
-	   tbb::tick_count time;
-	   count=0;
-	   m_backlog_hist->Fill(m_done.size());
-	   // if we already checked 10 wait for maxTot more events before checking
-	   if(++ncheck>maxTot+maxCheck) ncheck=0;
-	   if( ncheck < maxTot){
-	   if( m_done.try_pop(evdone)) {
-	   length=evdone->size();
-	   count=evdone->count();
-	   roi_data=evdone->data();
-	   l1id=roi_data[5];
-	   el1id=evdone->l1id64();
-	   if(DebugMe) ERS_LOG(" lvl1id:"<<l1id<<" has "<<count<<" fragments"<<
-	   " total size is "<< length << " in words");
-	   if( lastId<el1id ) lastId=el1id;
-	   time=evdone->start();
-	   thistime=evdone->complete();
-	   // the time for the event to be fully collected
-	   elapsed=(thistime-time);
-	   m_timeComplete_hist->Fill(elapsed.seconds()*sectomicro);
-	   thistime=tbb::tick_count::now();
-	   // the time for the event to be fully processed
-	   elapsed=(thistime-time);
-	   m_timeProcess_hist->Fill(elapsed.seconds()*sectomicro);
-	   m_nFrags_hist->Fill(count);
-	   return true;
-	   } else return false;
-	   } else {
-	   // check for stale entries every so often
-	   thistime=tbb::tick_count::now();
-	   std::queue<uint64_t>  restore;
-	   m_NPending_hist->Fill(m_events.size());
-	   while (m_l1ids.try_pop(el1id) ) {
-	   // don't consider an event timed out unless it is prior to
-	   // a completed event since long term buffering occurs in the
-	   // robinnp
-	   if( el1id < lastId) {
-	   EventList::const_accessor m_eventsLocator;
-	   if(m_events.find(m_eventsLocator,el1id)) {
-	   if( !timeout ) {
-	   builtEv * const & ev=(m_eventsLocator)->second;
-	   time=ev->start();
-	   elapsed=(thistime-time);
-	   // check that this has timed out & has at least one link & less then
-	   //all links
-	   if((elapsed.seconds()*sectomicro>limit && ev->count()<m_nactive && ev->count()>0)
-	   && !timeout) {
-	   timeout=true;
-	   ncheck--;//keep checking until all timed out events are cleared.
-	   l1id_timedOut=el1id;
-	   }
-	   }
-	   // save the order and all but the timedout l1id for restoring
-	   if( el1id != l1id_timedOut || !timeout ) restore.push(el1id);
-	   }
-	   } else restore.push(el1id);
-	   }
-	   // put all but the ones cleared from the event list back
-	   while (!restore.empty()){
-	   m_l1ids.push(restore.front());
-	   restore.pop();
-	   }
-	   }
-	   // update the count in case a fragment came in on a timeout
-	   EventList::accessor m_eventsLocator;
-	   if(timeout && m_events.find(m_eventsLocator,l1id_timedOut)) {
-	   builtEv * & ev=(m_eventsLocator)->second;
-	   length=ev->size();
-	   count=ev->count();
-	   // make sure not to report a complete event here
-	   if( count >= m_nactive ){
-	   if(DebugMe) ERS_LOG(" event completed while processing timeout");
-	   return false;
-	   }
-	   roi_data=ev->data();
-	   l1id=roi_data[5];
-	   linkList=ev->links();
-	   time=ev->start();
-	   elapsed= (thistime-time);
-	   ERS_LOG(" event with lvl1id:"<<l1id<<" timed out "<<
-	   elapsed.seconds()*sectomicro);
-	   ERS_LOG(" call to getnext returns true with " <<count << 
-	   " fragments");
-	   m_nFrags_hist->Fill(count);
-	   m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
-	   std::set<uint32_t> missingLinks=m_active_chan;
-	   for (uint32_t k=0;k<count;k++) 
-	   {
-	   auto i=linkList[k];
-	   auto loc=missingLinks.find(i);
-	   if(loc != missingLinks.end() ) missingLinks.erase(loc);
-	   }
-	   for( auto i:missingLinks) m_missedLink_hist->Fill(i);
-	   std::string linksin;
-	   for (uint32_t i=0;i<count;i++) 
-	   linksin+=
-	   static_cast<std::ostringstream*>( &(std::ostringstream() << linkList[i]))->str()+" ";
-	   ERS_LOG("links:"<<linksin.c_str()<<"reported"); 
-	   if( DebugData){
-	   ERS_LOG(" data dump:");
-	   for (uint32_t j=0;j<length;j++) 
-	   ERS_LOG(j<<":"<<std::hex<<roi_data[j]);
-	   }
-	   return true;
-	   } else return false;
-  */  
 }
 
-void RoIBuilder::check_timeouts( )
+void RoIBuilder::check_results( )
 {
   tbb::tick_count time;
   tbb::tick_count thistime;
   tbb::tick_count::interval_t elapsed;
 
-  const double limit = 1; // in seconds
-  m_NPending_hist->Fill(m_events.size());
-  m_NPending = m_events.size();
+  const double limit = 1.0; // in seconds
+
   while(!m_stop){
-	std::this_thread::sleep_for(std::chrono::milliseconds(10)); // timeout set to 10 ms
-	// check for timeouts 
-
-	for(size_t i = 0; i < NUMBER_OF_SUBROBS; i++) {
-
-
-	  auto & lst = m_timeout_lists[i];
-
-	  while(!lst.empty()) {
-
-		std::unique_lock<std::mutex> lock(m_timeout_mutex[i]);          
-
-		auto el1id = lst.front();
-
-		EventList::const_accessor m_eventsLocator;
-		if(m_events.find(m_eventsLocator,el1id)) {
-			
-		  builtEv * const & ev=(m_eventsLocator)->second;
-		  time=ev->start();
-		  thistime=tbb::tick_count::now();
-		  elapsed=(thistime-time);
-
-		  // check that this has timed out & has at least one link & less then all links
-		  if(elapsed.seconds() > limit && ev->count()<m_nactive && ev->count()>0) {
-			// event timed out, move to built events queue
-			ev->finish();
-			m_done.push(ev);
-			lst.pop_front();
-
-			m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
-			m_timeout = elapsed.seconds()*sectomicro;
-			tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
-			tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
-			
-			for(; ipages!= evPages.end();++ipages){
-			  m_module->recyclePage(*ipages);
-			}
-		  }
-		  else
-			break; // oldest event not expired yet
-		}
-		else {
-		  // entry fully built
-		  lst.pop_front();
-		  continue;
-		} 			
+    m_NPending_hist->Fill(m_events.size());
+    m_NPending = m_events.size();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10)); // timeout set to 10 ms
+    // check results 
+    
+    for(size_t i = 0; i < NUMBER_OF_SUBROBS; i++) {
+      
+      auto & lst = m_result_lists[i];      
+      while(!lst.empty()) {
+	std::unique_lock<std::mutex> lock(m_result_mutex[i]);          
+	
+	auto el1id = lst.front();
+	
+	EventList::const_accessor m_eventsLocator;
+	if(m_events.find(m_eventsLocator,el1id)) {
+	  
+	  builtEv * const & ev=(m_eventsLocator)->second;
+	  time=ev->start();
+	  thistime=tbb::tick_count::now();
+	  elapsed=(thistime-time);
+	  
+	  // check that this has timed out & has at least one link & less then all links
+	  if(ev->count() == m_nactive || //built
+	     (elapsed.seconds() > limit ) //Or timed out events must be handled.
+	     ){
+	    //move to built events queue
+	    ev->finish();
+	    m_done.push(ev);
+	    lst.pop_front();
+	    
+	    if(elapsed.seconds() > limit && ev->count() < m_nactive){
+	      m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
+	      m_timeout = elapsed.seconds()*sectomicro;
+	    }
+	    
+	    tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
+	    tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
+	    
+	    for(; ipages!= evPages.end();++ipages){
+	      m_module->recyclePage(*ipages);
+	    }
 	  }
+	  else
+	    break; // oldest event not expired yet
 	}
+	else {
+	  //entry not found
+	  lst.pop_front();
+	  continue;
+	} 			
+      }
+    }
   }
 }
 
