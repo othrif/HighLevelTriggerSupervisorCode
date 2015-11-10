@@ -67,8 +67,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
     if(m_module == 0 ) 
       return;
 
-    // the below is needed to avoid hanging on unconfig, no longer sufficient
-    //possibly because m_done is also now accessed by the results handling thread?
+    // the below is needed to avoid hanging on unconfig
     if( m_done.size()>=maxBacklog ) continue; 
 
     if(DebugMe) 
@@ -148,8 +147,6 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	  std::lock_guard<std::mutex> lock(m_result_mutex[subrob]); 
 	  m_result_lists[subrob].push_back(el1id);
 	}
-	//		if( newL1id) m_l1ids.push(el1id);
-	//	m_module->recyclePage(fragment);
       }  else {
       
       // if data comes in for links not in use throw it away 
@@ -184,31 +181,31 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   // set up histograms
   std::string name="time_Build"; //"Time to complete";
   m_timeComplete_hist=
-    new TH1F(name.c_str(),"assembly time;microseconds;",
-	     100,0,50000);
+    new TH1D(name.c_str(),"assembly time;microseconds;",
+	     100,0,60000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_timeComplete_hist);
   hist_names.insert(name);
   name="time_Process"; //"Time to process";
   m_timeProcess_hist=
-    new TH1F(name.c_str(),"total processing time;microseconds;",100,0,50000);
+    new TH1D(name.c_str(),"total processing time;microseconds;",100,0,60000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_timeProcess_hist);
   hist_names.insert(name);
   name="fragment_Count"; //"Fragment count";
-  m_nFrags_hist=new TH1F(name.c_str(),"number of fragments;;",13,-.5,12.5);
+  m_nFrags_hist=new TH1D(name.c_str(),"number of fragments;;",13,-.5,12.5);
   monsvc::MonitoringService::instance().register_object(dir+name,m_nFrags_hist);
   hist_names.insert(name);
   name="Pending_RNP"; //"Pending event count";
-  m_NPending_hist=new TH1F(name.c_str(),"number of pending events;;",
+  m_NPending_hist=new TH1D(name.c_str(),"number of pending events;;",
 			   100,0,4000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_NPending_hist);
   hist_names.insert(name);
   name="timeout"; //"time elapsed for timeouts";
-  m_timeout_hist= new TH1F(name.c_str(),"elapsed time;microseconds;",
+  m_timeout_hist= new TH1D(name.c_str(),"elapsed time;microseconds;",
 			   100,0,1000000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_timeout_hist);
   hist_names.insert(name);
   name="link_Missed"; //"link missed";
-  m_missedLink_hist=new TH1F(name.c_str(),"missing links in timeouts;;",
+  m_missedLink_hist=new TH1D(name.c_str(),"missing links in timeouts;;",
 			     12,0,12);
   monsvc::MonitoringService::instance().register_object(dir+name,m_missedLink_hist);
   hist_names.insert(name);
@@ -217,14 +214,14 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
     char histname[50];
     sprintf(histname,"links_read_thread%d",i); //"links read by thread %d"
     name =std::string(histname);
-    m_readLink_hist[i]=new TH1F(histname,"channels read;;",
+    m_readLink_hist[i]=new TH1D(histname,"channels read;;",
 				maxLinks,-.5,maxLinks-.5);
     monsvc::MonitoringService::instance().register_object(dir+name,
 							  m_readLink_hist[i]);
     hist_names.insert(name);
     sprintf(histname,"subrobs_read_thread%d",i); //"subrobs read by thread %d"
     name =std::string(histname);
-    m_subrobReq_hist[i]=new TH1F(histname,"subrob requests;;",2,-.5,1.5);
+    m_subrobReq_hist[i]=new TH1D(histname,"subrob requests;;",2,-.5,1.5);
     monsvc::MonitoringService::instance().register_object(dir+name,
 							  m_subrobReq_hist[i]);
     hist_names.insert(name);
@@ -235,7 +232,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   m_result_thread =  std::thread(&RoIBuilder::check_results,this);
   
   name="Built_DAQ";//"Events complete and waiting for DAQ";
-  m_backlog_hist=new TH1F(name.c_str(),"events in queue;;",110,0,10000);
+  m_backlog_hist=new TH1D(name.c_str(),"events in queue;;",110,0,10000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_backlog_hist);
 }
 
@@ -245,8 +242,9 @@ RoIBuilder::~RoIBuilder()
   m_stop=true;
   for (uint32_t i=0;i<m_rcv_threads.size();i++) m_rcv_threads[i].join();
   m_result_thread.join();
-  if(DebugMe) ERS_LOG(" receive threads and their data cleaned up");
-  for (EventList::iterator i=m_events.begin();i!=m_events.end();i++) delete i->second;
+  if(DebugMe) ERS_LOG("Result and receive threads and their data cleaned up");
+  for (EventList::iterator i=m_events.begin();i!=m_events.end();i++)
+    delete i->second;
   for (auto name:hist_names)
     monsvc::MonitoringService::instance().remove_object(dir+name);
 }
@@ -299,6 +297,11 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
 
 void RoIBuilder::check_results( )
 {
+  
+  pid_t myID=syscall(SYS_gettid);
+  ERS_LOG(" Result handling thread started with id:"<<myID );
+
+  
   tbb::tick_count time;
   tbb::tick_count thistime;
   tbb::tick_count::interval_t elapsed;
@@ -308,9 +311,9 @@ void RoIBuilder::check_results( )
   while(!m_stop){
     m_NPending_hist->Fill(m_events.size());
     m_NPending = m_events.size();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10)); // timeout set to 10 ms
+    std::this_thread::sleep_for(std::chrono::milliseconds(10)); // result checking every 10 ms
     // check results 
-    
+
     for(size_t i = 0; i < NUMBER_OF_SUBROBS; i++) {
       
       auto & lst = m_result_lists[i];      
@@ -331,6 +334,10 @@ void RoIBuilder::check_results( )
 	  if(ev->count() == m_nactive || //built
 	     (elapsed.seconds() > limit ) //Or timed out events must be handled.
 	     ){
+
+	    // the below is needed to avoid hanging on unconfig
+	    if( m_done.size()>=maxBacklog ) break;     
+
 	    //move to built events queue
 	    ev->finish();
 	    m_done.push(ev);
@@ -349,7 +356,7 @@ void RoIBuilder::check_results( )
 	    }
 	  }
 	  else
-	    break; // oldest event not expired yet
+	    break; //no results to check.
 	}
 	else {
 	  //entry not found

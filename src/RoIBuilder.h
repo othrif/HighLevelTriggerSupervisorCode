@@ -17,7 +17,7 @@
 #include "tbb/tick_count.h"
 #include <unistd.h>
 #include "monsvc/MonitoringService.h"
-#include <TH1F.h>
+#include <TH1D.h>
 #include "HLTSV.h"
 
 const uint  maxLinks=12;
@@ -61,15 +61,15 @@ class builtEv
 class RoIBuilder
 {
  private:
-  TH1F * m_timeComplete_hist;
-  TH1F * m_timeProcess_hist;
-  TH1F * m_nFrags_hist;
-  TH1F * m_NPending_hist;
-  TH1F * m_timeout_hist;
-  TH1F * m_missedLink_hist;
-  TH1F * m_readLink_hist[maxThreads];
-  TH1F * m_subrobReq_hist[maxThreads];
-  TH1F * m_backlog_hist;
+  TH1D * m_timeComplete_hist;
+  TH1D * m_timeProcess_hist;
+  TH1D * m_nFrags_hist;
+  TH1D * m_NPending_hist;
+  TH1D * m_timeout_hist;
+  TH1D * m_missedLink_hist;
+  TH1D * m_readLink_hist[maxThreads];
+  TH1D * m_subrobReq_hist[maxThreads];
+  TH1D * m_backlog_hist;
   ROS::RobinNPROIB * m_module;
   ROS::RobinNPROLStats * m_rolStats;
   uint32_t m_nrols;
