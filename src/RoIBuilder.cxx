@@ -196,9 +196,24 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   hist_names.insert(name);
   name="Pending_RNP"; //"Pending event count";
   m_NPending_hist=new TH1D(name.c_str(),"number of pending events;;",
-			   100,0,4000);
+			   100,0,5000);
   monsvc::MonitoringService::instance().register_object(dir+name,m_NPending_hist);
   hist_names.insert(name);
+  name="NumResultHandled";//Number of results handled 
+  m_NResultHandled_hist=new TH1D(name.c_str(),"Number of Results Handled;;",
+				 100,0.,5000.);
+  monsvc::MonitoringService::instance().register_object(dir+name,m_NResultHandled_hist);
+  hist_names.insert(name);
+
+  for(uint32_t i=0;i<m_nactive;i++){
+    char histname[50];
+    sprintf(histname,"NumNPDMAPagesFree_%d",i); //"links read by thread %d"
+    name =std::string(histname);//Number of free RobinNP DMA Pages
+    m_NumNPDMAPagesFree_hist[i]=new TH1D(name.c_str(),"Num Number of Free DMA Pages;;",
+				      100,0.,5000.);
+    monsvc::MonitoringService::instance().register_object(dir+name,m_NumNPDMAPagesFree_hist[i]);
+    hist_names.insert(name);
+  }
   name="timeout"; //"time elapsed for timeouts";
   m_timeout_hist= new TH1D(name.c_str(),"elapsed time;microseconds;",
 			   100,0,1000000);
@@ -313,7 +328,9 @@ void RoIBuilder::check_results( )
     m_NPending = m_events.size();
     std::this_thread::sleep_for(std::chrono::milliseconds(10)); // result checking every 10 ms
     // check results 
-
+    
+    uint32_t numBuilt=0;
+    
     for(size_t i = 0; i < NUMBER_OF_SUBROBS; i++) {
       
       auto & lst = m_result_lists[i];      
@@ -330,19 +347,22 @@ void RoIBuilder::check_results( )
 	  thistime=tbb::tick_count::now();
 	  elapsed=(thistime-time);
 	  
-	  // check that this has timed out & has at least one link & less then all links
+	  // check that this has should be sent off
 	  if(ev->count() == m_nactive || //built
 	     (elapsed.seconds() > limit ) //Or timed out events must be handled.
 	     ){
 
 	    // the below is needed to avoid hanging on unconfig
+	    // as the upstream system has stopped and we can't keep
+	    // feeding it events.  Must release the memory.
 	    if( m_done.size()>=maxBacklog ) break;     
 
 	    //move to built events queue
 	    ev->finish();
 	    m_done.push(ev);
 	    lst.pop_front();
-	    
+	    numBuilt++;
+
 	    if(elapsed.seconds() > limit && ev->count() < m_nactive){
 	      m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
 	      m_timeout = elapsed.seconds()*sectomicro;
@@ -362,8 +382,9 @@ void RoIBuilder::check_results( )
 	  //entry not found
 	  lst.pop_front();
 	  continue;
-	} 			
+	} 	
       }
+      m_NResultHandled_hist->Fill(numBuilt);
     }
   }
 }
@@ -394,6 +415,7 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
     m_rolStats = m_module->getRolStatistics(i);
     info->RNP_Most_Recent_ID[i] = m_rolStats->m_mostRecentId;
     info->RNP_Free_pages[i] = m_rolStats->m_pagesFree;
+    m_NumNPDMAPagesFree_hist[i]->Fill(m_rolStats->m_pagesFree);
     info->RNP_Used_pages[i] = m_rolStats->m_pagesInUse;
     info->RNP_Most_Recent_ID[i] = m_rolStats->m_mostRecentId;
     info->RNP_XOFF_state[i] = m_rolStats->m_rolXoffStat;

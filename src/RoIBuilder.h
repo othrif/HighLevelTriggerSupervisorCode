@@ -23,7 +23,7 @@
 const uint  maxLinks=12;
 const int  maxLINKS=12;
 // one beyond because the robinnp adds one
-const uint maxSize=129;
+const uint maxSize=130;
 const uint maxEvWords=maxSize*maxLinks;
 const uint maxThreads=12;
 const uint NUMBER_OF_SUBROBS=2;
@@ -65,6 +65,8 @@ class RoIBuilder
   TH1D * m_timeProcess_hist;
   TH1D * m_nFrags_hist;
   TH1D * m_NPending_hist;
+  TH1D * m_NResultHandled_hist;
+  TH1D * m_NumNPDMAPagesFree_hist[24];//No hists for more than 2 RobinNPs
   TH1D * m_timeout_hist;
   TH1D * m_missedLink_hist;
   TH1D * m_readLink_hist[maxThreads];
