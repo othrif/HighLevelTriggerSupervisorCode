@@ -23,7 +23,7 @@
 const uint  maxLinks=12;
 const int  maxLINKS=12;
 // one beyond because the robinnp adds one
-const uint maxSize=130;
+const uint maxSize=129;
 const uint maxEvWords=maxSize*maxLinks;
 const uint maxThreads=12;
 const uint NUMBER_OF_SUBROBS=2;
@@ -89,8 +89,8 @@ class RoIBuilder
   std::thread m_result_thread;
   void m_rcv_proc(uint32_t);
   tbb::concurrent_bounded_queue<builtEv *> m_done;
-  std::list<uint64_t> m_result_lists[NUMBER_OF_SUBROBS];
   std::mutex          m_result_mutex[NUMBER_OF_SUBROBS];
+  tbb::concurrent_queue<unsigned int>  m_result_lists;
   void check_results( );
  public:
   bool m_running;

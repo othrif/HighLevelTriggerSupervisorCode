@@ -83,7 +83,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
     }
     
     rolId=fragment.rolId;
-    m_readLink_hist[myThread]->Fill(rolId);
+    //m_readLink_hist[myThread]->Fill(rolId);
     
     // If this is from an active channel add it to a map indexed by l1id
     if(m_active_chan.find(rolId) != m_active_chan.end())
@@ -120,32 +120,9 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	
 	// Concatenate fragments with same l1id but different rols
 	ev->add(fragment.dataSize,fragment.page->virtualAddress(),rolId, fragment);
-
-	//...// 
-	//...//WITH NEW TIME OUT SCHEME NO LONGER NECESSARY HANDLE BUILT EVENTS IN READ-IN THREAD
-	//...//
-	/*
-	// fragment is built for l1id	
-	if(ev->count()>=m_nactive) {
-	  if(DebugMe) 
-	    ERS_LOG("thread "<<myThread<<
-		    " built lvl1id:"<<l1id);
-	  // this will block until the list of done events drains
-	  // below maxBacklog
-	  ev->finish();
-	  m_done.push(ev);
-	  tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
-	  tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
-	  
-	  for(; ipages!= evPages.end();++ipages){
-	    m_module->recyclePage(*ipages);
-	  }
-	}//END BUILT EVENT HANDLING.
-	*/
-
+	
 	if(newL1id) {
-	  std::lock_guard<std::mutex> lock(m_result_mutex[subrob]); 
-	  m_result_lists[subrob].push_back(el1id);
+	  m_result_lists.push(el1id);
 	}
       }  else {
       
@@ -290,6 +267,11 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
     count=evdone->count();
     roi_data=evdone->data();
     l1id=roi_data[5];
+    tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= evdone->associatedPages();
+    tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
+    for(; ipages!= evPages.end();++ipages){
+      m_module->recyclePage(*ipages);
+    }
     el1id=evdone->l1id64();
     time=evdone->start();
     thistime=evdone->complete();
@@ -331,59 +313,55 @@ void RoIBuilder::check_results( )
     
     uint32_t numBuilt=0;
     
-    for(size_t i = 0; i < NUMBER_OF_SUBROBS; i++) {
+    while(!m_result_lists.empty()) {
+      unsigned int el1id;
+      m_result_lists.try_pop(el1id);
       
-      auto & lst = m_result_lists[i];      
-      while(!lst.empty()) {
-	std::unique_lock<std::mutex> lock(m_result_mutex[i]);          
+      EventList::const_accessor m_eventsLocator;
+      if(m_events.find(m_eventsLocator,el1id)) {
 	
-	auto el1id = lst.front();
+	builtEv * const & ev=(m_eventsLocator)->second;
+	time=ev->start();
+	thistime=tbb::tick_count::now();
+	elapsed=(thistime-time);
 	
-	EventList::const_accessor m_eventsLocator;
-	if(m_events.find(m_eventsLocator,el1id)) {
+	// check that this has should be sent off
+	if(ev->count() == m_nactive || //built
+	   (elapsed.seconds() > limit ) //Or timed out events must be handled.
+	   ){
 	  
-	  builtEv * const & ev=(m_eventsLocator)->second;
-	  time=ev->start();
-	  thistime=tbb::tick_count::now();
-	  elapsed=(thistime-time);
+	  // the below is needed to avoid hanging on unconfig
+	  // as the upstream system has stopped and we can't keep
+	  // feeding it events.  Must release the memory.
+	  if( m_done.size()>=maxBacklog ) break;     
 	  
-	  // check that this has should be sent off
-	  if(ev->count() == m_nactive || //built
-	     (elapsed.seconds() > limit ) //Or timed out events must be handled.
-	     ){
-
-	    // the below is needed to avoid hanging on unconfig
-	    // as the upstream system has stopped and we can't keep
-	    // feeding it events.  Must release the memory.
-	    if( m_done.size()>=maxBacklog ) break;     
-
-	    //move to built events queue
-	    ev->finish();
-	    m_done.push(ev);
-	    lst.pop_front();
-	    numBuilt++;
-
-	    if(elapsed.seconds() > limit && ev->count() < m_nactive){
-	      m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
-	      m_timeout = elapsed.seconds()*sectomicro;
-	    }
-	    
-	    tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
-	    tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
-	    
-	    for(; ipages!= evPages.end();++ipages){
-	      m_module->recyclePage(*ipages);
-	    }
+	  //move to built events queue
+	  ev->finish();
+	  m_done.push(ev);
+	  numBuilt++;
+	  
+	  if(elapsed.seconds() > limit && ev->count() < m_nactive){
+	    m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
+	    m_timeout = elapsed.seconds()*sectomicro;
 	  }
-	  else
-	    break; //no results to check.
+	  
+	  //...//tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
+	  //...//tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
+	  //...//
+	  //...//for(; ipages!= evPages.end();++ipages){
+	  //...//  m_module->recyclePage(*ipages);
+	  //...//}
 	}
-	else {
-	  //entry not found
-	  lst.pop_front();
-	  continue;
-	} 	
+	else{//Event not built and not out of time.
+	  m_result_lists.push(el1id);	    
+	  break; //no results to check.
+	}
       }
+      else {
+	//entry not found
+	continue;
+      } 	
+      //}
       m_NResultHandled_hist->Fill(numBuilt);
     }
   }
