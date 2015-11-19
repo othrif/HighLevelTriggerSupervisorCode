@@ -218,7 +218,7 @@ namespace hltsv {
 	}
 	ERS_LOG("Mask of active channels: " << linkMask);
 
-	m_input=new ROS::RobinNPROIB(1,linkMask,false,0);
+	m_input=new ROS::RobinNPROIB(0,linkMask,false,0);
 
     m_builder=new RoIBuilder(m_input,m_active_chan,m_maxchan+1);
   }

@@ -16,7 +16,7 @@ const bool DebugMe=false;
 const bool DebugData=false;
 std::string dir="/DEBUG/RoIBHistograms/";
 std::set<std::string> hist_names;
-const uint32_t maxBacklog=5000;
+const uint32_t maxBacklog=10000;
 
 builtEv::builtEv(uint64_t l1id64) :
   m_size(0),m_count(0),m_l1id64(l1id64),m_data(0)

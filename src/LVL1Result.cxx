@@ -89,7 +89,7 @@ namespace hltsv {
                 const uint32_t* rod[MAXLVL1RODS];
                 uint32_t        rodsize[MAXLVL1RODS];
 
-                bool found_ctp = false;
+               bool found_ctp = false;
 
                 uint32_t num_frags = eformat::find_rods(m_rod_data, m_rod_length, rod, rodsize, MAXLVL1RODS);
 
@@ -117,14 +117,14 @@ namespace hltsv {
                         writer_list = writer_list->next;
                     }
                 }
-
+				
                 m_converted = true;
-
+				
 				if(!found_ctp) {
-                    hltsv::NoCTPFragment err(ERS_HERE);
-                    ers::error(err);
-					}
-
+				  hltsv::NoCTPFragment err(ERS_HERE);
+				  ers::error(err);
+				}
+				
             } catch (eformat::Issue &e) {
                 ers::error(e); 
                 m_converted = false;
