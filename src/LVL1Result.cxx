@@ -120,10 +120,10 @@ namespace hltsv {
 
                 m_converted = true;
 
-                if(!found_ctp) {
+				if(!found_ctp) {
                     hltsv::NoCTPFragment err(ERS_HERE);
                     ers::error(err);
-                }
+					}
 
             } catch (eformat::Issue &e) {
                 ers::error(e); 

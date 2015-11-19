@@ -21,9 +21,8 @@
 #include "HLTSV.h"
 
 const uint  maxLinks=12;
-const int  maxLINKS=12;
 // one beyond because the robinnp adds one
-const uint maxSize=129;
+const uint maxSize=130;
 const uint maxEvWords=maxSize*maxLinks;
 const uint maxThreads=12;
 const uint NUMBER_OF_SUBROBS=2;

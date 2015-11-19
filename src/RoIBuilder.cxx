@@ -16,7 +16,7 @@ const bool DebugMe=false;
 const bool DebugData=false;
 std::string dir="/DEBUG/RoIBHistograms/";
 std::set<std::string> hist_names;
-const uint32_t maxBacklog=10000;
+const uint32_t maxBacklog=5000;
 
 builtEv::builtEv(uint64_t l1id64) :
   m_size(0),m_count(0),m_l1id64(l1id64),m_data(0)
@@ -308,60 +308,64 @@ void RoIBuilder::check_results( )
   while(!m_stop){
     m_NPending_hist->Fill(m_events.size());
     m_NPending = m_events.size();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10)); // result checking every 10 ms
+    std::this_thread::sleep_for(std::chrono::microseconds(10000)); // result checking every 10 ms
     // check results 
     
     uint32_t numBuilt=0;
     
     while(!m_result_lists.empty()) {
       unsigned int el1id;
-      m_result_lists.try_pop(el1id);
-      
-      EventList::const_accessor m_eventsLocator;
-      if(m_events.find(m_eventsLocator,el1id)) {
+      if(m_result_lists.try_pop(el1id)){
 	
-	builtEv * const & ev=(m_eventsLocator)->second;
-	time=ev->start();
-	thistime=tbb::tick_count::now();
-	elapsed=(thistime-time);
-	
-	// check that this has should be sent off
-	if(ev->count() == m_nactive || //built
-	   (elapsed.seconds() > limit ) //Or timed out events must be handled.
-	   ){
+	EventList::const_accessor m_eventsLocator;
+	if(m_events.find(m_eventsLocator,el1id)) {
 	  
-	  // the below is needed to avoid hanging on unconfig
-	  // as the upstream system has stopped and we can't keep
-	  // feeding it events.  Must release the memory.
-	  if( m_done.size()>=maxBacklog ) break;     
+	  builtEv * const & ev=(m_eventsLocator)->second;
+	  time=ev->start();
+	  thistime=tbb::tick_count::now();
+	  elapsed=(thistime-time);
 	  
-	  //move to built events queue
-	  ev->finish();
-	  m_done.push(ev);
-	  numBuilt++;
-	  
-	  if(elapsed.seconds() > limit && ev->count() < m_nactive){
-	    m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
-	    m_timeout = elapsed.seconds()*sectomicro;
+	  // check that this has should be sent off
+	  if(ev->count() == m_nactive || //built
+	     (elapsed.seconds() > limit ) //Or timed out events must be handled.
+	     ){
+	    
+	    // the below is needed to avoid hanging on unconfig
+	    // as the upstream system has stopped and we can't keep
+	    // feeding it events.  Must release the memory.
+	    if( m_done.size()>=maxBacklog || m_stop ) break;     
+	    
+	    //move to built events queue
+	    ev->finish();
+	    m_done.push(ev);
+	    numBuilt++;
+	    
+	    if(elapsed.seconds() > limit && ev->count() < m_nactive){
+	      m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
+	      m_timeout = elapsed.seconds()*sectomicro;
+	    }
+	    
+	    //...//tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
+	    //...//tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
+	    //...//
+	    //...//for(; ipages!= evPages.end();++ipages){
+	    //...//  m_module->recyclePage(*ipages);
+	    //...//}
 	  }
-	  
-	  //...//tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
-	  //...//tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
-	  //...//
-	  //...//for(; ipages!= evPages.end();++ipages){
-	  //...//  m_module->recyclePage(*ipages);
-	  //...//}
+	  else{//Event not built and not out of time.
+	    m_result_lists.push(el1id);	    
+	    break; //no results to check.
+	  }
 	}
-	else{//Event not built and not out of time.
-	  m_result_lists.push(el1id);	    
-	  break; //no results to check.
-	}
+	else {
+	  //entry not found
+	  continue;
+	}	
       }
-      else {
-	//entry not found
-	continue;
-      } 	
-      //}
+      else{
+	m_result_lists.push(el1id);
+	break;//If contention or end of event sleep.
+      }
       m_NResultHandled_hist->Fill(numBuilt);
     }
   }
@@ -369,6 +373,8 @@ void RoIBuilder::check_results( )
 
 void RoIBuilder::getISInfo(hltsv::HLTSV * info)
 {
+
+  const int maxLINKS = m_active_chan.size();
 
   // RoIB Statistics
   info->RoIB_Pending_RNP = m_NPending;
