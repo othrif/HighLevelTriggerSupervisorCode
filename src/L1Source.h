@@ -66,6 +66,13 @@ namespace hltsv {
         /** Executed in Configure */
         virtual void                    preset();
 
+        /**
+	 * Executed at stop, should wake up any blocking 
+	 * call to getResult(). The default behaviour
+	 * for old plugins does nothing.
+	 */
+	virtual void                    stop();
+
         /** Fill in monitoring information on demand.
          * 
          *  The default implementation does nothing.

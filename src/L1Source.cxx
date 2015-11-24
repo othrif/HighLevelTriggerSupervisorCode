@@ -30,6 +30,10 @@ namespace hltsv {
     {
     }
 
+    void L1Source::stop()
+    {
+    }
+
     void L1Source::getMonitoringInfo(HLTSV  * /* info */)
     {
     }

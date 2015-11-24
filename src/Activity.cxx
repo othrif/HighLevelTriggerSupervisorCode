@@ -250,6 +250,8 @@ namespace hltsv {
     m_event_sched->push_events();
 
     m_running = false;
+    m_l1source->stop();
+
     if(m_cmdReceiver) {
         m_l1source->stopLumiBlockUpdate();
     }
