@@ -16,7 +16,7 @@ const bool DebugMe=false;
 const bool DebugData=false;
 std::string dir="/DEBUG/RoIBHistograms/";
 std::set<std::string> hist_names;
-const uint32_t maxBacklog=10000;
+const uint32_t maxBacklog=4997;
 
 builtEv::builtEv(uint64_t l1id64) :
   m_size(0),m_count(0),m_l1id64(l1id64),m_data(0)
@@ -67,21 +67,17 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
     if(m_module == 0 ) 
       return;
 
-    // the below is needed to avoid hanging on unconfig
-    if( m_done.size()>=maxBacklog ) continue; 
-
     if(DebugMe) 
       ERS_LOG(" thread "<<myThread<<" initiating getFragment("
 	      <<subrob<<")"); 
     bool newL1id=false;
     auto fragment = m_module->getFragment(subrob);
-    m_subrobReq_hist[myThread]->Fill(subrob);
     // check that the fragment is okay
-    if(fragment.page->virtualAddress() == 0) {
+    if(fragment.page == 0) {
       ERS_LOG(" thread "<<myThread<<" invalid data from RobinNP");
       continue;
     }
-    
+    m_subrobReq_hist[myThread]->Fill(subrob);    
     rolId=fragment.rolId;
     //m_readLink_hist[myThread]->Fill(rolId);
     
@@ -146,95 +142,125 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   // stop reading once you reach the maximum number of events
   m_done.set_capacity(maxBacklog);
   m_nactive=0;
-  m_module=module;
-  m_nactive=chans.size();
-  if(DebugMe) 
-    ERS_LOG("m_nactive:"<<m_nactive<<" nrols:"<<nrols);
-  for (auto j:chans) m_active_chan.insert(j);
-  for (uint32_t i=0;i<nrols;i++) {
-    if(m_active_chan.find(i) != m_active_chan.end() )
-      if(DebugMe) ERS_LOG(" ROL "<<i<<" interogated and enabled");
-  }
-  // set up histograms
-  std::string name="time_Build"; //"Time to complete";
-  m_timeComplete_hist=
-    new TH1D(name.c_str(),"assembly time;microseconds;",
-	     100,0,60000);
-  monsvc::MonitoringService::instance().register_object(dir+name,m_timeComplete_hist);
-  hist_names.insert(name);
-  name="time_Process"; //"Time to process";
-  m_timeProcess_hist=
-    new TH1D(name.c_str(),"total processing time;microseconds;",100,0,60000);
-  monsvc::MonitoringService::instance().register_object(dir+name,m_timeProcess_hist);
-  hist_names.insert(name);
-  name="fragment_Count"; //"Fragment count";
-  m_nFrags_hist=new TH1D(name.c_str(),"number of fragments;;",13,-.5,12.5);
-  monsvc::MonitoringService::instance().register_object(dir+name,m_nFrags_hist);
-  hist_names.insert(name);
-  name="Pending_RNP"; //"Pending event count";
-  m_NPending_hist=new TH1D(name.c_str(),"number of pending events;;",
-			   100,0,5000);
-  monsvc::MonitoringService::instance().register_object(dir+name,m_NPending_hist);
-  hist_names.insert(name);
-  name="NumResultHandled";//Number of results handled 
-  m_NResultHandled_hist=new TH1D(name.c_str(),"Number of Results Handled;;",
-				 100,0.,5000.);
-  monsvc::MonitoringService::instance().register_object(dir+name,m_NResultHandled_hist);
-  hist_names.insert(name);
+   m_module=module;
+   m_nactive=chans.size();
+   if(DebugMe) 
+     ERS_LOG("m_nactive:"<<m_nactive<<" nrols:"<<nrols);
+   for (auto j:chans) m_active_chan.insert(j);
+   for (uint32_t i=0;i<nrols;i++) {
+     if(m_active_chan.find(i) != m_active_chan.end() )
+       if(DebugMe) ERS_LOG(" ROL "<<i<<" interogated and enabled");
+   }
+   // set up histograms
+   std::string name="time_Build"; //"Time to complete";
+   m_timeComplete_hist=
+     new TH1D(name.c_str(),"assembly time;microseconds;",
+	      100,0,60000);
+   monsvc::MonitoringService::instance().register_object(dir+name,m_timeComplete_hist);
+   hist_names.insert(name);
+   name="time_Process"; //"Time to process";
+   m_timeProcess_hist=
+     new TH1D(name.c_str(),"total processing time;microseconds;",100,0,60000);
+   monsvc::MonitoringService::instance().register_object(dir+name,m_timeProcess_hist);
+   hist_names.insert(name);
+   name="fragment_Count"; //"Fragment count";
+   m_nFrags_hist=new TH1D(name.c_str(),"number of fragments;;",13,-.5,12.5);
+   monsvc::MonitoringService::instance().register_object(dir+name,m_nFrags_hist);
+   hist_names.insert(name);
+   name="Pending_RNP"; //"Pending event count";
+   m_NPending_hist=new TH1D(name.c_str(),"number of pending events;;",
+			    100,0,5000);
+   monsvc::MonitoringService::instance().register_object(dir+name,m_NPending_hist);
+   hist_names.insert(name);
+   name="NumResultHandled";//Number of results handled 
+   m_NResultHandled_hist=new TH1D(name.c_str(),"Number of Results Handled;;",
+				  100,0.,5000.);
+   monsvc::MonitoringService::instance().register_object(dir+name,m_NResultHandled_hist);
+   hist_names.insert(name);
 
-  for(uint32_t i=0;i<m_nactive;i++){
-    char histname[50];
-    sprintf(histname,"NumNPDMAPagesFree_%d",i); //"links read by thread %d"
-    name =std::string(histname);//Number of free RobinNP DMA Pages
-    m_NumNPDMAPagesFree_hist[i]=new TH1D(name.c_str(),"Num Number of Free DMA Pages;;",
-				      100,0.,5000.);
-    monsvc::MonitoringService::instance().register_object(dir+name,m_NumNPDMAPagesFree_hist[i]);
-    hist_names.insert(name);
-  }
-  name="timeout"; //"time elapsed for timeouts";
-  m_timeout_hist= new TH1D(name.c_str(),"elapsed time;microseconds;",
-			   100,0,1000000);
-  monsvc::MonitoringService::instance().register_object(dir+name,m_timeout_hist);
-  hist_names.insert(name);
-  name="link_Missed"; //"link missed";
-  m_missedLink_hist=new TH1D(name.c_str(),"missing links in timeouts;;",
-			     12,0,12);
-  monsvc::MonitoringService::instance().register_object(dir+name,m_missedLink_hist);
-  hist_names.insert(name);
-  // for now we spawn readout threads
-  for (uint32_t i=0;i<n_rcv_threads;i++) {
-    char histname[50];
-    sprintf(histname,"links_read_thread%d",i); //"links read by thread %d"
-    name =std::string(histname);
-    m_readLink_hist[i]=new TH1D(histname,"channels read;;",
-				maxLinks,-.5,maxLinks-.5);
-    monsvc::MonitoringService::instance().register_object(dir+name,
-							  m_readLink_hist[i]);
-    hist_names.insert(name);
-    sprintf(histname,"subrobs_read_thread%d",i); //"subrobs read by thread %d"
-    name =std::string(histname);
-    m_subrobReq_hist[i]=new TH1D(histname,"subrob requests;;",2,-.5,1.5);
-    monsvc::MonitoringService::instance().register_object(dir+name,
-							  m_subrobReq_hist[i]);
-    hist_names.insert(name);
-    m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this,i));
-  }
-  
-  // spawn result checking thread
-  m_result_thread =  std::thread(&RoIBuilder::check_results,this);
-  
-  name="Built_DAQ";//"Events complete and waiting for DAQ";
-  m_backlog_hist=new TH1D(name.c_str(),"events in queue;;",110,0,10000);
-  monsvc::MonitoringService::instance().register_object(dir+name,m_backlog_hist);
-}
+   for(uint32_t i=0;i<m_nactive;i++){
+     char histname[50];
+     sprintf(histname,"NumNPDMAPagesFree_%d",i); //"links read by thread %d"
+     name =std::string(histname);//Number of free RobinNP DMA Pages
+     m_NumNPDMAPagesFree_hist[i]=new TH1D(name.c_str(),"Num Number of Free DMA Pages;;",
+				       100,0.,5000.);
+     monsvc::MonitoringService::instance().register_object(dir+name,m_NumNPDMAPagesFree_hist[i]);
+     hist_names.insert(name);
+   }
+   name="timeout"; //"time elapsed for timeouts";
+   m_timeout_hist= new TH1D(name.c_str(),"elapsed time;microseconds;",
+			    100,0,1000000);
+   monsvc::MonitoringService::instance().register_object(dir+name,m_timeout_hist);
+   hist_names.insert(name);
+   name="link_Missed"; //"link missed";
+   m_missedLink_hist=new TH1D(name.c_str(),"missing links in timeouts;;",
+			      12,0,12);
+   monsvc::MonitoringService::instance().register_object(dir+name,m_missedLink_hist);
+   hist_names.insert(name);
+   // for now we spawn readout threads
+   for (uint32_t i=0;i<n_rcv_threads;i++) {
+     char histname[50];
+     sprintf(histname,"links_read_thread%d",i); //"links read by thread %d"
+     name =std::string(histname);
+     m_readLink_hist[i]=new TH1D(histname,"channels read;;",
+				 maxLinks,-.5,maxLinks-.5);
+     monsvc::MonitoringService::instance().register_object(dir+name,
+							   m_readLink_hist[i]);
+     hist_names.insert(name);
+     sprintf(histname,"subrobs_read_thread%d",i); //"subrobs read by thread %d"
+     name =std::string(histname);
+     m_subrobReq_hist[i]=new TH1D(histname,"subrob requests;;",2,-.5,1.5);
+     monsvc::MonitoringService::instance().register_object(dir+name,
+							   m_subrobReq_hist[i]);
+     hist_names.insert(name);
+     m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this,i));
+   }
 
-RoIBuilder::~RoIBuilder()
-{
-  m_running=false;
-  m_stop=true;
+   // spawn result checking thread
+   m_result_thread =  std::thread(&RoIBuilder::check_results,this);
+
+   name="Built_DAQ";//"Events complete and waiting for DAQ";
+   m_backlog_hist=new TH1D(name.c_str(),"events in queue;;",110,0,10000);
+   monsvc::MonitoringService::instance().register_object(dir+name,m_backlog_hist);
+ }
+
+ RoIBuilder::~RoIBuilder()
+ {
+   m_running=false;
+   m_stop=true;
+
+   if(DebugMe) ERS_LOG("Joinging result and receive threads in destructor.");
+
+   //Abort read-in from Robin-NP
+  m_module->abort();
+  
+  //Join Receiving Threads
   for (uint32_t i=0;i<m_rcv_threads.size();i++) m_rcv_threads[i].join();
+  
+  //Join result handling thread.
   m_result_thread.join();
-  if(DebugMe) ERS_LOG("Result and receive threads and their data cleaned up");
+  
+  if(DebugMe) ERS_LOG("Freeing all memory in queues.");
+  //Delete data in queues.
+  while(!m_result_lists.empty()) {
+    unsigned int el1id;
+    if(m_result_lists.try_pop(el1id)){
+      
+      EventList::const_accessor m_eventsLocator;
+      if(m_events.find(m_eventsLocator,el1id)) {
+	
+	builtEv * const & ev=(m_eventsLocator)->second;
+	tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
+	tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
+	for(; ipages!= evPages.end();++ipages){
+	  m_module->recyclePage(*ipages);
+	}
+      }//if event found
+    }//try_pop succeed
+  }//until there is nothing left
+  m_result_lists.clear();
+  
+  if(DebugMe) ERS_LOG("Result and receive threads and their associated data cleaned up");
   for (EventList::iterator i=m_events.begin();i!=m_events.end();i++)
     delete i->second;
   for (auto name:hist_names)
@@ -267,11 +293,16 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
     count=evdone->count();
     roi_data=evdone->data();
     l1id=roi_data[5];
+
+    //
+    //Recycling of pages once event is passed to hltsv_main()
+    //
     tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= evdone->associatedPages();
     tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
     for(; ipages!= evPages.end();++ipages){
       m_module->recyclePage(*ipages);
     }
+
     el1id=evdone->l1id64();
     time=evdone->start();
     thistime=evdone->complete();
@@ -330,9 +361,7 @@ void RoIBuilder::check_results( )
 	     (elapsed.seconds() > limit ) //Or timed out events must be handled.
 	     ){
 	    
-	    // the below is needed to avoid hanging on unconfig
-	    // as the upstream system has stopped and we can't keep
-	    // feeding it events.  Must release the memory.
+	    //If down stream system stops could become deadlocked...
 	    if( m_done.size()>=maxBacklog || m_stop ) break;     
 	    
 	    //move to built events queue
@@ -345,6 +374,9 @@ void RoIBuilder::check_results( )
 	      m_timeout = elapsed.seconds()*sectomicro;
 	    }
 	    
+	    //
+	    //Recycling of pages once event is built or timed out.
+	    //
 	    //...//tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
 	    //...//tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
 	    //...//
