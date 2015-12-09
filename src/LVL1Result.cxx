@@ -100,12 +100,12 @@ namespace hltsv {
 
                     //update ROB header
                     m_writers[i]->rob_source_id(m_writers[i]->rod_source_id());
-                    //...//if(eformat::helper::SourceIdentifier(m_writers[i]->rob_source_id()).subdetector_id() == eformat::TDAQ_CTP) {
-                        m_lvl1_id = m_writers[i]->rod_lvl1_id();
-                        found_ctp = true;
-                    //...//} else if(!found_ctp) {
-                    //...//    m_lvl1_id = m_writers[i]->rod_lvl1_id();
-                    //...//} // else CTP fragment already seen.
+                    if(eformat::helper::SourceIdentifier(m_writers[i]->rob_source_id()).subdetector_id() == eformat::TDAQ_CTP) {
+		      m_lvl1_id = m_writers[i]->rod_lvl1_id();
+		      found_ctp = true;
+                    } else if(!found_ctp) {
+		      m_lvl1_id = m_writers[i]->rod_lvl1_id();
+                    } // else CTP fragment already seen.
                 }
 
                 // make one single buffer out of the whole data
