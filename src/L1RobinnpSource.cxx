@@ -112,6 +112,8 @@ namespace hltsv {
 
 
     LVL1Result* l1Result = nullptr;
+    if(m_hold) return nullptr;
+
     // lvl1_id is obvious
     // count is the number of fragments
     // roi_data is a pointer to the concatenated fragments
