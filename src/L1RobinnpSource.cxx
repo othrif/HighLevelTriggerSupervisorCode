@@ -1,5 +1,5 @@
-// Othmane Rifki & R. Blair
-// othmane.rifki@cern.ch
+// R. Blair, J. Love, & O. Rifki
+//jeremy.love@cern.ch
 
 #include <deque>
 #include <vector>
@@ -60,7 +60,7 @@ extern "C" hltsv::L1Source *create_source(Configuration *config, const daq::df::
   if(my_config == nullptr) {
     throw hltsv::ConfigFailed(ERS_HERE, "Invalid type for configuration to L1RobinnpSource");
   }
-  return new hltsv::L1RobinnpSource(my_config->get_Links());
+  return new hltsv::L1RobinnpSource(my_config->get_Links());//, my_config->get_SleepTime());
 }
 
 namespace hltsv {
@@ -75,7 +75,6 @@ namespace hltsv {
 	ERS_LOG(" L1RobinnpSource thread started with id:"<<myID);
 	m_active_chan=channels;
 	m_rols=channels.size();
-      
   }
   //____________________________________________
   L1RobinnpSource::~L1RobinnpSource()
@@ -110,10 +109,7 @@ namespace hltsv {
 	  }
     */
 
-
     LVL1Result* l1Result = nullptr;
-    if(m_hold) return nullptr;
-
     // lvl1_id is obvious
     // count is the number of fragments
     // roi_data is a pointer to the concatenated fragments
@@ -199,10 +195,7 @@ namespace hltsv {
 		throw ConfigFailed(ERS_HERE, "Invalid RobinNP channel");
       }
     }
-    uint32_t m_maxchan=0;
-    for ( auto i:m_active_chan ) m_maxchan=i>m_maxchan?i:m_maxchan;
-    if(DebugMe) ERS_LOG(" running externally with "<<m_maxchan+1<<
-						" channels");
+    
     if ( m_builder ) {
       delete m_builder;
       m_builder=0;
@@ -214,16 +207,19 @@ namespace hltsv {
       m_input=0;
     } else ERS_LOG(" no input present");
 
-	uint32_t linkMask = 0;
-	for(auto ch : m_active_chan) {
-	  linkMask |= (1 << ch);
-	}
-	ERS_LOG("Mask of active channels: " << linkMask);
-
-	m_input=new ROS::RobinNPROIB(0,linkMask,false,0);
-	//m_input=new ROS::RobinNPROIB(1,linkMask,false,0);
-
-    m_builder=new RoIBuilder(m_input,m_active_chan,m_maxchan+1);
+    uint32_t m_maxchan=m_active_chan.size();
+    uint32_t linkMask = 0;
+    for(auto ch : m_active_chan) {
+      linkMask |= (1 << ch);
+    }
+    ERS_LOG("Mask of active channels: " << linkMask);
+    
+    if(DebugMe) ERS_LOG(" running externally with "<<m_maxchan<<
+			" channels");
+    //m_input=new ROS::RobinNPROIB(0,linkMask,true,0);//,256,4000);
+    m_input=new ROS::RobinNPROIB(0,linkMask,false,0);
+    
+    m_builder=new RoIBuilder(m_input,m_active_chan);
   }
   //______________________________________________________________________________
   void

@@ -16,7 +16,7 @@ const bool DebugMe=false;
 const bool DebugData=false;
 std::string dir="/DEBUG/RoIBHistograms/";
 std::set<std::string> hist_names;
-const uint32_t maxBacklog=4997;
+const uint32_t maxBacklog=5000;
 
 builtEv::builtEv(uint64_t l1id64) :
   m_size(0),m_count(0),m_l1id64(l1id64),m_data(0)
@@ -48,7 +48,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
   uint32_t Nwrap[]={0,0,0,0,0,0,0,0,0,0,0,0};
   uint32_t lastId[]={0,0,0,0,0,0,0,0,0,0,0,0};  
   uint32_t rolId;
-  uint32_t MaxSubrob=(m_active_chan.size()>6?1:0);
+  uint32_t MaxSubrob=1;//(m_active_chan.size()>6?1:0);//ASSUMPTION OF LOWEST CHANNELS HERE TOO!!!
   uint32_t subrob=myThread;
   uint64_t el1id;
 
@@ -56,10 +56,10 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 
   pid_t myID=syscall(SYS_gettid);
   ERS_LOG(" Receive thread "<<myThread<<" started with id:"<<myID << 
-		  " MaxSubrob="<<MaxSubrob<<" starting subrob:"<<subrob);
-
+	  " MaxSubrob="<<MaxSubrob<<" starting subrob:"<<subrob);
+  
   if(DebugMe ) 
-	ERS_LOG(" Receive thread started");
+    ERS_LOG(" Receive thread started");
 
   // loop reading out until asked to stop
   while(!m_stop) {
@@ -67,9 +67,9 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
     if(m_module == 0 ) 
       return;
 
-    if(DebugMe) 
+    /*if(DebugMe) 
       ERS_LOG(" thread "<<myThread<<" initiating getFragment("
-	      <<subrob<<")"); 
+      <<subrob<<")"); */
     bool newL1id=false;
     auto fragment = m_module->getFragment(subrob);
     // check that the fragment is okay
@@ -106,7 +106,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 		  " link:"<<rolId<<
 		  " l1id:"<<l1id);
 	EventList::accessor m_eventsLocator;
-	el1id=(uint64_t)l1id|(uint64_t)Nwrap[rolId]<<32;
+	el1id=(uint64_t)l1id|((uint64_t)Nwrap[rolId]<<32);
 	if (m_events.insert(m_eventsLocator, el1id)) {
 	  // A new element was inserted
 	  m_eventsLocator->second=new builtEv(el1id);
@@ -119,7 +119,12 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	
 	if(newL1id) {
 	  m_result_lists.push(el1id);
+	  m_firstChan_hist->Fill( rolId);
+	}	
+	else if(ev->count() == m_nactive){
+	  m_lastChan_hist->Fill( rolId);
 	}
+
       }  else {
       
       // if data comes in for links not in use throw it away 
@@ -132,9 +137,8 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 }
 
 
-RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uint32_t nrols)
-  :m_nrols(nrols),
-   m_running(false),
+RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans)
+  :m_running(false),
    m_stop(false)
 {
   //the current code requires n_rcv_threads to be set to two=# subrobs
@@ -142,17 +146,39 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   // stop reading once you reach the maximum number of events
   m_done.set_capacity(maxBacklog);
   m_nactive=0;
-   m_module=module;
-   m_nactive=chans.size();
-   if(DebugMe) 
-     ERS_LOG("m_nactive:"<<m_nactive<<" nrols:"<<nrols);
-   for (auto j:chans) m_active_chan.insert(j);
-   for (uint32_t i=0;i<nrols;i++) {
-     if(m_active_chan.find(i) != m_active_chan.end() )
-       if(DebugMe) ERS_LOG(" ROL "<<i<<" interogated and enabled");
-   }
+  m_module=module;
+  
+  for (auto j:chans){
+    m_active_chan.insert(j);
+    if(DebugMe) ERS_LOG(" ROL "<<j<<" interogated and enabled");
+  }
+  //m_nactive=chans.size();
+  m_nactive=m_active_chan.size();
+  if(DebugMe) 
+    ERS_LOG("m_nactive:"<<m_nactive);
+  
    // set up histograms
-   std::string name="time_Build"; //"Time to complete";
+   std::string name;
+   
+   // for now we spawn readout threads
+   for (uint32_t i=0;i<n_rcv_threads;i++) {
+     char histname[50];
+     sprintf(histname,"links_read_thread%d",i); //"links read by thread %d"
+     name =std::string(histname);
+     m_readLink_hist[i]=new TH1D(histname,"channels read;;",
+				 maxLinks,-.5,maxLinks-.5);
+     monsvc::MonitoringService::instance().register_object(dir+name,
+							   m_readLink_hist[i]);
+     hist_names.insert(name);
+     sprintf(histname,"subrobs_read_thread%d",i); //"subrobs read by thread %d"
+     name =std::string(histname);
+     m_subrobReq_hist[i]=new TH1D(histname,"subrob requests;;",2,-.5,1.5);
+     monsvc::MonitoringService::instance().register_object(dir+name,
+							   m_subrobReq_hist[i]);
+     hist_names.insert(name);
+     m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this,i));
+   }
+   name="time_Build"; //"Time to complete";
    m_timeComplete_hist=
      new TH1D(name.c_str(),"assembly time;microseconds;",
 	      100,0,60000);
@@ -177,16 +203,6 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
 				  100,0.,5000.);
    monsvc::MonitoringService::instance().register_object(dir+name,m_NResultHandled_hist);
    hist_names.insert(name);
-
-   for(uint32_t i=0;i<m_nactive;i++){
-     char histname[50];
-     sprintf(histname,"NumNPDMAPagesFree_%d",i); //"links read by thread %d"
-     name =std::string(histname);//Number of free RobinNP DMA Pages
-     m_NumNPDMAPagesFree_hist[i]=new TH1D(name.c_str(),"Num Number of Free DMA Pages;;",
-				       100,0.,5000.);
-     monsvc::MonitoringService::instance().register_object(dir+name,m_NumNPDMAPagesFree_hist[i]);
-     hist_names.insert(name);
-   }
    name="timeout"; //"time elapsed for timeouts";
    m_timeout_hist= new TH1D(name.c_str(),"elapsed time;microseconds;",
 			    100,0,1000000);
@@ -197,31 +213,33 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
 			      12,0,12);
    monsvc::MonitoringService::instance().register_object(dir+name,m_missedLink_hist);
    hist_names.insert(name);
-   // for now we spawn readout threads
-   for (uint32_t i=0;i<n_rcv_threads;i++) {
-     char histname[50];
-     sprintf(histname,"links_read_thread%d",i); //"links read by thread %d"
-     name =std::string(histname);
-     m_readLink_hist[i]=new TH1D(histname,"channels read;;",
-				 maxLinks,-.5,maxLinks-.5);
-     monsvc::MonitoringService::instance().register_object(dir+name,
-							   m_readLink_hist[i]);
-     hist_names.insert(name);
-     sprintf(histname,"subrobs_read_thread%d",i); //"subrobs read by thread %d"
-     name =std::string(histname);
-     m_subrobReq_hist[i]=new TH1D(histname,"subrob requests;;",2,-.5,1.5);
-     monsvc::MonitoringService::instance().register_object(dir+name,
-							   m_subrobReq_hist[i]);
-     hist_names.insert(name);
-     m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this,i));
-   }
-
-   // spawn result checking thread
-   m_result_thread =  std::thread(&RoIBuilder::check_results,this);
-
+   name="Last_Chan";//Monitor last link received
+   m_lastChan_hist=new TH1D(name.c_str(),"Last Channel Received",11,-0.5,11.5);
+   monsvc::MonitoringService::instance().register_object(dir+name,m_lastChan_hist);
+   hist_names.insert(name);
+   name="First_Chan";//Monitor last link received
+   m_firstChan_hist=new TH1D(name.c_str(), "First Channel Received",12,-0.5,11.5);
+   monsvc::MonitoringService::instance().register_object(dir+name,m_firstChan_hist);
+   hist_names.insert(name);
    name="Built_DAQ";//"Events complete and waiting for DAQ";
    m_backlog_hist=new TH1D(name.c_str(),"events in queue;;",110,0,10000);
    monsvc::MonitoringService::instance().register_object(dir+name,m_backlog_hist);
+   
+   for(std::set<uint32_t>::iterator iChan=m_active_chan.begin();iChan!=m_active_chan.end();++iChan){
+     unsigned int i=*iChan;
+     char histname[50];
+     sprintf(histname,"NumNPDMAPagesFree_%d",i); //"links read by thread %d"
+     name =std::string(histname);//Number of free RobinNP DMA Pages
+     m_NumNPDMAPagesFree_hist[i]=new TH1D(name.c_str(),"Num Number of Free DMA Pages;;",
+					  100,0.,5000.);
+     hist_names.insert(name);
+     monsvc::MonitoringService::instance().register_object(dir+name,m_NumNPDMAPagesFree_hist[i]);
+   }
+
+   
+   // spawn result checking thread
+   m_result_thread =  std::thread(&RoIBuilder::check_results,this);
+   
  }
 
  RoIBuilder::~RoIBuilder()
@@ -243,7 +261,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans,uin
   if(DebugMe) ERS_LOG("Freeing all memory in queues.");
   //Delete data in queues.
   while(!m_result_lists.empty()) {
-    unsigned int el1id;
+    long unsigned int el1id;
     if(m_result_lists.try_pop(el1id)){
       
       EventList::const_accessor m_eventsLocator;
@@ -285,7 +303,6 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
   tbb::tick_count thistime;
   tbb::tick_count::interval_t elapsed;
   
-  m_backlog_hist->Fill(m_done.size());
   m_backlog = m_done.size();
   builtEv * evdone;
   if(m_done.try_pop(evdone)){
@@ -293,6 +310,7 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
     count=evdone->count();
     roi_data=evdone->data();
     l1id=roi_data[5];
+    if(DebugMe) ERS_LOG("Built event "<<evdone->l1id64()<<" clearing Robin-NP pages!  There are "<<m_done.size()<<" events still available.")
 
     //
     //Recycling of pages once event is passed to hltsv_main()
@@ -339,15 +357,16 @@ void RoIBuilder::check_results( )
   while(!m_stop){
     m_NPending_hist->Fill(m_events.size());
     m_NPending = m_events.size();
-    std::this_thread::sleep_for(std::chrono::microseconds(10000)); // result checking every 10 ms
+    std::this_thread::sleep_for(std::chrono::microseconds(5000)); // result checking every 5 ms
     // check results 
+    m_backlog_hist->Fill(m_done.size());
     
     uint32_t numBuilt=0;
     
     while(!m_result_lists.empty()) {
-      unsigned int el1id;
+      long unsigned int el1id;
       if(m_result_lists.try_pop(el1id)){
-	
+	if(DebugMe) ERS_LOG("Checking result for L1ID: "<<el1id);
 	EventList::const_accessor m_eventsLocator;
 	if(m_events.find(m_eventsLocator,el1id)) {
 	  
@@ -355,23 +374,26 @@ void RoIBuilder::check_results( )
 	  time=ev->start();
 	  thistime=tbb::tick_count::now();
 	  elapsed=(thistime-time);
-	  
+	  if(DebugMe) ERS_LOG("Found "<<el1id<<" with "<<ev->count()<<" fragments == "<<m_nactive<<".");	  
 	  // check that this has should be sent off
 	  if(ev->count() == m_nactive || //built
 	     (elapsed.seconds() > limit ) //Or timed out events must be handled.
 	     ){
+	    if(DebugMe) ERS_LOG("CONDITION TRUE! BUILT EVENT "<<el1id<<"!");	  
 	    
 	    //If down stream system stops could become deadlocked...
 	    if( m_done.size()>=maxBacklog || m_stop ) break;     
-	    
+
 	    //move to built events queue
 	    ev->finish();
 	    m_done.push(ev);
 	    numBuilt++;
-	    
+	    if(DebugMe) ERS_LOG("Moved L1ID "<<el1id<<" to done pile with "<<m_done.size()<<" of its friends.");
+	    	    
 	    if(elapsed.seconds() > limit && ev->count() < m_nactive){
 	      m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
 	      m_timeout = elapsed.seconds()*sectomicro;
+	      ERS_LOG("Timed out event "<<el1id<<" after "<<m_timeout<<" ms with "<<ev->count()<<" fragments instead of "<<m_nactive<<".");
 	    }
 	    
 	    //
@@ -385,7 +407,7 @@ void RoIBuilder::check_results( )
 	    //...//}
 	  }
 	  else{//Event not built and not out of time.
-	    m_result_lists.push(el1id);	    
+	    m_result_lists.push(el1id);
 	    break; //no results to check.
 	  }
 	}
@@ -398,8 +420,8 @@ void RoIBuilder::check_results( )
 	m_result_lists.push(el1id);
 	break;//If contention or end of event sleep.
       }
-      m_NResultHandled_hist->Fill(numBuilt);
     }
+    m_NResultHandled_hist->Fill(numBuilt);
   }
 }
 
@@ -427,11 +449,12 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
   info->RNP_bufferFull.resize(maxLINKS);
   info->RNP_numberOfLdowns.resize(maxLINKS);
 
-  for(int i=0;i<maxLINKS;i++){
-    m_rolStats = m_module->getRolStatistics(i);
+  int i=0;
+  for(std::set<uint32_t>::iterator iChan=m_active_chan.begin();iChan!=m_active_chan.end();++iChan){
+    m_rolStats = m_module->getRolStatistics(*iChan);
     info->RNP_Most_Recent_ID[i] = m_rolStats->m_mostRecentId;
     info->RNP_Free_pages[i] = m_rolStats->m_pagesFree;
-    m_NumNPDMAPagesFree_hist[i]->Fill(m_rolStats->m_pagesFree);
+    m_NumNPDMAPagesFree_hist[*iChan]->Fill(m_rolStats->m_pagesFree);
     info->RNP_Used_pages[i] = m_rolStats->m_pagesInUse;
     info->RNP_Most_Recent_ID[i] = m_rolStats->m_mostRecentId;
     info->RNP_XOFF_state[i] = m_rolStats->m_rolXoffStat;
@@ -440,6 +463,7 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
     info->RNP_Down_stat[i] = m_rolStats->m_rolDownStat;
     info->RNP_bufferFull[i] = m_rolStats->m_bufferFull;
     info->RNP_numberOfLdowns[i] = m_rolStats->m_ldowncount;
+    i++;
   }
 }
 

@@ -68,6 +68,8 @@ class RoIBuilder
   TH1D * m_NumNPDMAPagesFree_hist[24];//No hists for more than 2 RobinNPs
   TH1D * m_timeout_hist;
   TH1D * m_missedLink_hist;
+  TH1D * m_lastChan_hist;
+  TH1D * m_firstChan_hist;
   TH1D * m_readLink_hist[maxThreads];
   TH1D * m_subrobReq_hist[maxThreads];
   TH1D * m_backlog_hist;
@@ -89,12 +91,12 @@ class RoIBuilder
   void m_rcv_proc(uint32_t);
   tbb::concurrent_bounded_queue<builtEv *> m_done;
   std::mutex          m_result_mutex[NUMBER_OF_SUBROBS];
-  tbb::concurrent_queue<unsigned int>  m_result_lists;
+  tbb::concurrent_queue<long unsigned int>  m_result_lists;
   void check_results( );
  public:
   bool m_running;
   bool m_stop;
-  RoIBuilder(ROS::RobinNPROIB *,std::vector<uint32_t>,uint32_t);
+  RoIBuilder(ROS::RobinNPROIB *,std::vector<uint32_t>);
   ~RoIBuilder();
   bool getNext(uint32_t &,uint32_t &,uint32_t * &,uint32_t &,uint64_t &);
   void release(uint64_t);
