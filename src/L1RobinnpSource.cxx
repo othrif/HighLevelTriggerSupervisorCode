@@ -1,3 +1,4 @@
+
 // R. Blair, J. Love, & O. Rifki
 //jeremy.love@cern.ch
 
@@ -14,6 +15,20 @@
 #include "ers/ers.h"
 #include "LVL1Result.h"
 #include "eformat/Issue.h"
+
+#include "dal/Component.h"
+#include "dal/Partition.h"
+#include "dal/Segment.h"
+#include "DFdal/DFParameters.h"
+#include "DFdal/DataFile.h"
+#include "DFdal/RoIBConfiguration.h"
+#include "DFdal/RoIBInputBoard.h"
+#include "DFdal/RoIBInputChannel.h"
+#include "rc/RunParams.h"
+#include "dal/Partition.h"
+#include "dal/MasterTrigger.h"
+#include "DFdal/DFParameters.h"
+#include "RunControl/Common/OnlineServices.h"
 
 #include "Issues.h"
 
@@ -60,7 +75,61 @@ extern "C" hltsv::L1Source *create_source(Configuration *config, const daq::df::
   if(my_config == nullptr) {
     throw hltsv::ConfigFailed(ERS_HERE, "Invalid type for configuration to L1RobinnpSource");
   }
-  return new hltsv::L1RobinnpSource(my_config->get_Links());//, my_config->get_SleepTime());
+  //  return new hltsv::L1RobinnpSource(my_config->get_Links());//, my_config->get_SleepTime());
+  std::vector<uint32_t> links;
+  Configuration& conf=daq::rc::OnlineServices::instance().getConfiguration();
+  // Load configuration parameters
+  // start with roib inputs
+  const daq::core::Partition & partition = 
+    daq::rc::OnlineServices::instance().getPartition();
+  const daq::core::Segment & segment = 
+    daq::rc::OnlineServices::instance().getSegment();
+  std::vector<const daq::core::ResourceBase*> rb = segment.get_Resources();
+  if( rb.size() == 0 ) {
+    ERS_LOG(" no resources found to explore for RoIBInputs");
+  }
+  else for (std::vector<const daq::core::ResourceBase*>::iterator it = 
+              rb.begin(); it != rb.end(); it++) {
+      const daq::core::ResourceSet* rit = conf.cast<daq::core::ResourceSet>(*it);
+      if (rit && !rit->disabled(partition)) {
+        // Inputs from L1Source
+        try {
+          //input loop
+          if (rit->UID() == "RoIBInput") {
+            std::vector<const daq::core::ResourceBase*> inputChannels =
+              rit->get_Contains();
+            for (std::vector<const daq::core::ResourceBase*>::iterator ic = inputChannels.begin();
+                 ic != inputChannels.end(); ic++) {
+              const daq::df::RoIBInputChannel* ric = conf.cast<daq::df::RoIBInputChannel>(*ic);
+              if (ric && !ric->disabled(partition)) {
+                //check if the L1source available and enabled
+                const daq::core::ResourceBase* rb = ric->get_L1Source();
+                if (rb && !rb->disabled(partition)) {
+                  ERS_LOG(
+                          " Adding link "<<ric->get_ChannelID()<<
+                          " from RoIBInput");
+                  links.push_back(ric->get_ChannelID());
+                }
+              }
+            }
+          }
+        } catch (daq::config::Exception& ex) {
+          ers::error(ex);
+        }
+      }
+    }
+  //add any specific additional ones from the config
+  for (auto i=0;i<(int32_t)(my_config->get_Links()).size();i++)  {
+    ERS_LOG(" Adding link "<<my_config->get_Links().at(i));
+    links.push_back((my_config->get_Links()).at(i));
+  }
+  // remove any repeats and order them
+  std::sort(links.begin(),links.end());
+  auto last=std::unique(links.begin(),links.end());
+  auto oldend=links.end();
+  links.erase(last,oldend);
+  ERS_LOG(" total of "<<links.size()<<" unique links");
+  return new hltsv::L1RobinnpSource(links);
 }
 
 namespace hltsv {
