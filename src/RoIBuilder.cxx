@@ -315,8 +315,10 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
     count=evdone->count();
     roi_data=evdone->data();
     l1id=roi_data[5];
-    if(DebugMe) ERS_LOG("Built event "<<evdone->l1id64()<<" clearing Robin-NP pages!  There are "<<m_done.size()<<" events still available.")
-
+    if(DebugMe) {
+      ERS_LOG("Built event "<<evdone->l1id64()<<" clearing Robin-NP pages!  There are "<<m_done.size()<<" events still available.");
+    }
+    
     //
     //Recycling of pages once event is passed to hltsv_main()
     //
