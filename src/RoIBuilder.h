@@ -20,6 +20,7 @@
 #include <TH1D.h>
 #include <TH2D.h>
 #include "HLTSV.h"
+#include "Issues.h"
 
 const uint  maxLinks=12;
 // one beyond because the robinnp adds one

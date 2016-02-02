@@ -208,7 +208,7 @@ namespace hltsv {
 		  m_builder->release(elvl1id);
 		} 
 		catch(...) {
-		  ERS_LOG(" failed to create LVL1Result from this data");
+		  hltsv::L1ResultFail err(ERS_HERE);
 		  ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
 		  for(uint32_t j=0;j<length;j++) ERS_LOG(j<<":"<<std::hex<<roi_data[j]);
 		  l1Result=nullptr;
@@ -217,25 +217,30 @@ namespace hltsv {
 		// here we have timeouts and maybe other potential screwups
 		if( count >0 )
 		  {
-			ERS_LOG("found only "<<count<<" RoI links for this event, lvl1id:"<<
-					lvl1_id);
-			try {
-			  l1Result = new LVL1Result(roi_data,length);
-			  m_builder->release(elvl1id);
-			  if(DebugData) {
-				ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
-				for(uint32_t j=0;j<length;j++) 
-				  ERS_LOG(j<<":"<<std::hex<<roi_data[j]);
-			  }
-			}
-			catch(...) {
-			  ERS_LOG(" failed to create LVL1Result from this data, LVL1ID:"<<
-					  lvl1_id);
-			  ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
-			  for(uint32_t j=0;j<length;j++) 
-				ERS_LOG(std::dec<<j<<":"<<std::hex<<roi_data[j]<<" "<<std::dec);
-			  l1Result=nullptr;
-			}
+		    std::ostringstream mesg;
+		    mesg<<" received "<<count<<" links while expecting "<<m_rols;
+		    hltsv::MissedFragment err(ERS_HERE,(mesg.str()).c_str());
+		    ers::error(err);
+		    ERS_LOG("found only "<<count<<" RoI links for this event, lvl1id:"<<
+			    lvl1_id);
+		    try {
+		      l1Result = new LVL1Result(roi_data,length);
+		      m_builder->release(elvl1id);
+		      if(DebugData) {
+			ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
+			for(uint32_t j=0;j<length;j++) 
+			  ERS_LOG(j<<":"<<std::hex<<roi_data[j]);
+		      }
+		    }
+		    catch(...) {
+		      hltsv::L1ResultFail err(ERS_HERE);
+		      ERS_LOG(" failed to create LVL1Result from this data, LVL1ID:"<<
+			      lvl1_id);
+		      ERS_LOG(" data dump:"<<" lvl1_id:"<<lvl1_id);
+		      for(uint32_t j=0;j<length;j++) 
+			ERS_LOG(std::dec<<j<<":"<<std::hex<<roi_data[j]<<" "<<std::dec);
+		      l1Result=nullptr;
+		    }
 		  } else {
 		  try{
 			l1Result=nullptr;

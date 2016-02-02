@@ -163,6 +163,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans)
    // for now we spawn readout threads
    for (uint32_t i=0;i<n_rcv_threads;i++) {
      char histname[50];
+     /*
      sprintf(histname,"links_read_thread%d",i); //"links read by thread %d"
      name =std::string(histname);
      m_readLink_hist[i]=new TH1D(histname,"channels read;;",
@@ -170,12 +171,14 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans)
      monsvc::MonitoringService::instance().register_object(dir+name,
 							   m_readLink_hist[i]);
      hist_names.insert(name);
+     */
      sprintf(histname,"subrobs_read_thread%d",i); //"subrobs read by thread %d"
      name =std::string(histname);
      m_subrobReq_hist[i]=new TH1D(histname,"subrob requests;;",2,-.5,1.5);
      monsvc::MonitoringService::instance().register_object(dir+name,
 							   m_subrobReq_hist[i]);
      hist_names.insert(name);
+   
      m_rcv_threads.push_back(std::thread(&RoIBuilder::m_rcv_proc,this,i));
    }
    name="time_Build"; //"Time to complete";
@@ -222,9 +225,11 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans)
    monsvc::MonitoringService::instance().register_object(dir+name,m_firstChan_hist);
    hist_names.insert(name);
    name="Frag_Size";//Size of each fragment
+
    m_fragSize_hist=new TH2D(name.c_str(), "Channel;Size in Words;",12,-0.5,11.5,100,0.,128.);
    monsvc::MonitoringService::instance().register_object(dir+name,m_fragSize_hist);
    hist_names.insert(name);
+
    name="Built_DAQ";//"Events complete and waiting for DAQ";
    m_backlog_hist=new TH1D(name.c_str(),"events in queue;;",110,0,10000);
    monsvc::MonitoringService::instance().register_object(dir+name,m_backlog_hist);
@@ -397,9 +402,27 @@ void RoIBuilder::check_results( )
 	    if(DebugMe) ERS_LOG("Moved L1ID "<<el1id<<" to done pile with "<<m_done.size()<<" of its friends.");
 	    	    
 	    if(elapsed.seconds() > m_limit && ev->count() < m_nactive){
+	      hltsv::FragmentTimeout err(ERS_HERE);
+	      ers::error(err);
 	      m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
 	      m_timeout = elapsed.seconds()*sectomicro;
 	      ERS_LOG("Timed out event "<<el1id<<" after "<<m_timeout<<" ms with "<<ev->count()<<" fragments instead of "<<m_nactive<<".");
+	      // find the missing fragment and report it and histogram the
+	      // link(s)
+	      const uint32_t * linkList(ev->links());
+	      std::set<uint32_t> expected(m_active_chan);
+	      for (auto iii=0;iii<ev->count();iii++)
+		if( expected.find(linkList[iii]) != expected.end())
+		  expected.erase(expected.find(linkList[iii]));
+	      for (auto iii=expected.begin();iii!=expected.end();iii++){
+		m_missedLink_hist->Fill(*iii);
+		ERS_LOG(" L1ID:"<<el1id<<" missed fragment from link:"<<
+			*iii);
+		std::ostringstream mesg;
+		mesg << " link number:"<<*iii;
+		hltsv::MissedFragment err(ERS_HERE, (mesg.str()).c_str());
+		ers::error(err);
+	      }
 	    }
 	    
 	    //

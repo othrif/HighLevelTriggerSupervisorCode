@@ -69,9 +69,34 @@ ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
 			)
 
 ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
+			MissedFragment, // issue class name
+			hltsv::Issue, //base class name
+			" Missed fragment in ROIB data "<<
+			what<<"\".", //message
+                        ERS_EMPTY,
+                        ((const char *) what )) //attribute of this class
+
+
+ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
 			NoCTPFragment, // issue class name
 			hltsv::Issue, //base class name
 			" No CTP fragment in ROIB data, invalid L1ID may be used", //message
+                        ERS_EMPTY,
+                        ERS_EMPTY
+			)
+
+ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
+			L1ResultFail, // issue class name
+			hltsv::Issue, //base class name
+			" failed to create LVL1Result", //message
+                        ERS_EMPTY,
+                        ERS_EMPTY
+			)
+
+ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
+			FragmentTimeout, // issue class name
+			hltsv::Issue, //base class name
+			" One or more RoI fragments timed out", //message
                         ERS_EMPTY,
                         ERS_EMPTY
 			)
