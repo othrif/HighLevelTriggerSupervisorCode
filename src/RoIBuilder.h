@@ -78,12 +78,15 @@ class RoIBuilder
   uint32_t m_nrols;
   uint32_t m_nactive;
   uint32_t m_timeout;
+  uint32_t m_limit;
   uint32_t m_time_Build;
   uint32_t m_time_Process;
   uint32_t m_NPending;
   uint32_t m_backlog;
+  uint64_t m_sleep=5000;
+  double m_fraction=0.5;
   tbb::concurrent_queue<uint64_t> m_l1ids;
-  std::set<uint32_t> m_active_chan;
+    std::set<uint32_t> m_active_chan;
   typedef tbb::concurrent_hash_map<uint64_t,builtEv *> EventList;
   EventList m_events;
   std::vector<std::thread> m_rcv_threads;
@@ -101,5 +104,8 @@ class RoIBuilder
   bool getNext(uint32_t &,uint32_t &,uint32_t * &,uint32_t &,uint64_t &);
   void release(uint64_t);
   void getISInfo( hltsv::HLTSV * info);
+  void setTimeout(uint32_t timeout){m_limit=timeout;}
+  void setSleep(uint64_t sleep){m_sleep=sleep;}
+  void setFraction(double fraction){m_fraction=fraction;}
 };
 #endif

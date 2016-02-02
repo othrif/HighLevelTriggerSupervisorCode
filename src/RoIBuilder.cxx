@@ -48,7 +48,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
   uint32_t Nwrap[]={0,0,0,0,0,0,0,0,0,0,0,0};
   uint32_t lastId[]={0,0,0,0,0,0,0,0,0,0,0,0};  
   uint32_t rolId;
-  uint32_t MaxSubrob=1;//(m_active_chan.size()>6?1:0);//ASSUMPTION OF LOWEST CHANNELS HERE TOO!!!
+  uint32_t MaxSubrob=1;//Hardcoded for one Robin-NP with two subrobs.
   uint32_t subrob=myThread;
   uint64_t el1id;
 
@@ -67,9 +67,9 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
     if(m_module == 0 ) 
       return;
 
-    /*if(DebugMe) 
+    if(DebugMe) 
       ERS_LOG(" thread "<<myThread<<" initiating getFragment("
-      <<subrob<<")"); */
+      <<subrob<<")");
     bool newL1id=false;
     auto fragment = m_module->getFragment(subrob);
     // check that the fragment is okay
@@ -152,7 +152,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans)
     m_active_chan.insert(j);
     if(DebugMe) ERS_LOG(" ROL "<<j<<" interogated and enabled");
   }
-  //m_nactive=chans.size();
+  
   m_nactive=m_active_chan.size();
   if(DebugMe) 
     ERS_LOG("m_nactive:"<<m_nactive);
@@ -352,17 +352,16 @@ void RoIBuilder::check_results( )
   tbb::tick_count thistime;
   tbb::tick_count::interval_t elapsed;
 
-  const double limit = 1.0; // in seconds
-
   while(!m_stop){
     m_NPending_hist->Fill(m_events.size());
     m_NPending = m_events.size();
-    std::this_thread::sleep_for(std::chrono::microseconds(5000)); // result checking every 5 ms
+    if(m_events.size() < m_fraction*maxBacklog)
+      std::this_thread::sleep_for(std::chrono::microseconds(m_sleep)); // result checking every 5 ms
     // check results 
     m_backlog_hist->Fill(m_done.size());
     
     uint32_t numBuilt=0;
-    
+
     while(!m_result_lists.empty()) {
       long unsigned int el1id;
       if(m_result_lists.try_pop(el1id)){
@@ -377,7 +376,7 @@ void RoIBuilder::check_results( )
 	  if(DebugMe) ERS_LOG("Found "<<el1id<<" with "<<ev->count()<<" fragments == "<<m_nactive<<".");	  
 	  // check that this has should be sent off
 	  if(ev->count() == m_nactive || //built
-	     (elapsed.seconds() > limit ) //Or timed out events must be handled.
+	     (elapsed.seconds() > m_limit ) //Or timed out events must be handled.
 	     ){
 	    if(DebugMe) ERS_LOG("CONDITION TRUE! BUILT EVENT "<<el1id<<"!");	  
 	    
@@ -390,7 +389,7 @@ void RoIBuilder::check_results( )
 	    numBuilt++;
 	    if(DebugMe) ERS_LOG("Moved L1ID "<<el1id<<" to done pile with "<<m_done.size()<<" of its friends.");
 	    	    
-	    if(elapsed.seconds() > limit && ev->count() < m_nactive){
+	    if(elapsed.seconds() > m_limit && ev->count() < m_nactive){
 	      m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
 	      m_timeout = elapsed.seconds()*sectomicro;
 	      ERS_LOG("Timed out event "<<el1id<<" after "<<m_timeout<<" ms with "<<ev->count()<<" fragments instead of "<<m_nactive<<".");
@@ -413,6 +412,7 @@ void RoIBuilder::check_results( )
 	}
 	else {
 	  //entry not found
+	  ERS_LOG("Search for "<<el1id<<" in hash map failed. Removed from list of results");
 	  continue;
 	}	
       }
@@ -466,4 +466,3 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
     i++;
   }
 }
-

@@ -87,6 +87,7 @@
  <file path="daq/schema/core.schema.xml"/>
  <file path="daq/schema/df.schema.xml"/>
  <file path="daq/schema/monsvc_config.schema.xml"/>
+ <file path="daq/schema/RobinNPModule.schema.xml"/>
 </include>
 
 
@@ -126,8 +127,14 @@
  </class>
 
  <class name="RoIBPluginRobinnp" description="The RoIB plugin to read from the RobinNP (i.e. direct from LVL1 or the feeder)">
-  <superclass name="RoIBMasterTriggerPlugin"/>
-  <attribute name="Links" description="A list of indexes specifying which channel on the RobinNP card to read." type="u32" is-multi-value="yes" init-value="0" is-not-null="yes"/>
+   <superclass name="RoIBMasterTriggerPlugin"/>
+   <superclass name="ReadoutModule"/>
+   <superclass name="ResourceSetAND"/>
+   <superclass name="TestableObject"/>
+   <attribute name="Timeout" description="Timeout window for all L1 fragments to arrive in seconds." type="u32" is-multi-value="no" init-value="1.0" is-not-null="yes"/>
+   <attribute name="SleepTime" description="Time system should sleep before handling results." type="u64" is-multi-value="no" init-value="5000" is-not-null="yes"/>
+   <attribute name="SleepFraction" description="Fractional full before system ignores call to sleep." type="double" is-multi-value="no" init-value="1.0" is-not-null="yes"/>
+   <attribute name="DataEmulation" description="Use Robin-NP's data emulation mode." type="bool" is-multi-value="no" init-value="false"/>
  </class>
 
  <class name="RoIBPluginInternal" description="The RoIB plugin to generate a CTP fragment internally.">

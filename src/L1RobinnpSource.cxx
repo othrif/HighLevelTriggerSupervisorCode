@@ -52,7 +52,7 @@ namespace hltsv {
 
   class L1RobinnpSource : public L1Source {
   public:
-    L1RobinnpSource(const std::vector<uint32_t>& channels);
+    L1RobinnpSource(const std::vector<uint32_t>& channels, uint32_t timeout, uint64_t sleep, double fraction, bool isEmu);
     ~L1RobinnpSource();
     
     virtual LVL1Result* getResult() override;
@@ -64,6 +64,10 @@ namespace hltsv {
   private:
 
     size_t m_rols;
+    uint32_t m_timeout;
+    uint64_t m_sleep;
+    double m_fraction;
+    bool m_emulated;
     RoIBuilder * m_builder;
     std::vector<uint32_t> m_active_chan;
   };
@@ -75,7 +79,7 @@ extern "C" hltsv::L1Source *create_source(Configuration *config, const daq::df::
   if(my_config == nullptr) {
     throw hltsv::ConfigFailed(ERS_HERE, "Invalid type for configuration to L1RobinnpSource");
   }
-  //  return new hltsv::L1RobinnpSource(my_config->get_Links());//, my_config->get_SleepTime());
+
   std::vector<uint32_t> links;
   Configuration& conf=daq::rc::OnlineServices::instance().getConfiguration();
   // Load configuration parameters
@@ -105,11 +109,10 @@ extern "C" hltsv::L1Source *create_source(Configuration *config, const daq::df::
                 //check if the L1source available and enabled
                 const daq::core::ResourceBase* rb = ric->get_L1Source();
                 if (rb && !rb->disabled(partition)) {
-                  ERS_LOG(
-                          " Adding link "<<ric->get_ChannelID()<<
-                          " from RoIBInput");
-                  links.push_back(ric->get_ChannelID());
-                }
+		  ERS_LOG(" Adding link "<<ric->get_ChannelID()<<
+			  " from RoIBInput");
+		  links.push_back(ric->get_ChannelID());
+		}
               }
             }
           }
@@ -118,24 +121,25 @@ extern "C" hltsv::L1Source *create_source(Configuration *config, const daq::df::
         }
       }
     }
-  //add any specific additional ones from the config
+  /*//add any specific additional ones from the config
   for (auto i=0;i<(int32_t)(my_config->get_Links()).size();i++)  {
     ERS_LOG(" Adding link "<<my_config->get_Links().at(i));
     links.push_back((my_config->get_Links()).at(i));
-  }
+    }*/
   // remove any repeats and order them
   std::sort(links.begin(),links.end());
   auto last=std::unique(links.begin(),links.end());
   auto oldend=links.end();
   links.erase(last,oldend);
   ERS_LOG(" total of "<<links.size()<<" unique links");
-  return new hltsv::L1RobinnpSource(links);
+
+  return new hltsv::L1RobinnpSource(links, my_config->get_Timeout(), my_config->get_SleepTime(), my_config->get_SleepFraction(), my_config->get_DataEmulation());
 }
 
 namespace hltsv {
 
   //______________________________________________________________________________
-  L1RobinnpSource::L1RobinnpSource(const std::vector<uint32_t>& channels)
+  L1RobinnpSource::L1RobinnpSource(const std::vector<uint32_t>& channels, uint32_t timeout, uint64_t sleep, double fraction, bool isEmu)
     :m_input(0),
      m_rols(0),
      m_builder(0)
@@ -144,6 +148,10 @@ namespace hltsv {
 	ERS_LOG(" L1RobinnpSource thread started with id:"<<myID);
 	m_active_chan=channels;
 	m_rols=channels.size();
+	m_sleep=sleep;
+	m_fraction=fraction;
+	m_emulated=isEmu;
+	m_timeout=timeout;
   }
   //____________________________________________
   L1RobinnpSource::~L1RobinnpSource()
@@ -286,9 +294,12 @@ namespace hltsv {
     if(DebugMe) ERS_LOG(" running externally with "<<m_maxchan<<
 			" channels");
     //m_input=new ROS::RobinNPROIB(0,linkMask,true,0);//,256,4000);
-    m_input=new ROS::RobinNPROIB(0,linkMask,false,0);
+    m_input=new ROS::RobinNPROIB(0,linkMask,m_emulated,0);
     
     m_builder=new RoIBuilder(m_input,m_active_chan);
+    m_builder->setTimeout(m_timeout);
+    m_builder->setSleep(m_sleep);
+    m_builder->setFraction(m_fraction);
   }
   //______________________________________________________________________________
   void
