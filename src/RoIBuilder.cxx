@@ -113,7 +113,7 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	  newL1id=true;
 	}
 	builtEv * & ev=m_eventsLocator->second;
-	
+	m_fragSize_hist->Fill(rolId,fragment.dataSize);
 	// Concatenate fragments with same l1id but different rols
 	ev->add(fragment.dataSize,fragment.page->virtualAddress(),rolId, fragment);
 	
@@ -221,9 +221,14 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans)
    m_firstChan_hist=new TH1D(name.c_str(), "First Channel Received",12,-0.5,11.5);
    monsvc::MonitoringService::instance().register_object(dir+name,m_firstChan_hist);
    hist_names.insert(name);
+   name="Frag_Size";//Size of each fragment
+   m_fragSize_hist=new TH2D(name.c_str(), "Channel;Size in Words;",12,-0.5,11.5,100,0.,128.);
+   monsvc::MonitoringService::instance().register_object(dir+name,m_fragSize_hist);
+   hist_names.insert(name);
    name="Built_DAQ";//"Events complete and waiting for DAQ";
    m_backlog_hist=new TH1D(name.c_str(),"events in queue;;",110,0,10000);
    monsvc::MonitoringService::instance().register_object(dir+name,m_backlog_hist);
+   hist_names.insert(name);
    
    for(std::set<uint32_t>::iterator iChan=m_active_chan.begin();iChan!=m_active_chan.end();++iChan){
      unsigned int i=*iChan;

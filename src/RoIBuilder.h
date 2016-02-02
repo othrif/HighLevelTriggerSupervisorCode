@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include "monsvc/MonitoringService.h"
 #include <TH1D.h>
+#include <TH2D.h>
 #include "HLTSV.h"
 
 const uint  maxLinks=12;
@@ -73,6 +74,7 @@ class RoIBuilder
   TH1D * m_readLink_hist[maxThreads];
   TH1D * m_subrobReq_hist[maxThreads];
   TH1D * m_backlog_hist;
+  TH2D * m_fragSize_hist;
   ROS::RobinNPROIB * m_module;
   ROS::RobinNPROLStats * m_rolStats;
   uint32_t m_nrols;
