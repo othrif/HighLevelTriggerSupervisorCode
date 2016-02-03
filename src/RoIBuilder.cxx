@@ -508,11 +508,11 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
 
 bool RoIBuilder::isLateFragment(uint64_t el1id){
   bool foundL1ID=false;
-  int stale=0;
+  std::vector<uint64_t>::iterator stale = m_timedoutL1ID.begin();
   
   for (auto i:m_timedoutL1ID){
     if(m_timedoutL1ID[i]==el1id){
-      foundL1ID=true;
+      stale++;
     }
     
     if( (el1id - m_timedoutL1ID[i]) > ((uint64_t)2<<32)){//if L1ID is from more than two L1ID wraps old remove it.
@@ -520,11 +520,11 @@ bool RoIBuilder::isLateFragment(uint64_t el1id){
     }
   }
   
-  if( m_timedoutL1ID.size() > 10000)//Don't let vector explode.
+  if( m_timedoutL1ID.size() > 10000 && stale == m_timedoutL1ID.begin() )//Don't let vector explode.
     stale++;
   
-  if(stale !=0)
-    m_timedoutL1ID.erase(m_timedoutL1ID.begin(),m_timedoutL1ID.begin()+stale);
+  if(stale !=m_timedoutL1ID.begin())
+    m_timedoutL1ID.erase(m_timedoutL1ID.begin(),stale);
   
   if(!foundL1ID)
     m_timedoutL1ID.push_back(el1id);
