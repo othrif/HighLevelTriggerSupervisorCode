@@ -40,9 +40,17 @@ void builtEv::add(uint32_t w,uint32_t *d,uint32_t link,ROS::ROIBOutputElement &f
   pages.push_back(fragment);
   m_count++;
 }
+
 void builtEv::finish() {
   m_complete=tbb::tick_count::now();
 }
+  
+void RoIBuilder::freePages(tbb::concurrent_vector<ROS::ROIBOutputElement> evPages){
+  tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
+  for(; ipages!= evPages.end();++ipages)
+    m_module->recyclePage(*ipages);
+}
+
 void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 {
   uint32_t Nwrap[]={0,0,0,0,0,0,0,0,0,0,0,0};
@@ -100,11 +108,15 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	
 	
 	// Check status element
-	if(fragment.fragmentStatus != 0 ) 
+	if(fragment.fragmentStatus != 0 ) {
 	  ERS_LOG("Fragment status " << 
 		  std::hex << fragment.fragmentStatus << std::dec<<
 		  " link:"<<rolId<<
 		  " l1id:"<<l1id);
+	  //If error is bad enough that fragment is not worth building...
+	  //m_module->recyclePage(fragment);
+	  //continue;
+	}
 	EventList::accessor m_eventsLocator;
 	el1id=(uint64_t)l1id|((uint64_t)Nwrap[rolId]<<32);
 	if (m_events.insert(m_eventsLocator, el1id)) {
@@ -278,11 +290,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans)
       if(m_events.find(m_eventsLocator,el1id)) {
 	
 	builtEv * const & ev=(m_eventsLocator)->second;
-	tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
-	tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
-	for(; ipages!= evPages.end();++ipages){
-	  m_module->recyclePage(*ipages);
-	}
+	freePages(ev->associatedPages());
       }//if event found
     }//try_pop succeed
   }//until there is nothing left
@@ -327,12 +335,8 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
     //
     //Recycling of pages once event is passed to hltsv_main()
     //
-    tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= evdone->associatedPages();
-    tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
-    for(; ipages!= evPages.end();++ipages){
-      m_module->recyclePage(*ipages);
-    }
-
+    freePages(evdone->associatedPages());
+    
     el1id=evdone->l1id64();
     time=evdone->start();
     thistime=evdone->complete();
@@ -367,8 +371,9 @@ void RoIBuilder::check_results( )
   while(!m_stop){
     m_NPending_hist->Fill(m_events.size());
     m_NPending = m_events.size();
-    if(m_events.size() < m_fraction*maxBacklog)
+    if(m_events.size() < m_fraction*maxBacklog){
       std::this_thread::sleep_for(std::chrono::microseconds(m_sleep)); // result checking every 5 ms
+    }
     // check results 
     m_backlog_hist->Fill(m_done.size());
     
@@ -395,23 +400,18 @@ void RoIBuilder::check_results( )
 	    //If down stream system stops could become deadlocked...
 	    if( m_done.size()>=maxBacklog || m_stop ) break;     
 
-	    //move to built events queue
-	    ev->finish();
-	    m_done.push(ev);
-	    numBuilt++;
-	    if(DebugMe) ERS_LOG("Moved L1ID "<<el1id<<" to done pile with "<<m_done.size()<<" of its friends.");
-	    	    
-	    if(elapsed.seconds() > m_limit && ev->count() < m_nactive){
+	    if(elapsed.seconds() > m_limit && ev->count() != m_nactive){
 	      hltsv::FragmentTimeout err(ERS_HERE);
 	      ers::error(err);
 	      m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
 	      m_timeout = elapsed.seconds()*sectomicro;
 	      ERS_LOG("Timed out event "<<el1id<<" after "<<m_timeout<<" ms with "<<ev->count()<<" fragments instead of "<<m_nactive<<".");
+	      
 	      // find the missing fragment and report it and histogram the
 	      // link(s)
 	      const uint32_t * linkList(ev->links());
 	      std::set<uint32_t> expected(m_active_chan);
-	      for (auto iii=0;iii<ev->count();iii++)
+	      for (uint32_t iii=0;iii<ev->count();iii++)
 		if( expected.find(linkList[iii]) != expected.end())
 		  expected.erase(expected.find(linkList[iii]));
 	      for (auto iii=expected.begin();iii!=expected.end();iii++){
@@ -423,17 +423,26 @@ void RoIBuilder::check_results( )
 		hltsv::MissedFragment err(ERS_HERE, (mesg.str()).c_str());
 		ers::error(err);
 	      }
+	      
+	      //suppress timedout L1IDs already in the system
+	      if(isLateFragment(el1id)){
+		freePages(ev->associatedPages());
+		continue;
+	      }
+	      
 	    }
+	    
+	    //move to built events queue
+	    ev->finish();
+	    m_done.push(ev);
+	    numBuilt++;
+	    if(DebugMe) ERS_LOG("Moved L1ID "<<el1id<<" to done pile with "<<m_done.size()<<" of its friends.");
 	    
 	    //
 	    //Recycling of pages once event is built or timed out.
 	    //
-	    //...//tbb::concurrent_vector<ROS::ROIBOutputElement> evPages= ev->associatedPages();
-	    //...//tbb::concurrent_vector<ROS::ROIBOutputElement>::iterator ipages= evPages.begin();
-	    //...//
-	    //...//for(; ipages!= evPages.end();++ipages){
-	    //...//  m_module->recyclePage(*ipages);
-	    //...//}
+	    //...//freePages(ev->associatedPages());
+
 	  }
 	  else{//Event not built and not out of time.
 	    m_result_lists.push(el1id);
@@ -495,4 +504,30 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
     info->RNP_numberOfLdowns[i] = m_rolStats->m_ldowncount;
     i++;
   }
+}
+
+bool RoIBuilder::isLateFragment(uint64_t el1id){
+  bool foundL1ID=false;
+  int stale=0;
+  
+  for (auto i:m_timedoutL1ID){
+    if(m_timedoutL1ID[i]==el1id){
+      foundL1ID=true;
+    }
+    
+    if( (el1id - m_timedoutL1ID[i]) > ((uint64_t)2<<32)){//if L1ID is from more than two L1ID wraps old remove it.
+      stale++;//assumes vector is sorted.
+    }
+  }
+  
+  if( m_timedoutL1ID.size() > 10000)//Don't let vector explode.
+    stale++;
+  
+  if(stale !=0)
+    m_timedoutL1ID.erase(m_timedoutL1ID.begin(),m_timedoutL1ID.begin()+stale);
+  
+  if(!foundL1ID)
+    m_timedoutL1ID.push_back(el1id);
+  
+  return foundL1ID;
 }

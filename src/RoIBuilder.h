@@ -88,8 +88,9 @@ class RoIBuilder
   uint32_t m_backlog;
   uint64_t m_sleep=5000;
   double m_fraction=0.5;
+  std::vector<uint64_t> m_timedoutL1ID;
   tbb::concurrent_queue<uint64_t> m_l1ids;
-    std::set<uint32_t> m_active_chan;
+  std::set<uint32_t> m_active_chan;
   typedef tbb::concurrent_hash_map<uint64_t,builtEv *> EventList;
   EventList m_events;
   std::vector<std::thread> m_rcv_threads;
@@ -99,6 +100,9 @@ class RoIBuilder
   std::mutex          m_result_mutex[NUMBER_OF_SUBROBS];
   tbb::concurrent_queue<long unsigned int>  m_result_lists;
   void check_results( );
+  void freePages(tbb::concurrent_vector<ROS::ROIBOutputElement> evPages);
+  bool isLateFragment(uint64_t el1id);
+  
  public:
   bool m_running;
   bool m_stop;
