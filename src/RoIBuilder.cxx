@@ -399,7 +399,7 @@ void RoIBuilder::check_results( )
 	    
 	    //If down stream system stops could become deadlocked...
 	    if( m_done.size()>=maxBacklog || m_stop ) break;     
-
+	    
 	    if(elapsed.seconds() > m_limit && ev->count() != m_nactive){
 	      hltsv::FragmentTimeout err(ERS_HERE);
 	      ers::error(err);
@@ -412,22 +412,23 @@ void RoIBuilder::check_results( )
 	      const uint32_t * linkList(ev->links());
 	      std::set<uint32_t> expected(m_active_chan);
 	      for (uint32_t iii=0;iii<ev->count();iii++)
-		if( expected.find(linkList[iii]) != expected.end())
-		  expected.erase(expected.find(linkList[iii]));
+	      	if( expected.find(linkList[iii]) != expected.end())
+	      	  expected.erase(expected.find(linkList[iii]));
 	      for (auto iii=expected.begin();iii!=expected.end();iii++){
-		m_missedLink_hist->Fill(*iii);
-		ERS_LOG(" L1ID:"<<el1id<<" missed fragment from link:"<<
-			*iii);
-		std::ostringstream mesg;
-		mesg << " link number:"<<*iii;
-		hltsv::MissedFragment err(ERS_HERE, (mesg.str()).c_str());
-		ers::error(err);
+	      	m_missedLink_hist->Fill(*iii);
+	      	ERS_LOG(" L1ID:"<<el1id<<" missed fragment from link:"<<
+	      		*iii);
+	      	std::ostringstream mesg;
+	      	mesg << " link number:"<<*iii;
+	      	hltsv::MissedFragment err(ERS_HERE, (mesg.str()).c_str());
+	      	ers::error(err);
 	      }
 	      
 	      //suppress timedout L1IDs already in the system
 	      if(isLateFragment(el1id)){
-		freePages(ev->associatedPages());
-		continue;
+	      	ERS_LOG("Found a late coming fragment for event "<<el1id);
+	      	freePages(ev->associatedPages());
+	      	continue;
 	      }
 	      
 	    }
@@ -510,21 +511,23 @@ bool RoIBuilder::isLateFragment(uint64_t el1id){
   bool foundL1ID=false;
   std::vector<uint64_t>::iterator stale = m_timedoutL1ID.begin();
   
-  for (auto i:m_timedoutL1ID){
-    if(m_timedoutL1ID[i]==el1id){
-      stale++;
+  for( uint32_t iTO=0; iTO < m_timedoutL1ID.size(); iTO++){
+    if( m_timedoutL1ID[iTO]==el1id ){
+      foundL1ID=true;
     }
     
-    if( (el1id - m_timedoutL1ID[i]) > ((uint64_t)2<<32)){//if L1ID is from more than two L1ID wraps old remove it.
+    if( el1id > m_timedoutL1ID[iTO] && // Don't break when subtracting unsigned ints goes negative and wraps.
+	(el1id - m_timedoutL1ID[iTO]) > ((uint64_t)2<<32)){//if L1ID is from more than two L1ID wraps old remove it.
       stale++;//assumes vector is sorted.
     }
   }
   
-  if( m_timedoutL1ID.size() > 10000 && stale == m_timedoutL1ID.begin() )//Don't let vector explode.
+  if( m_timedoutL1ID.size() > 100000 && stale == m_timedoutL1ID.begin() )//Don't let vector explode.
     stale++;
   
-  if(stale !=m_timedoutL1ID.begin())
+  if(stale != m_timedoutL1ID.begin()){
     m_timedoutL1ID.erase(m_timedoutL1ID.begin(),stale);
+  }
   
   if(!foundL1ID)
     m_timedoutL1ID.push_back(el1id);
