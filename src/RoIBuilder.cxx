@@ -108,14 +108,14 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	
 	
 	// Check status element
-	if(fragment.fragmentStatus != 0 ) {
+	if( fragment.fragmentStatus & roiErrorMask ) {
 	  ERS_LOG("Fragment status " << 
 		  std::hex << fragment.fragmentStatus << std::dec<<
 		  " link:"<<rolId<<
 		  " l1id:"<<l1id);
 	  //If error is bad enough that fragment is not worth building...
-	  //m_module->recyclePage(fragment);
-	  //continue;
+	  m_module->recyclePage(fragment);
+	  continue;
 	}
 	EventList::accessor m_eventsLocator;
 	el1id=(uint64_t)l1id|((uint64_t)Nwrap[rolId]<<32);

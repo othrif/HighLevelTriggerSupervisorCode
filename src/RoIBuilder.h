@@ -115,4 +115,27 @@ class RoIBuilder
   void setSleep(uint64_t sleep){m_sleep=sleep;}
   void setFraction(double fraction){m_fraction=fraction;}
 };
+
+enum roiStatusError{
+  roiStatusOk                  = 0x00000000,  // fragment OK
+
+  // HLTSV
+  INCOMPLETE_ROI               = 0x00010000,  // bit 16 // Incomplete RoI should be set by the HLTSV in the ROB specific status
+
+  // RobinNP flagged errors
+  roiStatusTxError		       = 0x04000000,  // bit 26 // transmission error. Set on any S-Link or fragment format error condition
+  roiStatusSeqError		       = 0x02000000,  // bit 25 // out-of-sequence fragment
+  roiStatusFormatError	       = 0x00800000,  // bit 23 // UPF: Major format version mismatch
+  roiStatusMarkerError	       = 0x00400000,  // bit 22 // UPF: invalid header marker
+  roiStatusEofError		       = 0x00200000,  // bit 21 // UPF: missing EOF
+  roiStatusCtlError		       = 0x00080000,  // bit 19 // UPF: ctl word error
+  roiStatusDataError	       = 0x00040000,  // bit 18 // UPF: data block error
+  roiStatusSizeError	       = 0x00020000,  // bit 17  // UPF: fragment size error
+  roiGenStatusData		       = 0x00000008,  // bit 3  // data error: corrupted fragment
+  //------------
+  roiErrorMask = roiStatusTxError | roiStatusSeqError | roiStatusFormatError | roiStatusMarkerError | roiStatusEofError | \
+  roiStatusCtlError | roiStatusDataError | roiStatusSizeError | roiGenStatusData
+
+};
+
 #endif
