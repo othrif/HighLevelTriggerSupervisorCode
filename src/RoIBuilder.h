@@ -89,6 +89,8 @@ class RoIBuilder
   uint64_t m_sleep=5000;
   double m_fraction=0.5;
   std::vector<uint64_t> m_timedoutL1ID;
+  tbb::atomic<uint64_t> m_rolSize[maxLinks];
+  tbb::tick_count m_rolTime;
   tbb::concurrent_queue<uint64_t> m_l1ids;
   std::set<uint32_t> m_active_chan;
   typedef tbb::concurrent_hash_map<uint64_t,builtEv *> EventList;

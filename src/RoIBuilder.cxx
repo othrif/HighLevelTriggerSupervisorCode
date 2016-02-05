@@ -60,6 +60,8 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
   uint32_t subrob=myThread;
   uint64_t el1id;
 
+  m_rolTime = tbb::tick_count::now(); // for incoming channel rate measurement
+
   subrob=subrob%(MaxSubrob+1);
 
   pid_t myID=syscall(SYS_gettid);
@@ -113,10 +115,14 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 		  std::hex << fragment.fragmentStatus << std::dec<<
 		  " link:"<<rolId<<
 		  " l1id:"<<l1id);
-	  //If error is bad enough that fragment is not worth building...
+	  //If the RobinNP reports an error, the fragment is not worth building...
 	  m_module->recyclePage(fragment);
 	  continue;
 	}
+
+	// for incoming rate measurement per channel
+	m_rolSize[rolId] += fragment.dataSize;
+
 	EventList::accessor m_eventsLocator;
 	el1id=(uint64_t)l1id|((uint64_t)Nwrap[rolId]<<32);
 	if (m_events.insert(m_eventsLocator, el1id)) {
@@ -469,6 +475,9 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
 {
 
   const int maxLINKS = m_active_chan.size();
+  tbb::tick_count thistime;
+  tbb::tick_count::interval_t elapsed;
+  double bandwidth=0;
 
   // RoIB Statistics
   info->RoIB_Pending_RNP = m_NPending;
@@ -489,6 +498,9 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
   info->RNP_bufferFull.resize(maxLINKS);
   info->RNP_numberOfLdowns.resize(maxLINKS);
 
+  // Bandwidth per channel
+  info->RoIB_Bandwidth.resize(maxLINKS);
+
   int i=0;
   for(std::set<uint32_t>::iterator iChan=m_active_chan.begin();iChan!=m_active_chan.end();++iChan){
     m_rolStats = m_module->getRolStatistics(*iChan);
@@ -503,8 +515,16 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
     info->RNP_Down_stat[i] = m_rolStats->m_rolDownStat;
     info->RNP_bufferFull[i] = m_rolStats->m_bufferFull;
     info->RNP_numberOfLdowns[i] = m_rolStats->m_ldowncount;
+
+  // Incoming rate measurement per channel
+	thistime = tbb::tick_count::now();
+	elapsed = (thistime - m_rolTime);
+	bandwidth = (m_rolSize[*iChan]*4) / (1000000*elapsed.seconds());
+	info->RoIB_Bandwidth[i] = bandwidth;
+	m_rolSize[*iChan] = 0;
     i++;
   }
+	m_rolTime = thistime;
 }
 
 bool RoIBuilder::isLateFragment(uint64_t el1id){
