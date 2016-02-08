@@ -76,6 +76,7 @@ class RoIBuilder
   TH1D * m_subrobReq_hist[maxThreads];
   TH1D * m_backlog_hist;
   TH2D * m_fragSize_hist;
+  TH2D * m_fragError_hist;
   ROS::RobinNPROIB * m_module;
   ROS::RobinNPROLStats * m_rolStats;
   uint32_t m_nrols;
@@ -133,10 +134,10 @@ enum roiStatusError{
   roiStatusCtlError		       = 0x00080000,  // bit 19 // UPF: ctl word error
   roiStatusDataError	       = 0x00040000,  // bit 18 // UPF: data block error
   roiStatusSizeError	       = 0x00020000,  // bit 17  // UPF: fragment size error
-  roiGenStatusData		       = 0x00000008,  // bit 3  // data error: corrupted fragment
+  roiGenStatusError		       = 0x00000008,  // bit 3  // data error: corrupted fragment
   //------------
   roiErrorMask = roiStatusTxError | roiStatusSeqError | roiStatusFormatError | roiStatusMarkerError | roiStatusEofError | \
-  roiStatusCtlError | roiStatusDataError | roiStatusSizeError | roiGenStatusData
+  roiStatusCtlError | roiStatusDataError | roiStatusSizeError | roiGenStatusError
 
 };
 
