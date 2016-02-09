@@ -25,6 +25,7 @@ use ROSBufferManagement
 use ROSEventFragment
 use ROSUtilities
 use ROSRobinNP
+use ROSModulesNP
 use ROSMemoryPoolNP
 use ROSDescriptorNP
 use RunControl
