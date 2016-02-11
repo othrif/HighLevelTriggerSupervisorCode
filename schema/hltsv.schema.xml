@@ -114,7 +114,6 @@
 
  <class name="RoIBPlugin" is-abstract="yes">
   <attribute name="Libraries" description="A list of shared libraries to load for this plugin." type="string" is-multi-value="yes"/>
-  <attribute name="IsMasterTrigger" type="bool" init-value="false"/>
  </class>
 
  <class name="RoIBMasterTriggerPlugin" is-abstract="yes">
@@ -127,11 +126,11 @@
  </class>
 
  <class name="RoIBPluginRobinnp" description="The RoIB plugin to read from the RobinNP (i.e. direct from LVL1 or the feeder)">
-   <superclass name="RoIBMasterTriggerPlugin"/>
+   <superclass name="RoIBPlugin"/>
    <superclass name="ReadoutModule"/>
    <superclass name="ResourceSetAND"/>
    <superclass name="TestableObject"/>
-   <attribute name="Timeout" description="Timeout window for all L1 fragments to arrive in seconds." type="u32" is-multi-value="no" init-value="1.0" is-not-null="yes"/>
+   <attribute name="Timeout" description="Timeout window for all L1 fragments to arrive in seconds." type="float" is-multi-value="no" init-value="1.0" is-not-null="yes"/>
    <attribute name="SleepTime" description="Time system should sleep before handling results." type="u64" is-multi-value="no" init-value="5000" is-not-null="yes"/>
    <attribute name="SleepFraction" description="Fractional full before system ignores call to sleep." type="double" is-multi-value="no" init-value="1.0" is-not-null="yes"/>
    <attribute name="DataEmulation" description="Use Robin-NP's data emulation mode." type="bool" is-multi-value="no" init-value="false"/>

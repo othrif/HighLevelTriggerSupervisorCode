@@ -64,7 +64,7 @@ namespace hltsv {
   private:
 
     size_t m_rols;
-    uint32_t m_timeout;
+    float m_timeout;
     uint64_t m_sleep;
     double m_fraction;
     bool m_emulated;

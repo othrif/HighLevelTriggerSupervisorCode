@@ -81,7 +81,7 @@ class RoIBuilder
   ROS::RobinNPROLStats * m_rolStats;
   uint32_t m_nrols;
   uint32_t m_nactive;
-  uint32_t m_timeout;
+  float m_timeout;
   uint32_t m_limit;
   uint32_t m_time_Build;
   uint32_t m_time_Process;
@@ -114,7 +114,7 @@ class RoIBuilder
   bool getNext(uint32_t &,uint32_t &,uint32_t * &,uint32_t &,uint64_t &);
   void release(uint64_t);
   void getISInfo( hltsv::HLTSV * info);
-  void setTimeout(uint32_t timeout){m_limit=timeout;}
+  void setTimeout(float timeout){m_limit=timeout;}
   void setSleep(uint64_t sleep){m_sleep=sleep;}
   void setFraction(double fraction){m_fraction=fraction;}
 };
