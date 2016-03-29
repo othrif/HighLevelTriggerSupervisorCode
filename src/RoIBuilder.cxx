@@ -288,14 +288,14 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans)
 
    if(DebugMe) ERS_LOG("Joinging result and receive threads in destructor.");
 
+  //Join result handling thread.
+  m_result_thread.join();
+  
    //Abort read-in from Robin-NP
   m_module->abort();
   
   //Join Receiving Threads
   for (uint32_t i=0;i<m_rcv_threads.size();i++) m_rcv_threads[i].join();
-  
-  //Join result handling thread.
-  m_result_thread.join();
   
   if(DebugMe) ERS_LOG("Freeing all memory in queues.");
   //Delete data in queues.
