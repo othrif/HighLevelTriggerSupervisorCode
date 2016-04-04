@@ -49,7 +49,7 @@ tdaq_add_library(svl1ttc2lan MODULE
 
 tdaq_add_library(svl1robinnp MODULE
   src/L1RobinnpSource.cxx src/RoIBuilder.cxx
-  LINK_LIBRARIES tdaq-common::eformat_write tdaq-common::eformat
+  LINK_LIBRARIES trgCommander tdaq-common::eformat_write tdaq-common::eformat
   ROSCore ROSUserActionScheduler robinNP robinNP_rol robinNP_BIST robinNP_monitoring 
   NPDescriptor ROSMemoryPoolNP ROSMemoryPool daq-hltsv-dal)
 

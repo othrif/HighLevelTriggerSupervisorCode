@@ -87,7 +87,6 @@
  <file path="daq/schema/core.schema.xml"/>
  <file path="daq/schema/df.schema.xml"/>
  <file path="daq/schema/monsvc_config.schema.xml"/>
- <file path="daq/schema/RobinNPModule.schema.xml"/>
 </include>
 
 
