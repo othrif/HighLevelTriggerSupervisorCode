@@ -1,5 +1,5 @@
 
-tdaq_package()
+tdaq_package(NO_HEADERS)
 
 tdaq_generate_dal(schema/hltsv.schema.xml
   INCLUDE_DIRECTORIES dal monsvc DFConfiguration
