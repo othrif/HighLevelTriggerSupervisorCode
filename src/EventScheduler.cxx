@@ -5,6 +5,7 @@
 #include "ers/ers.h"
 #include "LVL1Result.h"
 #include "monsvc/MonitoringService.h"
+std::atomic<unsigned int> SumAvailable,Nfrac,Nblock;
 
 namespace hltsv {
 
@@ -42,6 +43,9 @@ namespace hltsv {
             std::lock_guard<monsvc::ptr<HLTSV> > lock(m_stats);
             auto hltsv = m_stats.get();
             hltsv->ProcessedEvents += finished_events;
+	    // total count of available cores - crude way to get it
+	    if( hltsv->MaxAvailable < m_free_cores.size())
+		hltsv->MaxAvailable = m_free_cores.size();
         }
     }
 
@@ -68,6 +72,9 @@ namespace hltsv {
         push_events();
         // now handle the new event
         do {
+	    Nfrac++;
+	    SumAvailable+=m_free_cores.size();
+	    if(m_free_cores.size() <= 0 ) Nblock++;
             // might block
 	    m_free_cores.pop(dcm);
 	    real_dcm = dcm.lock();
@@ -122,6 +129,9 @@ namespace hltsv {
     {
         m_global_id = initial_event_id;
         m_stats->reset();
+	Nfrac=0;
+	Nblock=0;
+	SumAvailable=0;
         m_free_cores.clear();
         m_reassigned_events.clear();
     }
@@ -141,7 +151,19 @@ namespace hltsv {
                 auto hltsv = m_stats.get();
 
                 hltsv->AvailableCores = n < 0 ? 0 : n;
-
+		if(Nfrac>0) {
+		    hltsv->FracAvailable=
+			(hltsv->MaxAvailable > 0) ? 
+			SumAvailable/
+			(float)(Nfrac*hltsv->MaxAvailable) : 1.;
+		    hltsv->Busy=(float)Nblock/(float)Nfrac;
+		} else {
+		    hltsv->FracAvailable=1.0;
+		    hltsv->Busy=0.0;
+		}
+		SumAvailable=0;
+		Nfrac=0;
+		Nblock=0;
                 if(hltsv->ProcessedEvents >= last_count)  {
                     auto rate   = (double)(hltsv->ProcessedEvents - last_count)/(double)(sleep_interval_secs);
                     hltsv->Rate = rate;
