@@ -109,23 +109,6 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	  ERS_LOG("thread "<<myThread<<" Processing fragment with l1id " << l1id << " from ROL " << rolId);
 	
 	
-	// Check status element fill error hists.
-	if( fragment.fragmentStatus != roiStatusOk ) {
-	  if( fragment.fragmentStatus & roiStatusTxError) m_fragError_hist->Fill(rolId,0);
-	  if( fragment.fragmentStatus & roiStatusSeqError) m_fragError_hist->Fill(rolId,1);
-	  if( fragment.fragmentStatus & roiStatusFormatError) m_fragError_hist->Fill(rolId,2);
-	  if( fragment.fragmentStatus & roiStatusMarkerError) m_fragError_hist->Fill(rolId,3);
-	  if( fragment.fragmentStatus & roiStatusEofError) m_fragError_hist->Fill(rolId,4);
-	  if( fragment.fragmentStatus & roiStatusCtlError) m_fragError_hist->Fill(rolId,5);
-	  if( fragment.fragmentStatus & roiStatusDataError) m_fragError_hist->Fill(rolId,6);
-	  if( fragment.fragmentStatus & roiStatusSizeError) m_fragError_hist->Fill(rolId,7);
-	  if( fragment.fragmentStatus & roiGenStatusError) m_fragError_hist->Fill(rolId,8);
-	  
-	  //If the RobinNP reports an error, the fragment is not worth building...
-	  //...//m_module->recyclePage(fragment);
-	  //...//continue;
-	}
-	
 	// for incoming rate measurement per channel
 	m_rolSize[rolId] += fragment.dataSize;
 
@@ -137,6 +120,20 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	  newL1id=true;
 	}
 	builtEv * & ev=m_eventsLocator->second;
+	
+	// Check status element fill error hists.
+	if( fragment.fragmentStatus != roiStatusOk ) {
+	  if( fragment.fragmentStatus & roiStatusTxError) m_fragError_hist->Fill(rolId,0);
+	  if( fragment.fragmentStatus & roiStatusSeqError) m_fragError_hist->Fill(rolId,1);
+	  if( fragment.fragmentStatus & roiStatusFormatError) m_fragError_hist->Fill(rolId,2);
+	  if( fragment.fragmentStatus & roiStatusMarkerError) m_fragError_hist->Fill(rolId,3);
+	  if( fragment.fragmentStatus & roiStatusEofError) m_fragError_hist->Fill(rolId,4);
+	  if( fragment.fragmentStatus & roiStatusCtlError) m_fragError_hist->Fill(rolId,5);
+	  if( fragment.fragmentStatus & roiStatusDataError) m_fragError_hist->Fill(rolId,6);
+	  if( fragment.fragmentStatus & roiStatusSizeError) m_fragError_hist->Fill(rolId,7);
+	  if( fragment.fragmentStatus & roiGenStatusError) m_fragError_hist->Fill(rolId,8);
+	  ev->addError(rolId,fragment.fragmentStatus);
+	}
 	m_fragSize_hist->Fill(rolId,fragment.dataSize);
 	// Concatenate fragments with same l1id but different rols
 	ev->add(fragment.dataSize,fragment.page->virtualAddress(),rolId, fragment);
@@ -367,6 +364,32 @@ bool RoIBuilder::getNext(uint32_t & l1id,uint32_t & count,uint32_t * & roi_data,
     m_timeProcess_hist->Fill(elapsed.seconds()*sectomicro);
     m_time_Process = elapsed.seconds()*sectomicro;
     m_nFrags_hist->Fill(count);
+    //check for and report any errors
+    auto errors= evdone->getErrors();
+    if( !errors.empty() ) {
+      std::ostringstream missed_links;
+      std::ostringstream bad_frags;
+      bool bad=false,missed=false;
+      std::pair<uint32_t,uint32_t> errorRep;
+      while ( errors.try_pop(errorRep) ) {
+	switch(errorRep.second) {
+	case 0: missed_links <<std::dec<< " link: "<<errorRep.first;
+	  missed=true;
+	  break;
+	default: bad_frags<< std::dec <<" link: " <<errorRep.first << " error:"
+			  << std::hex << errorRep.second ;
+	  bad=true;
+	}
+      }
+      if( missed ) {
+	hltsv::MissedFragment err(ERS_HERE, (missed_links.str()).c_str());
+	ers::error(err);
+      }
+      if( bad ) {
+	hltsv::BadFragment err(ERS_HERE, (bad_frags.str()).c_str());
+	ers::error(err);
+      }
+    }
     return true;
   }
   else
@@ -418,8 +441,6 @@ void RoIBuilder::check_results( )
 	    if( m_done.size()>=maxBacklog || m_stop ) break;     
 	    
 	    if(elapsed.seconds() > m_limit && ev->count() != m_nactive){
-	      hltsv::FragmentTimeout err(ERS_HERE);
-	      ers::error(err);
 	      m_timeout_hist->Fill(elapsed.seconds()*sectomicro);
 	      m_timeout = elapsed.seconds()*sectomicro;
 	      ERS_LOG("Timed out event "<<el1id<<" after "<<m_timeout<<" ms with "<<ev->count()<<" fragments instead of "<<m_nactive<<".");
@@ -435,10 +456,7 @@ void RoIBuilder::check_results( )
 	      	m_missedLink_hist->Fill(*iii);
 	      	ERS_LOG(" L1ID:"<<el1id<<" missed fragment from link:"<<
 	      		*iii);
-	      	std::ostringstream mesg;
-	      	mesg << " link number:"<<*iii;
-	      	hltsv::MissedFragment err(ERS_HERE, (mesg.str()).c_str());
-	      	ers::error(err);
+		ev->addError(*iii,(uint32_t)0);
 	      }
 	      
 	      //suppress timedout L1IDs already in the system

@@ -94,11 +94,11 @@ ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
 			)
 
 ERS_DECLARE_ISSUE_BASE( hltsv, //namespace
-			FragmentTimeout, // issue class name
+			BadFragment, // issue class name
 			hltsv::Issue, //base class name
-			" One or more RoI fragments timed out", //message
+			" One or more RoI fragments had errors "<<
+			what<<"\".", //message
                         ERS_EMPTY,
-                        ERS_EMPTY
-			)
+                        ((const char *) what )) //attribute of this class
 
 #endif //__HLTSV_ISSUES_H__

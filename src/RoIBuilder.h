@@ -49,6 +49,10 @@ class builtEv
   void add(uint32_t w,uint32_t *d,uint32_t link,ROS::ROIBOutputElement &fragment);
   tbb::concurrent_vector<ROS::ROIBOutputElement> associatedPages(){return pages;}
   void finish();
+  tbb::concurrent_queue<std::pair<uint32_t,uint32_t>> getErrors()
+    {return m_errors;}
+  void addError(uint32_t link,uint32_t val)
+  {m_errors.push(std::make_pair(link,val));}
  private:
   tbb::tick_count m_start;
   tbb::tick_count m_complete;
@@ -58,6 +62,7 @@ class builtEv
   uint32_t * m_data;
   uint32_t m_links[maxLinks];
   tbb::concurrent_vector<ROS::ROIBOutputElement> pages;
+  tbb::concurrent_queue<std::pair<uint32_t,uint32_t>> m_errors;
 };
 class RoIBuilder
 {
