@@ -217,10 +217,6 @@ namespace hltsv {
 		// here we have timeouts and maybe other potential screwups
 		if( count >0 )
 		  {
-		    std::ostringstream mesg;
-		    mesg<<" received "<<count<<" links while expecting "<<m_rols;
-		    hltsv::MissedFragment err(ERS_HERE,(mesg.str()).c_str());
-		    ers::error(err);
 		    ERS_LOG("found only "<<count<<" RoI links for this event, lvl1id:"<<
 			    lvl1_id);
 		    try {
