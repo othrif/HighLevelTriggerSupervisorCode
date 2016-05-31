@@ -6,6 +6,7 @@
 #include <mutex>
 #include <atomic>
 #include <time.h>
+#include <unordered_map>
 
 #include "ers/ers.h"
 
@@ -107,7 +108,7 @@ namespace {
     class Callback {
     public:
         virtual ~Callback() {}
-        virtual void insert(uint32_t first, uint32_t last) = 0;
+        virtual void insert(std::shared_ptr<daq::asyncmsg::Session> sender, uint32_t first, uint32_t last) = 0;
         virtual void connected(std::shared_ptr<daq::asyncmsg::Session> session) = 0;
     };
     
@@ -160,16 +161,20 @@ namespace {
 
             uint32_t l1id = msg->l1_id();
           
-            if (m_debug) ERS_LOG("TTC2LAN: recieved new L1ID  "<<l1id<<" in hex: "<<std::hex<<l1id);
-                               
+            if (m_debug) { 
+                ERS_LOG("TTC2LAN: received new L1ID  "<<l1id<<" in hex: "<<std::hex<<l1id);
+            }
+
             if((m_last_id & 0xff000000) == (l1id & 0xff000000)) {
                 // no ECR happened
-                m_callback.insert(m_last_id + 1, l1id);
+                m_callback.insert(shared_from_this(), m_last_id + 1, l1id);
             } else {
                 // ECR happened
-              m_ECRcnt++;
-                if (m_debug) ERS_LOG("TTC2LAN: ECR detected "<<l1id<<" in hex: "<<std::hex<<l1id);
-                m_callback.insert(l1id & 0xff000000, l1id);
+                m_ECRcnt++;
+                if (m_debug) { 
+                    ERS_LOG("TTC2LAN: ECR detected "<<l1id<<" in hex: "<<std::hex<<l1id);
+                }
+                m_callback.insert(shared_from_this(), l1id & 0xff000000, l1id);
             }
 
             m_last_id = l1id;
@@ -209,8 +214,8 @@ namespace {
     private:
         uint32_t  m_last_id;
         Callback& m_callback;
-        uint32_t m_ECRcnt;
-        bool m_debug;
+        uint32_t  m_ECRcnt;
+        bool      m_debug;
     };
 
     class Server : public daq::asyncmsg::Server {
@@ -288,7 +293,7 @@ namespace hltsv {
         void        preset() override;
 
         // Callback interface
-        void insert(uint32_t first, uint32_t last) override;
+        void insert(std::shared_ptr<daq::asyncmsg::Session> sender, uint32_t first, uint32_t last) override;
         void connected(std::shared_ptr<daq::asyncmsg::Session> session) override;
 
     private:
@@ -303,12 +308,12 @@ namespace hltsv {
         std::shared_ptr<Server> m_server;
 
         std::mutex                              m_mutex;
-        std::list<std::pair<uint32_t,uint32_t>> m_events;
+        std::unordered_map<std::shared_ptr<daq::asyncmsg::Session>, std::list<std::pair<uint32_t,uint32_t>>> m_events;
         uint32_t                                m_event_count;
         XONOFFStatus                            m_status;
         bool                                    m_debug;
 
-        std::shared_ptr<daq::asyncmsg::Session> m_session;
+        std::vector<std::shared_ptr<daq::asyncmsg::Session>> m_sessions;
 
         std::thread                             m_io_thread;
     };
@@ -347,38 +352,66 @@ namespace hltsv {
     LVL1Result* L1TTC2LANSource::getResult()
     {
       
-      if (m_debug) {ERS_LOG("L1TTC2LANSource::getResult(): m_event_count = "<<m_event_count
-              <<" m_low_watermark = "<<m_low_watermark
-              <<" m_status = "<<bool(m_status == XONOFFStatus::ON)
-              <<" l1ids in list: "<<m_events.size()
-                          );}
-       
-        if(m_status == XONOFFStatus::OFF && m_event_count < m_low_watermark) {
-          if (m_debug) { ERS_LOG("L1TTC2LANSource::getResult(): sending XON"); }
-            std::unique_ptr<daq::asyncmsg::OutputMessage> msg(new XONOFF(XONOFFStatus::ON));
-            m_session->asyncSend(std::move(msg));
-            m_status = XONOFFStatus::ON;
+        if (m_debug) {
+            ERS_LOG("L1TTC2LANSource::getResult(): m_event_count = " << m_event_count
+                    <<" m_low_watermark = " << m_low_watermark
+                    <<" m_status = " << bool(m_status == XONOFFStatus::ON)
+                    <<" l1ids in list: " << m_events.size());
         }
 
-        uint32_t l1id;
+        if(m_status == XONOFFStatus::OFF && m_event_count < m_low_watermark) {
 
+            if (m_debug) { 
+                ERS_LOG("L1TTC2LANSource::getResult(): sending XON"); 
+            }
+
+            for(auto& session : m_sessions) {
+                std::unique_ptr<daq::asyncmsg::OutputMessage> msg(new XONOFF(XONOFFStatus::ON));
+                session->asyncSend(std::move(msg));
+            }
+            m_status = XONOFFStatus::ON;
+        }
+        
+        uint32_t l1id;
+        
         { // lock
             std::unique_lock<std::mutex> lock(m_mutex);
-                
-            if(m_events.empty()) {
-                return 0;
+            
+            // This first loop checks if all senders have send
+            // something.
+            for(auto& events : m_events) {
+                if(events.second.empty()) {
+                    return 0;
+                }
+            }
+
+            // ok, there are events in all input queues
+            // The assumption here is that they are all aligend, i.e. the
+            // next event in all inputs queues is the same across the senders
+            
+            std::vector<uint32_t> l1ids;
+            l1ids.reserve(m_sessions.size());
+
+            for(auto& events : m_events) {
+                auto& ev = events.second;
+                l1ids.push_back(ev.front().first);
+                if(++ev.front().first > ev.front().second) {
+                    ev.pop_front();
+                }
+            }
+
+            l1id = l1ids.front();
+            for(auto i : l1ids) {
+                if(i != l1id) {
+                    ERS_LOG("Event IDs out of sync: " << l1id << " vs. " << i);
+                }
             }
             
-            l1id = m_events.front().first;
-            if(++m_events.front().first > m_events.front().second) {
-                m_events.pop_front();
-            }
-
             m_event_count--;
         } // end of lock
-
+        
         //create the ROB fragment 
-        const uint32_t bc_id	 = 0x1;
+        const uint32_t bc_id     = 0x1;
         const uint32_t lvl1_type = 0xff;
   
         const uint32_t event_type = 0x1; 
@@ -392,48 +425,52 @@ namespace hltsv {
 
         ctp_rod[0] = current_time.tv_nsec;
         ctp_rod[1] = current_time.tv_sec;
-
+        
         eformat::write::ROBFragment rob(src.code(), m_run_number, l1id, bc_id,
                                         lvl1_type, event_type, 
                                         ctp_rod.size(), &ctp_rod[0], 
                                         eformat::STATUS_BACK);
-
+        
         rob.rod_minor_version(0x1815);
-
+        
         auto fragment = new uint32_t[rob.size_word()];
         eformat::write::copy(*rob.bind(), fragment, rob.size_word());
-
+        
         LVL1Result* l1Result = new LVL1Result(l1id, fragment, rob.size_word());
-
+        
         return l1Result;
     }
-
-    void L1TTC2LANSource::insert(uint32_t first, uint32_t last)
+    
+    void L1TTC2LANSource::insert(std::shared_ptr<daq::asyncmsg::Session> sender, uint32_t first, uint32_t last)
     {
         { // lock
             std::unique_lock<std::mutex> lock(m_mutex);
-            m_events.push_back(std::make_pair(first,last));
+            m_events[sender].push_back(std::make_pair(first,last));
             m_event_count += (last - first + 1);
         } // end of lock
-      
-        if(m_debug) {ERS_LOG("L1TTC2LANSource::insert(): first = "<<first<<" last = "<<last<<" new m_event_count = "<<m_event_count);}
+        
+        if(m_debug) {
+            ERS_LOG("L1TTC2LANSource::insert(): first = " << first << " last = " << last << " new m_event_count = " << m_event_count);
+        }
         if(m_event_count > m_high_watermark && m_status == XONOFFStatus::ON) {
-            std::unique_ptr<daq::asyncmsg::OutputMessage> msg(new XONOFF(XONOFFStatus::OFF));
-            m_session->asyncSend(std::move(msg));
+            for(auto& session : m_sessions) {
+                std::unique_ptr<daq::asyncmsg::OutputMessage> msg(new XONOFF(XONOFFStatus::OFF));
+                session->asyncSend(std::move(msg));
+            }
             m_status = XONOFFStatus::OFF;
-            ERS_LOG("L1TTC2LANSource::insert(): sending XOFF because m_event_count:  "<<m_event_count<<" > m_high_watermark = "<<m_high_watermark);
+            ERS_LOG("L1TTC2LANSource::insert(): sending XOFF because m_event_count:  " << m_event_count << " > m_high_watermark = " << m_high_watermark);
         }
     }
-
+    
     void L1TTC2LANSource::connected(std::shared_ptr<daq::asyncmsg::Session> session)
     {
-        m_session = session;
+        m_sessions.push_back(session);
     }
-
+    
     void L1TTC2LANSource::preset()
     {
         m_work.reset(new boost::asio::io_service::work(m_io_service));
-
+        
         m_events.clear();
         m_event_count = 0;
         m_server = std::make_shared<Server>(m_io_service,
@@ -442,7 +479,7 @@ namespace hltsv {
         m_server->start();
         m_io_thread = std::thread([&] { m_io_service.run(); });
     }
-
+    
     void
     L1TTC2LANSource::reset(uint32_t run_number)
     {
@@ -451,5 +488,5 @@ namespace hltsv {
         m_run_number = run_number;
     }
     
-
+    
 }
