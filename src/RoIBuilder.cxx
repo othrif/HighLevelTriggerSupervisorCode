@@ -261,8 +261,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans)
    monsvc::MonitoringService::instance().register_object(dir+name,m_backlog_hist);
    hist_names.insert(name);
    
-   for(std::set<uint32_t>::iterator iChan=m_active_chan.begin();iChan!=m_active_chan.end();++iChan){
-     unsigned int i=*iChan;
+   for(uint32_t i=0; i<maxLinks; i++){
      char histname[50];
      sprintf(histname,"NumNPDMAPagesFree_%d",i); //"links read by thread %d"
      name =std::string(histname);//Number of free RobinNP DMA Pages
@@ -503,7 +502,7 @@ void RoIBuilder::check_results( )
 void RoIBuilder::getISInfo(hltsv::HLTSV * info)
 {
 
-  const int maxLINKS = m_active_chan.size();
+  const int maxLINKS = 12;//One Robin-NP Hardcoded.
   tbb::tick_count thistime;
   tbb::tick_count::interval_t elapsed;
   double bandwidth=0;
@@ -530,12 +529,11 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
   // Bandwidth per channel
   info->RoIB_Bandwidth.resize(maxLINKS);
 
-  int i=0;
-  for(std::set<uint32_t>::iterator iChan=m_active_chan.begin();iChan!=m_active_chan.end();++iChan){
-    m_rolStats = m_module->getRolStatistics(*iChan);
+  for(  int i=0; i< maxLINKS; i++){
+    m_rolStats = m_module->getRolStatistics(i);
     info->RNP_Most_Recent_ID[i] = m_rolStats->m_mostRecentId;
     info->RNP_Free_pages[i] = m_rolStats->m_pagesFree;
-    m_NumNPDMAPagesFree_hist[*iChan]->Fill(m_rolStats->m_pagesFree);
+    m_NumNPDMAPagesFree_hist[i]->Fill(m_rolStats->m_pagesFree);
     info->RNP_Used_pages[i] = m_rolStats->m_pagesInUse;
     info->RNP_Most_Recent_ID[i] = m_rolStats->m_mostRecentId;
     info->RNP_XOFF_state[i] = m_rolStats->m_rolXoffStat;
@@ -548,10 +546,9 @@ void RoIBuilder::getISInfo(hltsv::HLTSV * info)
   // Incoming rate measurement per channel
 	thistime = tbb::tick_count::now();
 	elapsed = (thistime - m_rolTime);
-	bandwidth = (m_rolSize[*iChan]*4) / (1000000*elapsed.seconds());
+	bandwidth = (m_rolSize[i]*4) / (1000000*elapsed.seconds());
 	info->RoIB_Bandwidth[i] = bandwidth;
-	m_rolSize[*iChan] = 0;
-    i++;
+	m_rolSize[i] = 0;
   }
 	m_rolTime = thistime;
 }
