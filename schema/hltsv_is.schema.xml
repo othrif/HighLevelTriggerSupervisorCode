@@ -94,12 +94,12 @@
 	<attribute name="ReassignedEvents" description="Number of reassigned events." type="u64" init-value="0" is-not-null="yes"/>
 	<attribute name="ProcessedEvents" description="Number of processed events" type="u64" init-value="0" is-not-null="yes"/>
 	<attribute name="AvailableCores" description="The number of currently available cores on the DCMs." type="u32" init-value="0" is-not-null="yes"/>
-        <attribute name="FracAvailable" description="The fraction of available cores on average between samples" type="float" init-value="0.0" is-not-null="yes" />
+	 <attribute name="FracAvailable" description="The fraction of available cores on average between samples" type="float" init-value="0.0" is-not-null="yes" />
 	<attribute name="MaxAvailable" description="The maximum number of available cores in the DCMs" type="u32" init-value="0" is-not-null="yes"/>
 	<attribute name="Rate" description="Instantaneous Rate (Hz)" type="float" init-value="0.0" is-not-null="yes"/>
 	<attribute name="Recent_LVL1_ID" description="Recent Level 1 ID" type="u32" init-value="0" is-not-null="yes"/>
 	<attribute name="Recent_Global_ID" description="Recent Global Event ID" type="u64" init-value="0" is-not-null="yes"/>
-	<attribute name="Busy" description="Busy Rate" type="float" init-value="0.0" is-not-null="yes"/>  
+	<attribute name="Busy" description="Busy fraction received from HLT farm." type="float" init-value="0.0" is-not-null="yes"/>  
 	<attribute name="LVL1DecodingErrors" description="Number of failed LVL1 decodings" type="u64" init-value="0" is-not-null="yes"/>  
 	<attribute name="RoIB_Bandwidth" description="Bandwidth per channel (MBytes/s)" format="dec" type="double" init-value="0" is-multi-value="yes"/>
 	<attribute name="RoIB_Pending_RNP" description="Number of events received but not built yet due to missing ROLs" type="u64" init-value="0" is-not-null="yes"/>
