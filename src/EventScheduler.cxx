@@ -43,6 +43,7 @@ namespace hltsv {
             std::lock_guard<monsvc::ptr<HLTSV> > lock(m_stats);
             auto hltsv = m_stats.get();
             hltsv->ProcessedEvents += finished_events;
+
 	    // total count of available cores - crude way to get it
 	    if( hltsv->MaxAvailable < m_free_cores.size())
 		hltsv->MaxAvailable = m_free_cores.size();
@@ -67,7 +68,7 @@ namespace hltsv {
 
         hltsv->Recent_Global_ID = global_id;
         hltsv->Recent_LVL1_ID = rois->l1_id();
-
+	
         // First try to work on the re-assigned events if there are any
         push_events();
         // now handle the new event
@@ -132,7 +133,7 @@ namespace hltsv {
 	Nfrac=0;
 	Nblock=0;
 	SumAvailable=0;
-        m_free_cores.clear();
+	m_free_cores.clear();
         m_reassigned_events.clear();
     }
 
@@ -151,12 +152,13 @@ namespace hltsv {
                 auto hltsv = m_stats.get();
 
                 hltsv->AvailableCores = n < 0 ? 0 : n;
+
 		if(Nfrac>0) {
 		    hltsv->FracAvailable=
 			(hltsv->MaxAvailable > 0) ? 
 			SumAvailable/
 			(float)(Nfrac*hltsv->MaxAvailable) : 1.;
-		    hltsv->Busy=(float)Nblock/(float)Nfrac;
+		    hltsv->Busy=(float)100.*(float)Nblock/(float)Nfrac;
 		} else {
 		    hltsv->FracAvailable=1.0;
 		    hltsv->Busy=0.0;
@@ -164,6 +166,7 @@ namespace hltsv {
 		SumAvailable=0;
 		Nfrac=0;
 		Nblock=0;
+
                 if(hltsv->ProcessedEvents >= last_count)  {
                     auto rate   = (double)(hltsv->ProcessedEvents - last_count)/(double)(sleep_interval_secs);
                     hltsv->Rate = rate;

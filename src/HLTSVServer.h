@@ -4,6 +4,7 @@
 
 #include "asyncmsg/Server.h"
 #include "monsvc/ptr.h"
+#include "HLTSV.h"
 
 #include <memory>
 #include <vector>

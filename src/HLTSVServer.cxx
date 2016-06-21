@@ -87,8 +87,11 @@ namespace hltsv {
         std::shared_ptr<DCMSession> dcm(session, dynamic_cast<DCMSession*>(session.get()));
 
         m_sessions.push_back(dcm);
-            
-        // start the next accept
+	
+	auto hltsv = m_stats.get();
+	hltsv->DCMSessions = m_sessions.size();
+        
+	// start the next accept
         auto new_session = std::make_shared<DCMSession>(m_services[m_next_service],
                                                         m_scheduler,
                                                         m_ros_clear,

@@ -64,6 +64,11 @@ public:
     float                         Rate;
 
     /**
+     * Number of DCM Sessions seen by HLTSV
+     */
+    unsigned int                  DCMSessions;
+
+    /**
      * Recent Level 1 ID
      */
     unsigned int                  Recent_LVL1_ID;
@@ -177,7 +182,8 @@ public:
 	out << "Rate: " << Rate << "\t// Instantaneous Rate (Hz)" << std::endl;
 	out << "Recent_LVL1_ID: " << Recent_LVL1_ID << "\t// Recent Level 1 ID" << std::endl;
 	out << "Recent_Global_ID: " << Recent_Global_ID << "\t// Recent Global Event ID" << std::endl;
-	out << "Busy: " << Busy << "\t// Busy Rate" << std::endl;
+	out << "Busy: " << Busy << "\t// Busy fraction received from HLT farm." << std::endl;
+	out << "DCMSessions: " << DCMSessions << "\t// Number of DCM Sessions seen by HLTSV" << std::endl;
 	out << "LVL1DecodingErrors: " << LVL1DecodingErrors << "\t// Number of failed LVL1 decodings" << std::endl;
 	out << "RoIB_Bandwidth[" << RoIB_Bandwidth.size() << "]:\t// Bandwidth per channel (MBytes/s)" << std::endl;
 	for ( size_t i = 0; i < RoIB_Bandwidth.size(); ++i )
@@ -240,7 +246,7 @@ protected:
     void publishGuts( ISostream & out ){
 	out << LVL1Events << AssignedEvents << ReassignedEvents << ProcessedEvents << AvailableCores;
 	out << FracAvailable << MaxAvailable << Rate << Recent_LVL1_ID << Recent_Global_ID;
-	out << Busy << LVL1DecodingErrors << RoIB_Bandwidth << RoIB_Pending_RNP << RoIB_Pending_DAQ;
+	out << Busy << DCMSessions << LVL1DecodingErrors << RoIB_Bandwidth << RoIB_Pending_RNP << RoIB_Pending_DAQ;
 	out << RoIB_time_Build << RoIB_time_Process << RoIB_timeout << RNP_Free_pages << RNP_Used_pages;
 	out << RNP_Most_Recent_ID << RNP_XOFF_state << RNP_XOFF_per << RNP_XOFF_count << RNP_Down_stat;
 	out << RNP_bufferFull << RNP_numberOfLdowns;
@@ -249,7 +255,7 @@ protected:
     void refreshGuts( ISistream & in ){
 	in >> LVL1Events >> AssignedEvents >> ReassignedEvents >> ProcessedEvents >> AvailableCores;
 	in >> FracAvailable >> MaxAvailable >> Rate >> Recent_LVL1_ID >> Recent_Global_ID;
-	in >> Busy >> LVL1DecodingErrors >> RoIB_Bandwidth >> RoIB_Pending_RNP >> RoIB_Pending_DAQ;
+	in >> Busy >> DCMSessions >> LVL1DecodingErrors >> RoIB_Bandwidth >> RoIB_Pending_RNP >> RoIB_Pending_DAQ;
 	in >> RoIB_time_Build >> RoIB_time_Process >> RoIB_timeout >> RNP_Free_pages >> RNP_Used_pages;
 	in >> RNP_Most_Recent_ID >> RNP_XOFF_state >> RNP_XOFF_per >> RNP_XOFF_count >> RNP_Down_stat;
 	in >> RNP_bufferFull >> RNP_numberOfLdowns;
@@ -269,6 +275,7 @@ private:
 	Recent_LVL1_ID = 0;
 	Recent_Global_ID = 0;
 	Busy = 0.0;
+	DCMSessions = 0;
 	LVL1DecodingErrors = 0;
 	RoIB_Bandwidth.resize( 1 );
 	RoIB_Bandwidth[0] = 0;
