@@ -5,7 +5,7 @@
 #include "ers/ers.h"
 #include "LVL1Result.h"
 #include "monsvc/MonitoringService.h"
-std::atomic<unsigned int> SumAvailable,Nfrac,Nblock;
+std::atomic<unsigned int> SumAvailable,MaxAvailable,Nfrac,Nblock;
 
 namespace hltsv {
 
@@ -45,8 +45,8 @@ namespace hltsv {
             hltsv->ProcessedEvents += finished_events;
 
 	    // total count of available cores - crude way to get it
-	    if( hltsv->MaxAvailable < m_free_cores.size())
-		hltsv->MaxAvailable = m_free_cores.size();
+	    if( MaxAvailable < m_free_cores.size())
+		MaxAvailable = m_free_cores.size();
         }
     }
 
@@ -152,12 +152,12 @@ namespace hltsv {
                 auto hltsv = m_stats.get();
 
                 hltsv->AvailableCores = n < 0 ? 0 : n;
-
+		hltsv->MaxAvailable = MaxAvailable;
 		if(Nfrac>0) {
 		    hltsv->FracAvailable=
-			(hltsv->MaxAvailable > 0) ? 
+			(MaxAvailable > 0) ? 
 			SumAvailable/
-			(float)(Nfrac*hltsv->MaxAvailable) : 1.;
+			(float)(Nfrac*MaxAvailable) : 1.;
 		    hltsv->Busy=(float)100.*(float)Nblock/(float)Nfrac;
 		} else {
 		    hltsv->FracAvailable=1.0;
@@ -166,6 +166,7 @@ namespace hltsv {
 		SumAvailable=0;
 		Nfrac=0;
 		Nblock=0;
+		MaxAvailable=0;
 
                 if(hltsv->ProcessedEvents >= last_count)  {
                     auto rate   = (double)(hltsv->ProcessedEvents - last_count)/(double)(sleep_interval_secs);
