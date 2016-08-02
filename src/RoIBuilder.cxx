@@ -98,9 +98,10 @@ void  RoIBuilder::m_rcv_proc(uint32_t myThread)
 	
 	//check for ID wrap around
 	if( (0xFFF00000&l1id)<(0xFFF00000&lastId[rolId])) {
-	  ERS_LOG("thread "<<myThread<<" l1id has wrapped, this l1id:"
-		  <<l1id<<" previous id:"
-		  <<lastId[rolId] <<" link:"<<rolId);
+	  if(DebugMe)
+	    ERS_LOG("thread "<<myThread<<" l1id has wrapped, this l1id:"
+		    <<l1id<<" previous id:"
+		    <<lastId[rolId] <<" link:"<<rolId);
 	  // exempt a wrap as the first event comes in
 	  if( lastId[rolId]!=0)Nwrap[rolId]++;
 	}
