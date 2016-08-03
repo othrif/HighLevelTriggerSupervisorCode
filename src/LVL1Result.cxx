@@ -89,9 +89,13 @@ namespace hltsv {
                 const uint32_t* rod[MAXLVL1RODS];
                 uint32_t        rodsize[MAXLVL1RODS];
 
-               bool found_ctp = false;
+                bool found_ctp = false;
 
                 uint32_t num_frags = eformat::find_rods(m_rod_data, m_rod_length, rod, rodsize, MAXLVL1RODS);
+
+                m_writers.reserve(num_frags);
+                m_data.reserve(num_frags);
+                m_lengths.reserve(num_frags);
 
                 // create the ROB fragments out of ROD fragments
                 // eformat::write::ROBFragment* writers[MAXLVL1RODS];
