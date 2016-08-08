@@ -74,7 +74,7 @@ namespace hltsv {
         // now handle the new event
         do {
 	    Nfrac++;
-	    SumAvailable+=m_free_cores.size();
+	    SumAvailable+=(m_free_cores.size()>0)?m_free_cores.size():0;
 	    if(m_free_cores.size() <= 0 ) Nblock++;
             // might block
 	    m_free_cores.pop(dcm);

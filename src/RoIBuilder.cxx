@@ -239,7 +239,7 @@ RoIBuilder::RoIBuilder(ROS::RobinNPROIB *module, std::vector<uint32_t> chans)
    monsvc::MonitoringService::instance().register_object(dir+name,m_missedLink_hist);
    hist_names.insert(name);
    name="Last_Chan";//Monitor last link received
-   m_lastChan_hist=new TH1D(name.c_str(),"Last Channel Received",11,-0.5,11.5);
+   m_lastChan_hist=new TH1D(name.c_str(),"Last Channel Received",12,-0.5,11.5);
    monsvc::MonitoringService::instance().register_object(dir+name,m_lastChan_hist);
    hist_names.insert(name);
    name="First_Chan";//Monitor last link received
