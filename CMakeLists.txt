@@ -53,6 +53,4 @@ tdaq_add_library(svl1robinnp MODULE
   ROSCore ROSUserActionScheduler robinNP robinNP_rol robinNP_BIST robinNP_monitoring 
   NPDescriptor ROSMemoryPoolNP ROSMemoryPool daq-hltsv-dal)
 
-
-
-
+tdaq_add_is_schema(schema/hltsv_is.schema.xml DESTINATION schema)
