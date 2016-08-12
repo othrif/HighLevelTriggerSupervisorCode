@@ -54,3 +54,16 @@ tdaq_add_library(svl1robinnp MODULE
   NPDescriptor ROSMemoryPoolNP ROSMemoryPool daq-hltsv-dal)
 
 tdaq_add_is_schema(schema/hltsv_is.schema.xml DESTINATION schema)
+
+# Emulators 
+tdaq_add_executable(testDCM 
+  test/testDCM.cxx test/HLTSVSession.cxx test/DCMMessages.cxx
+  LINK_LIBRARIES  rc_ItemCtrl tdaq-common::ers tdaq-common::eformat daq-hltsv-dal monsvc-dal daq-df-dal asyncmsg cmdline TBB)
+
+tdaq_add_executable(testROS 
+  test/testROS.cxx
+  LINK_LIBRARIES asyncmsg rc_ItemCtrl tdaq-common::ers cmdline daq-df-dal)
+
+tdaq_add_executable(testTTC2LAN 
+  test/testTTC2LAN.cxx
+  LINK_LIBRARIES asyncmsg rc_ItemCtrl tdaq-common::ers cmdline daq-df-dal)
