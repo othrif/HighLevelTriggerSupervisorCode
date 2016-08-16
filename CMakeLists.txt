@@ -7,6 +7,8 @@ tdaq_generate_dal(schema/hltsv.schema.xml
   INCLUDE DFdal
   CPP_OUTPUT dal_srcs)
 
+tdaq_add_schema(schema/hltsv.schema.xml)
+
 tdaq_add_library(daq-hltsv-dal DAL ${dal_srcs}
   LINK_LIBRARIES monsvc-dal daq-df-dal daq-core-dal)
 
