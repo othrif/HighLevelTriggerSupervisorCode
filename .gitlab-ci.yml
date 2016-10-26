@@ -1,0 +1,23 @@
+
+# You can customize this 
+ci_trigger:
+   image: gitlab-registry.cern.ch/atlas-tdaq-software/tdaq_ci:trigger
+   tags:
+      - tdaq
+   script: ""
+   variables:
+        releases: nightly
+        GIT_STRATEGY: none
+   only:
+        - master
+   except:
+        - triggers
+
+# You should not have to modify the following
+ci_build:
+   image: $TDAQ_CI_IMAGE
+   script: ""
+   tags:
+        - tdaq
+   only:
+        - triggers
